@@ -1,0 +1,60 @@
+import datetime as dt
+import uuid
+
+from pydantic import BaseModel, Field
+
+
+class DonneurCreate(BaseModel):
+    cni: str = Field(min_length=3, max_length=64)
+    nom: str = Field(min_length=1, max_length=120)
+    prenom: str = Field(min_length=1, max_length=120)
+    sexe: str = Field(pattern="^[HF]$")
+    date_naissance: dt.date | None = None
+    groupe_sanguin: str | None = None
+    adresse: str | None = None
+    region: str | None = None
+    departement: str | None = None
+    telephone: str | None = None
+    email: str | None = None
+    profession: str | None = None
+
+
+class DonneurUpdate(BaseModel):
+    cni: str | None = Field(default=None, min_length=3, max_length=64)
+    nom: str | None = Field(default=None, min_length=1, max_length=120)
+    prenom: str | None = Field(default=None, min_length=1, max_length=120)
+    sexe: str | None = Field(default=None, pattern="^[HF]$")
+    date_naissance: dt.date | None = None
+    groupe_sanguin: str | None = None
+    adresse: str | None = None
+    region: str | None = None
+    departement: str | None = None
+    telephone: str | None = None
+    email: str | None = None
+    profession: str | None = None
+
+
+class DonneurOut(BaseModel):
+    id: uuid.UUID
+    cni_hash: str
+    cni: str | None = None
+    nom: str
+    prenom: str
+    sexe: str
+    date_naissance: dt.date | None = None
+    groupe_sanguin: str | None = None
+    adresse: str | None = None
+    region: str | None = None
+    departement: str | None = None
+    telephone: str | None = None
+    email: str | None = None
+    profession: str | None = None
+    dernier_don: dt.date | None
+
+    class Config:
+        from_attributes = True
+
+
+class EligibiliteOut(BaseModel):
+    eligible: bool
+    eligible_le: dt.date | None

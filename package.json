@@ -1,0 +1,20 @@
+{
+  "name": "cnts-monorepo",
+  "private": true,
+  "workspaces": [
+    "web",
+    "portal",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "lint": "npm -w web run lint && npm -w portal run lint && npm -ws --if-present run lint",
+    "test": "npm -ws --if-present run test",
+    "test:coverage": "npm -ws --if-present run test:coverage",
+    "dev:web": "npm -w web run dev",
+    "dev:portal": "npm -w portal run dev",
+    "mfa:backoffice": "node ./scripts/backoffice-mfa.mjs"
+  }
+}
