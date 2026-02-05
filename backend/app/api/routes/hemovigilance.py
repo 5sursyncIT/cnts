@@ -2,30 +2,38 @@ import uuid
 
 import csv
 import io
+import datetime as dt
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import PlainTextResponse
-from sqlalchemy import select
+from sqlalchemy import String, cast, func, or_, select
 from sqlalchemy.orm import Session
 
-from app.audit.events import log_event
-from app.db.models import ActeTransfusionnel, Commande, Don, Poche, RappelAction, RappelLot, Reservation
+from app.api.deps import require_auth_in_production
+from app.audit.events import TraceEvent, log_event
+from app.core.sync_cursor import decode_cursor, encode_cursor
+from app.db.models import ActeTransfusionnel, Commande, Don, Poche, RappelAction, RappelLot, Reservation, UserAccount
 from app.db.session import get_db
 from app.schemas.hemovigilance import (
     ActeTransfusionnelOut,
     ImpactRappelOut,
+    PartenaireFluxOut,
+    PartenaireEventOut,
     RappelActionCreate,
     RappelActionOut,
+    RappelAutoCreate,
     RappelCreate,
     RappelOut,
+    RapportAutoriteOut,
+    RappelLotStat,
+    RappelStatutStat,
+    TransfusionHopitalStat,
 )
 
 router = APIRouter(prefix="/hemovigilance")
 
 
 def _now_utc():
-    import datetime as dt
-
     return dt.datetime.now(dt.timezone.utc)
 
 
@@ -156,7 +164,11 @@ def list_transfusions(
 
 
 @router.post("/rappels", response_model=RappelOut, status_code=201)
-def create_rappel(payload: RappelCreate, db: Session = Depends(get_db)) -> RappelLot:
+def create_rappel(
+    payload: RappelCreate,
+    db: Session = Depends(get_db),
+    _user: UserAccount | None = Depends(require_auth_in_production),
+) -> RappelLot:
     row = RappelLot(
         type_cible=payload.type_cible,
         valeur_cible=payload.valeur_cible,
@@ -168,6 +180,47 @@ def create_rappel(payload: RappelCreate, db: Session = Depends(get_db)) -> Rappe
     db.refresh(row)
 
     _log_rappel_action(db, rappel=row, action="CREER", validateur_id=None, note=row.motif)
+    db.commit()
+    return row
+
+
+@router.post("/rappels/auto", response_model=RappelOut)
+def create_rappel_auto(
+    payload: RappelAutoCreate,
+    db: Session = Depends(get_db),
+    _user: UserAccount | None = Depends(require_auth_in_production),
+) -> RappelLot:
+    existing = (
+        db.execute(
+            select(RappelLot)
+            .where(
+                RappelLot.type_cible == payload.type_cible,
+                RappelLot.valeur_cible == payload.valeur_cible,
+                RappelLot.statut != "CLOTURE",
+            )
+            .order_by(RappelLot.created_at.desc())
+            .limit(1)
+        )
+        .scalars()
+        .first()
+    )
+    if existing is not None:
+        return existing
+
+    now = _now_utc()
+    row = RappelLot(
+        type_cible=payload.type_cible,
+        valeur_cible=payload.valeur_cible,
+        motif=payload.motif,
+        statut="NOTIFIE",
+        notified_at=now,
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+
+    _log_rappel_action(db, rappel=row, action="CREER", validateur_id=None, note=payload.motif)
+    _log_rappel_action(db, rappel=row, action="NOTIFIER", validateur_id=None, note=payload.source)
     db.commit()
     return row
 
@@ -208,11 +261,74 @@ def list_rappel_actions(
     return list(db.execute(stmt).scalars())
 
 
+@router.get("/rapports/autorites", response_model=RapportAutoriteOut)
+def rapport_autorites(db: Session = Depends(get_db)) -> RapportAutoriteOut:
+    rappels_rows = list(db.execute(select(RappelLot.statut, func.count()).group_by(RappelLot.statut)).all())
+    transfusions_rows = list(
+        db.execute(select(ActeTransfusionnel.hopital_id, func.count()).group_by(ActeTransfusionnel.hopital_id)).all()
+    )
+    rappels_lot_rows = list(db.execute(select(Poche.lot, func.count()).group_by(Poche.lot)).all())
+
+    return RapportAutoriteOut(
+        generated_at=_now_utc(),
+        rappels_par_statut=[RappelStatutStat(statut=statut, total=total) for statut, total in rappels_rows],
+        transfusions_par_hopital=[
+            TransfusionHopitalStat(hopital_id=hopital_id, total=total)
+            for hopital_id, total in transfusions_rows
+        ],
+        rappels_par_lot=[RappelLotStat(lot=lot, total=total) for lot, total in rappels_lot_rows],
+    )
+
+
+@router.get("/partenaires/flux", response_model=PartenaireFluxOut)
+def flux_partenaires(
+    cursor: str | None = Query(default=None),
+    hopital_id: uuid.UUID | None = Query(default=None),
+    limit: int = Query(default=200, ge=1, le=1000),
+    db: Session = Depends(get_db),
+) -> PartenaireFluxOut:
+    stmt = (
+        select(TraceEvent)
+        .where(
+            or_(
+                TraceEvent.event_type.like("rappel.%"),
+                TraceEvent.event_type.like("commande.%"),
+                TraceEvent.event_type.like("reservation.%"),
+                TraceEvent.event_type.like("notification.hopital.%"),
+            )
+        )
+        .order_by(TraceEvent.created_at.asc(), TraceEvent.id.asc())
+        .limit(limit)
+    )
+
+    if cursor:
+        created_at, event_id = decode_cursor(cursor)
+        stmt = stmt.where(
+            or_(
+                TraceEvent.created_at > created_at,
+                (TraceEvent.created_at == created_at) & (TraceEvent.id > event_id),
+            )
+        )
+
+    if hopital_id is not None:
+        dialect = db.get_bind().dialect.name
+        hopital_str = str(hopital_id)
+        if dialect == "postgresql":
+            stmt = stmt.where(TraceEvent.payload["hopital_id"].astext == hopital_str)  # type: ignore[attr-defined]
+        else:
+            stmt = stmt.where(cast(TraceEvent.payload, String).like(f'%\"hopital_id\": \"{hopital_str}\"%'))
+
+    rows = list(db.execute(stmt).scalars())
+    next_cursor = encode_cursor(created_at=rows[-1].created_at, event_id=rows[-1].id) if rows else None
+    return PartenaireFluxOut(events=[PartenaireEventOut.model_validate(r) for r in rows], next_cursor=next_cursor)
+
+
 @router.post("/rappels/{rappel_id}/notifier", response_model=RappelOut)
 def notifier_rappel(
     rappel_id: uuid.UUID,
     payload: RappelActionCreate,
     db: Session = Depends(get_db),
+    _user: UserAccount | None = Depends(require_auth_in_production),
 ) -> RappelLot:
     row = db.get(RappelLot, rappel_id)
     if row is None:
@@ -235,6 +351,7 @@ def confirmer_rappel(
     rappel_id: uuid.UUID,
     payload: RappelActionCreate,
     db: Session = Depends(get_db),
+    _user: UserAccount | None = Depends(require_auth_in_production),
 ) -> RappelLot:
     row = db.get(RappelLot, rappel_id)
     if row is None:
@@ -257,6 +374,7 @@ def cloturer_rappel(
     rappel_id: uuid.UUID,
     payload: RappelActionCreate,
     db: Session = Depends(get_db),
+    _user: UserAccount | None = Depends(require_auth_in_production),
 ) -> RappelLot:
     row = db.get(RappelLot, rappel_id)
     if row is None:

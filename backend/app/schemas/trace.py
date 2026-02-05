@@ -1,7 +1,7 @@
 import datetime as dt
 import uuid
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class TraceEventOut(BaseModel):
@@ -12,5 +12,4 @@ class TraceEventOut(BaseModel):
     payload: dict
     created_at: dt.datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

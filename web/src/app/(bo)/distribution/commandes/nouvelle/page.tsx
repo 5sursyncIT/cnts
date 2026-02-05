@@ -112,12 +112,12 @@ export default function NouvelleCommandePage() {
       <div className="mb-6">
         <Link
           href="/distribution/commandes"
-          className="text-blue-600 hover:text-blue-800 text-sm mb-2 inline-block"
+          className="text-blue-600 hover:text-blue-900 text-sm mb-2 inline-block"
         >
           ← Retour aux commandes
         </Link>
-        <h1 className="text-2xl font-bold">Nouvelle Commande</h1>
-        <p className="text-gray-600 mt-1">
+        <h1 className="text-2xl font-bold text-gray-900">Nouvelle Commande</h1>
+        <p className="text-gray-700 mt-1">
           Créer une demande de sang pour un hôpital
         </p>
       </div>
@@ -125,7 +125,7 @@ export default function NouvelleCommandePage() {
       {/* Erreur globale */}
       {createStatus === "error" && createError && (
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
-          <div className="text-sm font-medium text-red-800">
+          <div className="text-sm font-medium text-red-900">
             Erreur lors de la création
           </div>
           <div className="text-sm text-red-600 mt-1">
@@ -169,11 +169,11 @@ export default function NouvelleCommandePage() {
                     ))}
                   </select>
                   {hopitaux?.length === 0 && (
-                    <p className="mt-2 text-sm text-gray-600">
+                    <p className="mt-2 text-sm text-gray-800">
                       Aucun hôpital disponible.{" "}
                       <Link
                         href="/distribution/hopitaux/nouveau"
-                        className="text-blue-600 hover:text-blue-800"
+                        className="text-blue-600 hover:text-blue-900"
                       >
                         Créer un hôpital →
                       </Link>
@@ -200,11 +200,11 @@ export default function NouvelleCommandePage() {
             {/* Lignes de commande */}
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold">Lignes de commande</h2>
+                <h2 className="text-lg font-semibold text-gray-900">Lignes de commande</h2>
                 <button
                   type="button"
                   onClick={ajouterLigne}
-                  className="text-sm text-blue-600 hover:text-blue-800"
+                  className="text-sm text-blue-600 hover:text-blue-900"
                 >
                   + Ajouter une ligne
                 </button>
@@ -224,7 +224,7 @@ export default function NouvelleCommandePage() {
                         <button
                           type="button"
                           onClick={() => supprimerLigne(index)}
-                          className="text-sm text-red-600 hover:text-red-800"
+                          className="text-sm text-red-600 hover:text-red-900"
                         >
                           Supprimer
                         </button>
@@ -234,7 +234,7 @@ export default function NouvelleCommandePage() {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       {/* Type de produit */}
                       <div>
-                        <label className="block text-xs text-gray-600 mb-1">
+                        <label className="block text-xs text-gray-800 mb-1">
                           Type de produit
                         </label>
                         <select
@@ -254,7 +254,7 @@ export default function NouvelleCommandePage() {
 
                       {/* Groupe sanguin */}
                       <div>
-                        <label className="block text-xs text-gray-600 mb-1">
+                        <label className="block text-xs text-gray-800 mb-1">
                           Groupe sanguin
                         </label>
                         <select
@@ -279,7 +279,7 @@ export default function NouvelleCommandePage() {
 
                       {/* Quantité */}
                       <div>
-                        <label className="block text-xs text-gray-600 mb-1">
+                        <label className="block text-xs text-gray-800 mb-1">
                           Quantité
                         </label>
                         <input
@@ -341,7 +341,7 @@ export default function NouvelleCommandePage() {
             <h3 className="font-medium text-blue-900 mb-2 text-sm">
               Workflow de commande
             </h3>
-            <ul className="text-xs text-blue-800 space-y-1">
+            <ul className="text-xs text-blue-900 space-y-1">
               <li>1. Créer la commande (statut BROUILLON)</li>
               <li>2. Valider la commande (réserve les poches)</li>
               <li>3. Affecter les receveurs (cross-matching)</li>
@@ -353,7 +353,7 @@ export default function NouvelleCommandePage() {
             <h3 className="font-medium text-yellow-900 mb-2 text-sm">
               ⚠️ Réservation automatique
             </h3>
-            <p className="text-xs text-yellow-800">
+            <p className="text-xs text-yellow-900">
               Lors de la validation, les poches seront automatiquement réservées
               selon FEFO (First Expired, First Out) parmi les poches DISPONIBLE.
             </p>

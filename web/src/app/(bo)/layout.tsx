@@ -1,17 +1,22 @@
 import { redirect } from "next/navigation";
 
-import { TopNav } from "@/components/top-nav";
 import { getCurrentUser } from "@/lib/auth/current-user";
+import { Sidebar } from "@/components/sidebar";
+import { Header } from "@/components/header";
 
 export default async function BackOfficeLayout(props: { children: React.ReactNode }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900">
-      <TopNav user={user} />
-      <div className="mx-auto max-w-6xl px-4 py-6">{props.children}</div>
+    <div className="flex min-h-screen bg-[#f3f4f6]">
+      <Sidebar user={user} />
+      <div className="flex flex-1 flex-col overflow-hidden h-screen">
+        <Header user={user} />
+        <main className="flex-1 overflow-y-auto p-8 bg-[#f3f4f6]">
+          {props.children}
+        </main>
+      </div>
     </div>
   );
 }
-

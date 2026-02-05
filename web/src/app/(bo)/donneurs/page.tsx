@@ -2,7 +2,7 @@
 
 import { useDonneurs } from "@cnts/api";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { apiClient } from "@/lib/api-client";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -15,17 +15,12 @@ export default function DonneursPage() {
   const ITEMS_PER_PAGE = 20;
 
   const REGIONS_SENEGAL = [
-    "Dakar", "Diourbel", "Fatick", "Kaffrine", "Kaolack", "Kédougou", 
-    "Kolda", "Louga", "Matam", "Saint-Louis", "Sédhiou", "Tambacounda", 
+    "Dakar", "Diourbel", "Fatick", "Kaffrine", "Kaolack", "Kédougou",
+    "Kolda", "Louga", "Matam", "Saint-Louis", "Sédhiou", "Tambacounda",
     "Thiès", "Ziguinchor"
   ];
 
   const GROUPES_SANGUINS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
-
-  // Reset page when filters change
-  useEffect(() => {
-    setPage(1);
-  }, [searchQuery, sexeFilter, groupeFilter, regionFilter]);
 
   const { data: donneurs, status, error, refetch } = useDonneurs(apiClient, {
     q: searchQuery || undefined,
@@ -41,8 +36,8 @@ export default function DonneursPage() {
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Gestion des Donneurs</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-2xl font-bold text-gray-900">Gestion des Donneurs</h1>
+          <p className="text-gray-700 mt-1">
             Liste des donneurs enregistrés dans le système
           </p>
         </div>
@@ -64,9 +59,12 @@ export default function DonneursPage() {
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setPage(1);
+              }}
               placeholder="Nom, prénom..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             />
           </div>
 
@@ -76,8 +74,11 @@ export default function DonneursPage() {
             </label>
             <select
               value={sexeFilter}
-              onChange={(e) => setSexeFilter(e.target.value as "H" | "F" | "")}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={(e) => {
+                setSexeFilter(e.target.value as "H" | "F" | "");
+                setPage(1);
+              }}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             >
               <option value="">Tous</option>
               <option value="H">Homme</option>
@@ -91,8 +92,11 @@ export default function DonneursPage() {
             </label>
             <select
               value={groupeFilter}
-              onChange={(e) => setGroupeFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={(e) => {
+                setGroupeFilter(e.target.value);
+                setPage(1);
+              }}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             >
               <option value="">Tous</option>
               {GROUPES_SANGUINS.map((g) => (
@@ -109,8 +113,11 @@ export default function DonneursPage() {
             </label>
             <select
               value={regionFilter}
-              onChange={(e) => setRegionFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={(e) => {
+                setRegionFilter(e.target.value);
+                setPage(1);
+              }}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             >
               <option value="">Toutes</option>
               {REGIONS_SENEGAL.map((r) => (
@@ -133,7 +140,7 @@ export default function DonneursPage() {
       {/* Liste des donneurs */}
       <div className="bg-white rounded-lg shadow">
         {status === "loading" && (
-          <div className="p-8 text-center text-gray-500">
+          <div className="p-8 text-center text-gray-700">
             Chargement...
           </div>
         )}
@@ -141,7 +148,7 @@ export default function DonneursPage() {
         {status === "error" && (
           <div className="p-8 text-center">
             <div className="text-red-600 mb-2">Erreur de chargement</div>
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-gray-800">
               {error?.status ? `Erreur ${error.status}` : "Erreur inconnue"}
             </div>
             <button
@@ -154,7 +161,7 @@ export default function DonneursPage() {
         )}
 
         {status === "success" && donneurs && donneurs.length === 0 && (
-          <div className="p-8 text-center text-gray-500">
+          <div className="p-8 text-center text-gray-700">
             Aucun donneur trouvé
           </div>
         )}
@@ -164,25 +171,25 @@ export default function DonneursPage() {
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Nom & Prénom
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Sexe
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Groupe
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Région
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Dernier Don
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     CNI Hash
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -200,30 +207,29 @@ export default function DonneursPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
-                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          donneur.sexe === "H"
-                            ? "bg-blue-100 text-blue-800"
+                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${donneur.sexe === "H"
+                            ? "bg-blue-100 text-blue-900"
                             : "bg-pink-100 text-pink-800"
-                        }`}
+                          }`}
                       >
                         {donneur.sexe === "H" ? "Homme" : "Femme"}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                       {donneur.groupe_sanguin || "-"}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                       {donneur.region || "-"}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                       {donneur.dernier_don
                         ? new Date(donneur.dernier_don).toLocaleDateString(
-                            "fr-FR"
-                          )
+                          "fr-FR"
+                        )
                         : "Jamais"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <code className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">
+                      <code className="text-xs text-gray-800 bg-gray-100 px-2 py-1 rounded">
                         {donneur.cni_hash.substring(0, 16)}...
                       </code>
                     </td>
@@ -252,7 +258,7 @@ export default function DonneursPage() {
       {/* Pagination */}
       {status === "success" && (
         <div className="flex justify-between items-center mt-4 bg-white p-4 rounded-lg shadow">
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-gray-800">
             Page {page} • {donneurs?.length || 0} résultats affichés
           </div>
           <div className="flex gap-2">

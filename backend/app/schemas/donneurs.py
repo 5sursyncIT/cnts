@@ -1,7 +1,7 @@
 import datetime as dt
 import uuid
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class DonneurCreate(BaseModel):
@@ -35,9 +35,9 @@ class DonneurUpdate(BaseModel):
 
 
 class DonneurOut(BaseModel):
+    """Output schema for Donneur - CNI is NOT exposed for privacy/GDPR compliance."""
     id: uuid.UUID
-    cni_hash: str
-    cni: str | None = None
+    cni_hash: str  # Only the hash is exposed, never the original CNI
     nom: str
     prenom: str
     sexe: str
@@ -51,8 +51,7 @@ class DonneurOut(BaseModel):
     profession: str | None = None
     dernier_don: dt.date | None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class EligibiliteOut(BaseModel):

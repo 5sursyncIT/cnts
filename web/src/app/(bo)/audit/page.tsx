@@ -14,7 +14,7 @@ export default async function AuditPage() {
     return (
       <main>
         <h1 className="text-2xl font-semibold">Audit</h1>
-        <div className="mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
+        <div className="mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900" role="alert">
           Accès refusé.
         </div>
       </main>

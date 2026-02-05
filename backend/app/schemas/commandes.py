@@ -1,7 +1,7 @@
 import datetime as dt
 import uuid
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class LigneCommandeCreate(BaseModel):
@@ -22,8 +22,7 @@ class LigneCommandeOut(BaseModel):
     groupe_sanguin: str | None
     quantite: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CommandeOut(BaseModel):
@@ -36,8 +35,7 @@ class CommandeOut(BaseModel):
     updated_at: dt.datetime
     lignes: list[LigneCommandeOut]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CommandeValiderPayload(BaseModel):
@@ -71,3 +69,8 @@ class CommandeValiderOut(BaseModel):
 
 class CommandeServirPayload(BaseModel):
     pass
+
+
+class CommandeConfirmationPayload(BaseModel):
+    validateur_id: uuid.UUID | None = None
+    note: str | None = Field(default=None, max_length=2000)

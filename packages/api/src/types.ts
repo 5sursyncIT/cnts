@@ -27,23 +27,43 @@ export interface DonneurCreate {
   nom: string;
   prenom: string;
   sexe: "H" | "F";
+  date_naissance?: string;
+  adresse?: string;
+  region?: string;
+  telephone?: string;
+  email?: string;
+  groupe_sanguin?: string;
 }
 
 export interface DonneurUpdate {
   nom?: string;
   prenom?: string;
   sexe?: "H" | "F";
+  date_naissance?: string | null;
+  adresse?: string | null;
+  region?: string | null;
+  telephone?: string | null;
+  email?: string | null;
+  groupe_sanguin?: string | null;
+  cni?: string | null;
 }
 
 export interface Donneur {
   id: UUID;
   cni_hash: string;
+  // CNI is NOT exposed for privacy/GDPR compliance - only the hash is returned
   nom: string;
   prenom: string;
   sexe: "H" | "F";
+  date_naissance: string | null;
+  adresse: string | null;
+  region: string | null;
+  departement: string | null;
+  telephone: string | null;
+  email: string | null;
+  profession: string | null;
+  groupe_sanguin: string | null;
   dernier_don: string | null; // ISO date
-  created_at: string;
-  updated_at: string;
 }
 
 export interface EligibiliteResponse {
@@ -199,6 +219,28 @@ export interface ProductRule {
   created_at: string;
 }
 
+export interface ExpirationRuleBase {
+  product_type: string;
+  preservation_type: string;
+  min_temp: number;
+  max_temp: number;
+  shelf_life_value: number;
+  shelf_life_unit: string;
+  is_active: boolean;
+  modified_by?: string | null;
+}
+
+export interface ExpirationRuleCreate extends ExpirationRuleBase { }
+
+export interface ExpirationRuleUpdate extends ExpirationRuleBase { }
+
+export interface ExpirationRule extends ExpirationRuleBase {
+  id: UUID;
+  version: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ComposantRecette {
   type_produit: string;
   volume_ml: number;
@@ -234,6 +276,13 @@ export interface FractionnementRecettePayload extends IdempotencyPayload {
 
 export interface HopitalCreate {
   nom: string;
+  adresse?: string;
+  contact?: string;
+  convention_actif?: boolean;
+}
+
+export interface HopitalUpdate {
+  nom?: string;
   adresse?: string;
   contact?: string;
   convention_actif?: boolean;
@@ -297,6 +346,20 @@ export interface CommandeValiderResult {
   reservations: ReservationOut[];
 }
 
+export interface CommandeConfirmationPayload {
+  validateur_id?: UUID;
+  note?: string;
+}
+
+export interface CommandeEvent {
+  id: UUID;
+  aggregate_type: string;
+  aggregate_id: UUID;
+  event_type: string;
+  payload: Record<string, unknown>;
+  created_at: string;
+}
+
 export interface AffectationLigneReceveur {
   ligne_commande_id: UUID;
   receveur_id: UUID;
@@ -318,12 +381,36 @@ export interface CommandeServirResult {
 
 export interface ReceveurCreate {
   nom?: string;
+  prenom?: string;
+  sexe?: "H" | "F";
+  date_naissance?: string;
+  adresse?: string;
+  telephone?: string;
+  hopital_id?: UUID;
+  groupe_sanguin?: string;
+}
+
+export interface ReceveurUpdate {
+  nom?: string;
+  prenom?: string;
+  sexe?: "H" | "F";
+  date_naissance?: string;
+  adresse?: string;
+  telephone?: string;
+  hopital_id?: UUID;
   groupe_sanguin?: string;
 }
 
 export interface Receveur {
   id: UUID;
   nom: string | null;
+  prenom: string | null;
+  sexe: "H" | "F" | null;
+  date_naissance: string | null;
+  adresse: string | null;
+  telephone: string | null;
+  hopital_id: UUID | null;
+  hopital?: Hopital;
   groupe_sanguin: string | null;
   created_at: string;
 }
@@ -357,6 +444,49 @@ export interface ActeTransfusionnel {
   date_transfusion: string;
   validateur_id: UUID | null;
   created_at: string;
+  din?: string;
+  type_produit?: string;
+  lot?: string;
+}
+
+export interface RappelCreate {
+  type_cible: "DIN" | "LOT";
+  valeur_cible: string;
+  motif?: string;
+}
+
+export interface RappelAutoCreate {
+  type_cible: "DIN" | "LOT";
+  valeur_cible: string;
+  motif?: string;
+  source?: string;
+}
+
+export interface RappelActionCreate {
+  validateur_id?: UUID;
+  note?: string;
+}
+
+export interface RappelAction {
+  id: UUID;
+  rappel_id: UUID;
+  action: string;
+  validateur_id: UUID | null;
+  note: string | null;
+  created_at: string;
+}
+
+export interface ImpactRappel {
+  poche_id: UUID;
+  don_id: UUID;
+  din: string;
+  type_produit: string;
+  lot: string | null;
+  statut_distribution: string;
+  hopital_id: UUID | null;
+  receveur_id: UUID | null;
+  commande_id: UUID | null;
+  date_transfusion: string | null;
 }
 
 export interface RappelLot {
@@ -370,6 +500,42 @@ export interface RappelLot {
   confirmed_at: string | null;
   closed_at: string | null;
   created_at: string;
+}
+
+export interface RappelStatutStat {
+  statut: string;
+  total: number;
+}
+
+export interface TransfusionHopitalStat {
+  hopital_id: UUID | null;
+  total: number;
+}
+
+export interface RappelLotStat {
+  lot: string | null;
+  total: number;
+}
+
+export interface RapportAutorite {
+  generated_at: string;
+  rappels_par_statut: RappelStatutStat[];
+  transfusions_par_hopital: TransfusionHopitalStat[];
+  rappels_par_lot: RappelLotStat[];
+}
+
+export interface PartenaireEvent {
+  id: UUID;
+  aggregate_type: string;
+  aggregate_id: UUID;
+  event_type: string;
+  payload: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface PartenaireFlux {
+  events: PartenaireEvent[];
+  next_cursor?: string | null;
 }
 
 // ============================================================================
@@ -393,4 +559,161 @@ export interface AnalyticsDashboard {
     statut: string;
     count: number;
   }>;
+}
+
+// ============================================================================
+// CONTENT MANAGEMENT (CMS)
+// ============================================================================
+
+export type ArticleStatus = "DRAFT" | "REVIEW" | "PUBLISHED" | "ARCHIVED";
+
+export interface ArticleCreate {
+  title: string;
+  slug: string;
+  excerpt?: string;
+  content: string;
+  category: string;
+  image_url?: string;
+  status?: ArticleStatus;
+  tags?: string[];
+  is_published?: boolean;
+}
+
+export interface ArticleUpdate {
+  title?: string;
+  slug?: string;
+  excerpt?: string;
+  content?: string;
+  category?: string;
+  image_url?: string;
+  status?: ArticleStatus;
+  tags?: string[];
+  is_published?: boolean;
+}
+
+export interface Article {
+  id: UUID;
+  title: string;
+  slug: string;
+  excerpt: string | null;
+  content: string;
+  category: string;
+  image_url: string | null;
+  status: ArticleStatus;
+  tags: string[];
+  author_id: UUID | null;
+  published_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// ============================================================================
+// USER MANAGEMENT
+// ============================================================================
+
+export type UserRole = "admin" | "biologiste" | "technicien_labo" | "agent_distribution" | "agent_accueil" | "PATIENT";
+
+export interface User {
+  id: UUID;
+  email: string;
+  is_active: boolean;
+  role: UserRole;
+  mfa_enabled: boolean;
+  mfa_enabled_at: string | null;
+  mfa_disabled_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserCreate {
+  email: string;
+  password: string;
+  role: UserRole;
+  is_active?: boolean;
+}
+
+export interface UserUpdate {
+  email?: string;
+  role?: UserRole;
+  is_active?: boolean;
+}
+
+export interface PasswordResetPayload {
+  password: string;
+}
+
+export interface PasswordResetResult {
+  user_id: UUID;
+  success: boolean;
+}
+
+// ============================================================================
+// ANALYTICS
+// ============================================================================
+
+export type TimeGranularity = "day" | "week" | "month";
+
+export interface TrendDataPoint {
+  date: string;  // ISO date
+  value: number;
+  label?: string;
+}
+
+export interface TrendResponse {
+  data: TrendDataPoint[];
+  granularity?: string;
+  product_type?: string;
+}
+
+export interface KPIMetric {
+  name: string;
+  value: number;
+  unit: string;
+  trend: "up" | "down" | "stable";
+  change_percent: number;
+  previous_value: number;
+}
+
+export interface StockBreakdownItem {
+  type_produit: string;
+  available: number;
+  reserved: number;
+  distributed: number;
+  non_distribuable: number;
+}
+
+export interface StockBreakdownResponse {
+  breakdown: StockBreakdownItem[];
+}
+
+export interface AnalyticsDashboardResponse {
+  period: {
+    start: string;  // ISO date
+    end: string;    // ISO date
+  };
+  dons_trend: Array<{ date: string; count: number }>;
+  stock_distribution: Array<{ groupe: string; count: number }>;
+  commandes_status: Array<{ statut: string; count: number }>;
+}
+
+export type ReportType = "monthly" | "compliance" | "kpi" | "activity" | "stock";
+export type ReportFormat = "pdf" | "excel" | "csv";
+export type ReportStatus = "pending" | "ready" | "failed";
+
+export interface ReportMetadata {
+  id: UUID;
+  type: ReportType;
+  period_start: string;  // ISO date
+  period_end: string;    // ISO date
+  format: ReportFormat;
+  status: ReportStatus;
+  download_url?: string;
+  created_at: string;
+}
+
+export interface ReportGenerateRequest {
+  type: ReportType;
+  start_date: string;  // ISO date
+  end_date: string;    // ISO date
+  format: ReportFormat;
 }

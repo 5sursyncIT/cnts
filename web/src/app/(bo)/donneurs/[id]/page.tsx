@@ -1,6 +1,6 @@
 "use client";
 
-import { useDonneur, useCheckEligibilite, useDons, useUpdateDonneur, useDeleteDonneur } from "@cnts/api";
+import { useDonneur, useCheckEligibilite, useDons, useUpdateDonneur, useDeleteDonneur, useRegions } from "@cnts/api";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -11,6 +11,8 @@ export default function DonneurDetailPage() {
   const router = useRouter();
   const donneurId = params.id as string;
   const [isEditing, setIsEditing] = useState(false);
+
+  const { data: regions } = useRegions(apiClient);
 
   const {
     data: donneur,
@@ -26,7 +28,7 @@ export default function DonneurDetailPage() {
     if (!confirm("Êtes-vous sûr de vouloir supprimer ce donneur ? Cette action est irréversible.")) {
       return;
     }
-    
+
     try {
       await deleteDonneur(donneurId);
       router.push("/donneurs");
@@ -39,7 +41,7 @@ export default function DonneurDetailPage() {
   const handleUpdate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    
+
     try {
       await updateDonneur({
         id: donneurId,
@@ -51,6 +53,7 @@ export default function DonneurDetailPage() {
           groupe_sanguin: (formData.get("groupe_sanguin") as string) || null,
           cni: (formData.get("cni") as string) || null,
           adresse: (formData.get("adresse") as string) || null,
+          region: (formData.get("region") as string) || null,
           telephone: (formData.get("telephone") as string) || null,
           email: (formData.get("email") as string) || null,
         }
@@ -87,14 +90,14 @@ export default function DonneurDetailPage() {
       <div className="p-6 max-w-5xl mx-auto">
         <div className="text-center py-12">
           <div className="text-red-600 mb-2">Erreur de chargement</div>
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-gray-800">
             {donneurError?.status === 404
               ? "Donneur introuvable"
               : "Erreur inconnue"}
           </div>
           <Link
             href="/donneurs"
-            className="mt-4 inline-block text-blue-600 hover:text-blue-800"
+            className="mt-4 inline-block text-blue-600 hover:text-blue-900"
           >
             ← Retour à la liste
           </Link>
@@ -109,32 +112,30 @@ export default function DonneurDetailPage() {
       <div className="mb-6">
         <Link
           href="/donneurs"
-          className="text-blue-600 hover:text-blue-800 text-sm mb-2 inline-block"
+          className="text-blue-600 hover:text-blue-900 text-sm mb-2 inline-block"
         >
           ← Retour à la liste
         </Link>
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-2xl font-bold">
+            <h1 className="text-2xl font-bold text-gray-900">
               {donneur.nom}, {donneur.prenom}
             </h1>
             <div className="flex gap-3 mt-2">
               <span
-                className={`px-3 py-1 text-sm font-semibold rounded-full ${
-                  donneur.sexe === "H"
-                    ? "bg-blue-100 text-blue-800"
-                    : "bg-pink-100 text-pink-800"
-                }`}
+                className={`px-3 py-1 text-sm font-semibold rounded-full ${donneur.sexe === "H"
+                  ? "bg-blue-100 text-blue-900"
+                  : "bg-pink-100 text-pink-800"
+                  }`}
               >
                 {donneur.sexe === "H" ? "Homme" : "Femme"}
               </span>
               {eligibilite && (
                 <span
-                  className={`px-3 py-1 text-sm font-semibold rounded-full ${
-                    eligibilite.eligible
-                      ? "bg-green-100 text-green-800"
-                      : "bg-red-100 text-red-800"
-                  }`}
+                  className={`px-3 py-1 text-sm font-semibold rounded-full ${eligibilite.eligible
+                    ? "bg-green-100 text-green-900"
+                    : "bg-red-100 text-red-900"
+                    }`}
                 >
                   {eligibilite.eligible ? "✓ Éligible" : "✗ Non éligible"}
                 </span>
@@ -154,32 +155,32 @@ export default function DonneurDetailPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-bold">Modifier le donneur</h2>
+              <h2 className="text-xl font-bold text-gray-900">Modifier le donneur</h2>
             </div>
             <form onSubmit={handleUpdate} className="p-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Nom</label>
-                  <input name="nom" defaultValue={donneur.nom} required className="w-full px-3 py-2 border rounded-md" />
+                  <input name="nom" defaultValue={donneur.nom} required className="w-full px-3 py-2 border rounded-md text-gray-900" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Prénom</label>
-                  <input name="prenom" defaultValue={donneur.prenom} required className="w-full px-3 py-2 border rounded-md" />
+                  <input name="prenom" defaultValue={donneur.prenom} required className="w-full px-3 py-2 border rounded-md text-gray-900" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Sexe</label>
-                  <select name="sexe" defaultValue={donneur.sexe} className="w-full px-3 py-2 border rounded-md">
+                  <select name="sexe" defaultValue={donneur.sexe} className="w-full px-3 py-2 border rounded-md text-gray-900">
                     <option value="H">Homme</option>
                     <option value="F">Femme</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Date de naissance</label>
-                  <input type="date" name="date_naissance" defaultValue={donneur.date_naissance ? new Date(donneur.date_naissance).toISOString().split('T')[0] : ""} className="w-full px-3 py-2 border rounded-md" />
+                  <input type="date" name="date_naissance" defaultValue={donneur.date_naissance ? new Date(donneur.date_naissance).toISOString().split('T')[0] : ""} className="w-full px-3 py-2 border rounded-md text-gray-900" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Groupe Sanguin</label>
-                  <select name="groupe_sanguin" defaultValue={donneur.groupe_sanguin || ""} className="w-full px-3 py-2 border rounded-md">
+                  <select name="groupe_sanguin" defaultValue={donneur.groupe_sanguin || ""} className="w-full px-3 py-2 border rounded-md text-gray-900">
                     <option value="">Non renseigné</option>
                     <option value="A+">A+</option>
                     <option value="A-">A-</option>
@@ -192,20 +193,30 @@ export default function DonneurDetailPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">CNI</label>
-                  <input name="cni" defaultValue={donneur.cni || ""} className="w-full px-3 py-2 border rounded-md" />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">CNI (nouveau)</label>
+                  <input name="cni" placeholder="Laisser vide pour conserver" className="w-full px-3 py-2 border rounded-md text-gray-900" />
+                  <p className="text-xs text-gray-500 mt-1">Le CNI n&apos;est pas stocké pour des raisons de confidentialité</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Téléphone</label>
-                  <input name="telephone" defaultValue={donneur.telephone || ""} className="w-full px-3 py-2 border rounded-md" />
+                  <input name="telephone" defaultValue={donneur.telephone || ""} className="w-full px-3 py-2 border rounded-md text-gray-900" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                  <input type="email" name="email" defaultValue={donneur.email || ""} className="w-full px-3 py-2 border rounded-md" />
+                  <input type="email" name="email" defaultValue={donneur.email || ""} className="w-full px-3 py-2 border rounded-md text-gray-900" />
                 </div>
-                <div className="md:col-span-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Région</label>
+                  <select name="region" defaultValue={donneur.region || ""} className="w-full px-3 py-2 border rounded-md text-gray-900">
+                    <option value="">Choisir une région</option>
+                    {regions?.map((region) => (
+                      <option key={region} value={region}>{region}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="md:col-span-1">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Adresse</label>
-                  <input name="adresse" defaultValue={donneur.adresse || ""} className="w-full px-3 py-2 border rounded-md" />
+                  <input name="adresse" defaultValue={donneur.adresse || ""} className="w-full px-3 py-2 border rounded-md text-gray-900" />
                 </div>
               </div>
               <div className="flex justify-end gap-3 mt-6">
@@ -235,18 +246,18 @@ export default function DonneurDetailPage() {
           {/* Carte d'identité */}
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex justify-between items-start mb-4">
-              <h2 className="text-lg font-semibold">Informations</h2>
+              <h2 className="text-lg font-semibold text-gray-900">Informations</h2>
               <div className="flex gap-3">
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="text-sm text-blue-600 hover:text-blue-800"
+                  className="text-sm text-blue-600 hover:text-blue-900"
                 >
                   Modifier
                 </button>
                 <button
                   onClick={handleDelete}
                   disabled={deleteStatus === "loading"}
-                  className="text-sm text-red-600 hover:text-red-800 disabled:opacity-50"
+                  className="text-sm text-red-600 hover:text-red-900 disabled:opacity-50"
                 >
                   Supprimer
                 </button>
@@ -275,8 +286,8 @@ export default function DonneurDetailPage() {
                 <dt className="text-sm font-medium text-gray-500">
                   Numéro CNI
                 </dt>
-                <dd className="mt-1 text-sm text-gray-900 font-mono">
-                  {donneur.cni || <span className="text-gray-400 italic">Non renseigné</span>}
+                <dd className="mt-1 text-sm text-gray-500 italic">
+                  Protégé (RGPD)
                 </dd>
               </div>
               <div>
@@ -349,23 +360,23 @@ export default function DonneurDetailPage() {
           {/* Historique des dons */}
           <div className="bg-white rounded-lg shadow">
             <div className="p-6 border-b border-gray-200 flex justify-between items-center">
-              <h2 className="text-lg font-semibold">Historique des dons</h2>
+              <h2 className="text-lg font-semibold text-gray-900">Historique des dons</h2>
               <button
                 onClick={() => refetchDons()}
-                className="text-sm text-blue-600 hover:text-blue-800"
+                className="text-sm text-blue-600 hover:text-blue-900"
               >
                 Actualiser
               </button>
             </div>
 
             {donsStatus === "loading" && (
-              <div className="p-6 text-center text-gray-500">
+              <div className="p-6 text-center text-gray-700">
                 Chargement...
               </div>
             )}
 
             {donsStatus === "success" && dons && dons.length === 0 && (
-              <div className="p-6 text-center text-gray-500">
+              <div className="p-6 text-center text-gray-700">
                 Aucun don enregistré pour ce donneur
               </div>
             )}
@@ -383,17 +394,16 @@ export default function DonneurDetailPage() {
                         <div className="font-medium text-gray-900">
                           DIN: {don.din}
                         </div>
-                        <div className="text-sm text-gray-600 mt-1">
+                        <div className="text-sm text-gray-800 mt-1">
                           {new Date(don.date_don).toLocaleDateString("fr-FR")} -{" "}
                           {don.type_don}
                         </div>
                       </div>
                       <span
-                        className={`px-2 py-1 text-xs font-semibold rounded ${
-                          don.statut_qualification === "LIBERE"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-yellow-100 text-yellow-800"
-                        }`}
+                        className={`px-2 py-1 text-xs font-semibold rounded ${don.statut_qualification === "LIBERE"
+                          ? "bg-green-100 text-green-900"
+                          : "bg-yellow-100 text-yellow-900"
+                          }`}
                       >
                         {don.statut_qualification}
                       </span>
@@ -411,24 +421,22 @@ export default function DonneurDetailPage() {
             <h2 className="text-lg font-semibold mb-4">Éligibilité</h2>
 
             {eligibiliteStatus === "loading" && (
-              <div className="text-sm text-gray-500">Calcul...</div>
+              <div className="text-sm text-gray-700">Calcul...</div>
             )}
 
             {eligibiliteStatus === "success" && eligibilite && (
               <div className="space-y-4">
                 <div
-                  className={`p-4 rounded-lg ${
-                    eligibilite.eligible
-                      ? "bg-green-50 border border-green-200"
-                      : "bg-red-50 border border-red-200"
-                  }`}
+                  className={`p-4 rounded-lg ${eligibilite.eligible
+                    ? "bg-green-50 border border-green-200"
+                    : "bg-red-50 border border-red-200"
+                    }`}
                 >
                   <div
-                    className={`text-lg font-semibold mb-2 ${
-                      eligibilite.eligible
-                        ? "text-green-900"
-                        : "text-red-900"
-                    }`}
+                    className={`text-lg font-semibold mb-2 ${eligibilite.eligible
+                      ? "text-green-900"
+                      : "text-red-900"
+                      }`}
                   >
                     {eligibilite.eligible
                       ? "✓ Peut donner"
@@ -436,11 +444,10 @@ export default function DonneurDetailPage() {
                   </div>
                   {eligibilite.raison && (
                     <div
-                      className={`text-sm ${
-                        eligibilite.eligible
-                          ? "text-green-700"
-                          : "text-red-700"
-                      }`}
+                      className={`text-sm ${eligibilite.eligible
+                        ? "text-green-700"
+                        : "text-red-700"
+                        }`}
                     >
                       {eligibilite.raison}
                     </div>
@@ -492,7 +499,7 @@ export default function DonneurDetailPage() {
             <h3 className="font-medium text-blue-900 mb-2 text-sm">
               Règles d'éligibilité
             </h3>
-            <ul className="text-xs text-blue-800 space-y-1">
+            <ul className="text-xs text-blue-900 space-y-1">
               <li>• Hommes: 2 mois entre dons (60 jours)</li>
               <li>• Femmes: 4 mois entre dons (120 jours)</li>
               <li>• Le calcul est fait depuis le dernier don enregistré</li>

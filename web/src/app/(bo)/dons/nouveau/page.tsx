@@ -34,14 +34,14 @@ export default function NouveauDonPage() {
     data: donneur,
     status: donneurStatus,
     refetch: refetchDonneur,
-  } = useDonneur(apiClient, selectedDonneurId || null);
+  } = useDonneur(apiClient, selectedDonneurId);
 
   // Vérifier l'éligibilité
   const {
     data: eligibilite,
     status: eligibiliteStatus,
     refetch: refetchEligibilite,
-  } = useCheckEligibilite(apiClient, selectedDonneurId || null);
+  } = useCheckEligibilite(apiClient, selectedDonneurId);
 
   // Recharger l'éligibilité quand le donneur change
   useEffect(() => {
@@ -84,12 +84,12 @@ export default function NouveauDonPage() {
       <div className="mb-6">
         <Link
           href="/dons"
-          className="text-blue-600 hover:text-blue-800 text-sm mb-2 inline-block"
+          className="text-blue-600 hover:text-blue-900 text-sm mb-2 inline-block"
         >
           ← Retour à la liste
         </Link>
-        <h1 className="text-2xl font-bold">Nouveau Don</h1>
-        <p className="text-gray-600 mt-1">
+        <h1 className="text-2xl font-bold text-gray-900">Nouveau Don</h1>
+        <p className="text-gray-700 mt-1">
           Enregistrer une nouvelle collecte de sang
         </p>
       </div>
@@ -101,15 +101,15 @@ export default function NouveauDonPage() {
             {/* Erreur globale */}
             {createStatus === "error" && createError && (
               <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
-                <div className="text-sm font-medium text-red-800">
+                <div className="text-sm font-medium text-red-900">
                   Erreur lors de la création
                 </div>
                 <div className="text-sm text-red-600 mt-1">
                   {createError.status === 404
                     ? "Donneur introuvable"
                     : `Erreur ${createError.status}: ${JSON.stringify(
-                        createError.body
-                      )}`}
+                      createError.body
+                    )}`}
                 </div>
               </div>
             )}
@@ -127,7 +127,7 @@ export default function NouveauDonPage() {
                   id="donneur"
                   value={selectedDonneurId}
                   onChange={(e) => setSelectedDonneurId(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                   required
                 >
                   <option value="">Sélectionner un donneur...</option>
@@ -136,16 +136,16 @@ export default function NouveauDonPage() {
                       {d.nom}, {d.prenom} ({d.sexe})
                       {d.dernier_don
                         ? ` - Dernier don: ${new Date(
-                            d.dernier_don
-                          ).toLocaleDateString("fr-FR")}`
+                          d.dernier_don
+                        ).toLocaleDateString("fr-FR")}`
                         : " - Jamais donné"}
                     </option>
                   ))}
                 </select>
                 {!donneurIdFromUrl && (
-                  <div className="mt-2 text-sm text-gray-600">
+                  <div className="mt-2 text-sm text-gray-800">
                     Ou{" "}
-                    <Link href="/donneurs/nouveau" className="text-blue-600 hover:text-blue-800">
+                    <Link href="/donneurs/nouveau" className="text-blue-600 hover:text-blue-900">
                       créer un nouveau donneur
                     </Link>
                   </div>
@@ -168,7 +168,7 @@ export default function NouveauDonPage() {
                     setFormData({ ...formData, date_don: e.target.value })
                   }
                   max={new Date().toISOString().split("T")[0]}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                   required
                 />
                 <p className="mt-1 text-xs text-gray-500">
@@ -190,7 +190,7 @@ export default function NouveauDonPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, type_don: e.target.value })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                   required
                 >
                   <option value="SANG_TOTAL">Sang Total (ST)</option>
@@ -249,14 +249,14 @@ export default function NouveauDonPage() {
                   <div className="text-gray-900">
                     {donneur.dernier_don
                       ? new Date(donneur.dernier_don).toLocaleDateString(
-                          "fr-FR"
-                        )
+                        "fr-FR"
+                      )
                       : "Jamais"}
                   </div>
                 </div>
                 <Link
                   href={`/donneurs/${donneur.id}`}
-                  className="block text-sm text-blue-600 hover:text-blue-800"
+                  className="block text-sm text-blue-600 hover:text-blue-900"
                 >
                   Voir la fiche complète →
                 </Link>
@@ -268,24 +268,21 @@ export default function NouveauDonPage() {
             <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-lg font-semibold mb-4">Vérification d'éligibilité</h2>
               <div
-                className={`p-4 rounded-lg mb-4 ${
-                  eligibilite.eligible
-                    ? "bg-green-50 border border-green-200"
-                    : "bg-red-50 border border-red-200"
-                }`}
+                className={`p-4 rounded-lg mb-4 ${eligibilite.eligible
+                  ? "bg-green-50 border border-green-200"
+                  : "bg-red-50 border border-red-200"
+                  }`}
               >
                 <div
-                  className={`text-lg font-semibold mb-2 ${
-                    eligibilite.eligible ? "text-green-900" : "text-red-900"
-                  }`}
+                  className={`text-lg font-semibold mb-2 ${eligibilite.eligible ? "text-green-900" : "text-red-900"
+                    }`}
                 >
                   {eligibilite.eligible ? "✓ Éligible" : "✗ Non éligible"}
                 </div>
                 {eligibilite.raison && (
                   <div
-                    className={`text-sm ${
-                      eligibilite.eligible ? "text-green-700" : "text-red-700"
-                    }`}
+                    className={`text-sm ${eligibilite.eligible ? "text-green-700" : "text-red-700"
+                      }`}
                   >
                     {eligibilite.raison}
                   </div>
@@ -309,7 +306,7 @@ export default function NouveauDonPage() {
                     )}
                   </div>
                   {eligibilite.delai_jours !== null && (
-                    <div className="text-gray-600">
+                    <div className="text-gray-800">
                       Dans {eligibilite.delai_jours} jour(s)
                     </div>
                   )}
@@ -320,7 +317,7 @@ export default function NouveauDonPage() {
 
           {selectedDonneurId && eligibiliteStatus === "loading" && (
             <div className="bg-white rounded-lg shadow p-6">
-              <div className="text-sm text-gray-500">
+              <div className="text-sm text-gray-700">
                 Vérification de l'éligibilité...
               </div>
             </div>
@@ -331,7 +328,7 @@ export default function NouveauDonPage() {
               <h3 className="font-medium text-blue-900 mb-2 text-sm">
                 Workflow de création
               </h3>
-              <ul className="text-xs text-blue-800 space-y-1">
+              <ul className="text-xs text-blue-900 space-y-1">
                 <li>1. Sélectionner un donneur</li>
                 <li>2. Vérifier son éligibilité</li>
                 <li>3. Renseigner date et type de don</li>

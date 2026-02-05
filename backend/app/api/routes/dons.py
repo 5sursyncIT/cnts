@@ -6,10 +6,11 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
+from app.api.deps import require_auth_in_production
 from app.audit.events import log_event
 from app.core.din import generate_din
 from app.core.idempotency import get_idempotent_response, store_idempotent_response
-from app.db.models import Don, Donneur, Poche
+from app.db.models import Don, Donneur, Poche, UserAccount
 from app.db.session import get_db
 from app.schemas.dons import DonCreate, DonOut, EtiquetteOut
 
@@ -17,7 +18,11 @@ router = APIRouter(prefix="/dons")
 
 
 @router.post("", response_model=DonOut, status_code=201)
-def create_don(payload: DonCreate, db: Session = Depends(get_db)) -> JSONResponse | Don:
+def create_don(
+    payload: DonCreate,
+    db: Session = Depends(get_db),
+    _user: UserAccount | None = Depends(require_auth_in_production),
+) -> JSONResponse | Don:
     scope = "create_don"
     if payload.idempotency_key:
         hit = get_idempotent_response(

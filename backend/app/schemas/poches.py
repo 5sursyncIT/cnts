@@ -1,7 +1,7 @@
 import datetime as dt
 import uuid
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class PocheCreate(BaseModel):
@@ -46,8 +46,7 @@ class PocheOut(BaseModel):
     statut_distribution: str
     created_at: dt.datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class StockSummary(BaseModel):

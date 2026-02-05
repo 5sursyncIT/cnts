@@ -79,12 +79,12 @@ Date de péremption: ${new Date(etiquette.date_peremption).toLocaleDateString(
       <div className="p-6 max-w-6xl mx-auto">
         <div className="text-center py-12">
           <div className="text-red-600 mb-2">Erreur de chargement</div>
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-gray-800">
             {donError?.status === 404 ? "Don introuvable" : "Erreur inconnue"}
           </div>
           <Link
             href="/dons"
-            className="mt-4 inline-block text-blue-600 hover:text-blue-800"
+            className="mt-4 inline-block text-blue-600 hover:text-blue-900"
           >
             ← Retour à la liste
           </Link>
@@ -99,19 +99,19 @@ Date de péremption: ${new Date(etiquette.date_peremption).toLocaleDateString(
       <div className="mb-6">
         <Link
           href="/dons"
-          className="text-blue-600 hover:text-blue-800 text-sm mb-2 inline-block"
+          className="text-blue-600 hover:text-blue-900 text-sm mb-2 inline-block"
         >
           ← Retour à la liste
         </Link>
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-2xl font-bold">Don {don.din}</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Don {don.din}</h1>
             <div className="flex gap-3 mt-2">
               <span
                 className={`px-3 py-1 text-sm font-semibold rounded-full ${
                   don.statut_qualification === "LIBERE"
-                    ? "bg-green-100 text-green-800"
-                    : "bg-yellow-100 text-yellow-800"
+                    ? "bg-green-100 text-green-900"
+                    : "bg-yellow-100 text-yellow-900"
                 }`}
               >
                 {don.statut_qualification === "LIBERE"
@@ -187,7 +187,7 @@ Date de péremption: ${new Date(etiquette.date_peremption).toLocaleDateString(
                 </div>
                 <Link
                   href={`/donneurs/${donneur.id}`}
-                  className="text-blue-600 hover:text-blue-800"
+                  className="text-blue-600 hover:text-blue-900"
                 >
                   {donneur.nom}, {donneur.prenom} ({donneur.sexe === "H" ? "Homme" : "Femme"})
                   →
@@ -199,22 +199,22 @@ Date de péremption: ${new Date(etiquette.date_peremption).toLocaleDateString(
           {/* Analyses biologiques */}
           <div className="bg-white rounded-lg shadow">
             <div className="p-6 border-b border-gray-200 flex justify-between items-center">
-              <h2 className="text-lg font-semibold">Analyses biologiques</h2>
+              <h2 className="text-lg font-semibold text-gray-900">Analyses biologiques</h2>
               <button
                 onClick={() => refetchAnalyses()}
-                className="text-sm text-blue-600 hover:text-blue-800"
+                className="text-sm text-blue-600 hover:text-blue-900"
               >
                 Actualiser
               </button>
             </div>
 
             {!analyses || analyses.length === 0 ? (
-              <div className="p-6 text-center text-gray-500">
+              <div className="p-6 text-center text-gray-700">
                 Aucune analyse enregistrée
                 <div className="mt-2">
                   <Link
                     href={`/laboratoire/analyses?don_id=${donId}`}
-                    className="text-blue-600 hover:text-blue-800 text-sm"
+                    className="text-blue-600 hover:text-blue-900 text-sm"
                   >
                     Ajouter des analyses →
                   </Link>
@@ -237,7 +237,7 @@ Date de péremption: ${new Date(etiquette.date_peremption).toLocaleDateString(
                             {testType}
                           </div>
                           {analyse && analyse.note && (
-                            <div className="text-sm text-gray-600 mt-1">
+                            <div className="text-sm text-gray-800 mt-1">
                               {analyse.note}
                             </div>
                           )}
@@ -249,16 +249,16 @@ Date de péremption: ${new Date(etiquette.date_peremption).toLocaleDateString(
                               ["A", "B", "AB", "O", "POS", "NEG"].includes(
                                 analyse.resultat
                               )
-                                ? "bg-green-100 text-green-800"
+                                ? "bg-green-100 text-green-900"
                                 : analyse.resultat === "POSITIF"
-                                ? "bg-red-100 text-red-800"
+                                ? "bg-red-100 text-red-900"
                                 : "bg-gray-100 text-gray-800"
                             }`}
                           >
                             {analyse.resultat}
                           </span>
                         ) : (
-                          <span className="px-3 py-1 text-sm text-gray-500 bg-gray-100 rounded-full">
+                          <span className="px-3 py-1 text-sm text-gray-700 bg-gray-100 rounded-full">
                             Non effectué
                           </span>
                         )}
@@ -273,11 +273,11 @@ Date de péremption: ${new Date(etiquette.date_peremption).toLocaleDateString(
           {/* Poches associées */}
           <div className="bg-white rounded-lg shadow">
             <div className="p-6 border-b border-gray-200">
-              <h2 className="text-lg font-semibold">Poches créées</h2>
+              <h2 className="text-lg font-semibold text-gray-900">Poches créées</h2>
             </div>
 
             {!don.poches || don.poches.length === 0 ? (
-              <div className="p-6 text-center text-gray-500">
+              <div className="p-6 text-center text-gray-700">
                 Aucune poche créée
               </div>
             ) : (
@@ -293,14 +293,14 @@ Date de péremption: ${new Date(etiquette.date_peremption).toLocaleDateString(
                           {poche.type_produit}
                           {poche.groupe_sanguin && ` - ${poche.groupe_sanguin}`}
                         </div>
-                        <div className="text-sm text-gray-600 mt-1">
+                        <div className="text-sm text-gray-800 mt-1">
                           Péremption:{" "}
                           {new Date(poche.date_peremption).toLocaleDateString(
                             "fr-FR"
                           )}
                           {poche.volume_ml && ` • ${poche.volume_ml}ml`}
                         </div>
-                        <div className="text-sm text-gray-500 mt-1">
+                        <div className="text-sm text-gray-700 mt-1">
                           {poche.emplacement_stock}
                         </div>
                       </div>
@@ -308,12 +308,12 @@ Date de péremption: ${new Date(etiquette.date_peremption).toLocaleDateString(
                         <span
                           className={`px-2 py-1 text-xs font-semibold rounded ${
                             poche.statut_distribution === "DISPONIBLE"
-                              ? "bg-green-100 text-green-800"
+                              ? "bg-green-100 text-green-900"
                               : poche.statut_distribution === "RESERVE"
-                              ? "bg-blue-100 text-blue-800"
+                              ? "bg-blue-100 text-blue-900"
                               : poche.statut_distribution === "DISTRIBUE"
                               ? "bg-gray-100 text-gray-800"
-                              : "bg-yellow-100 text-yellow-800"
+                              : "bg-yellow-100 text-yellow-900"
                           }`}
                         >
                           {poche.statut_distribution}
@@ -414,7 +414,7 @@ Date de péremption: ${new Date(etiquette.date_peremption).toLocaleDateString(
             <h3 className="font-medium text-red-900 mb-2 text-sm">
               ⚠️ Règle d'or
             </h3>
-            <p className="text-xs text-red-800">
+            <p className="text-xs text-red-900">
               Aucune poche ne peut être distribuée sans libération biologique
               validée. Tous les tests doivent être NÉGATIF.
             </p>

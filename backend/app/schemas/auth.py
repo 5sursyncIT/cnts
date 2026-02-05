@@ -4,6 +4,9 @@ import uuid
 from pydantic import BaseModel, Field
 
 
+from app.schemas.users import UserOut
+
+
 class LoginIn(BaseModel):
     email: str = Field(min_length=3, max_length=320)
     password: str = Field(min_length=1)
@@ -13,6 +16,7 @@ class LoginOut(BaseModel):
     mfa_required: bool
     challenge_token: str | None = None
     access_token: str | None = None
+    user: UserOut | None = None
 
 
 class MfaVerifyIn(BaseModel):

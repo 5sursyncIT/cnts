@@ -18,7 +18,8 @@ describe("backoffice demo user", () => {
     const user = getBackOfficeUserByEmail("ADMIN@CNTS.LOCAL");
     expect(user?.email).toBe("admin@cnts.local");
     expect(user?.displayName).toBe("Admin");
-    expect(user?.isMfaEnabled).toBe(true);
+    expect(user?.isMfaEnabled).toBe(false);
+    expect(user?.totpSecret).toBeUndefined();
     expect(user?.roles.length).toBe(1);
     expect(verifyPassword(user!, "admin")).toBe(true);
     expect(verifyPassword(user!, "bad")).toBe(false);

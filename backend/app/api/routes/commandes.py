@@ -5,7 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.audit.events import log_event
+from app.api.deps import require_auth_in_production
+from app.audit.events import TraceEvent, log_event
 from app.core.blood import (
     is_compatible_plasma,
     normalize_groupe_sanguin,
@@ -22,10 +23,12 @@ from app.db.models import (
     Poche,
     Receveur,
     Reservation,
+    UserAccount,
 )
 from app.db.session import get_db
 from app.schemas.commandes import (
     CommandeAffecterPayload,
+    CommandeConfirmationPayload,
     CommandeCreate,
     CommandeOut,
     CommandeServirPayload,
@@ -33,6 +36,7 @@ from app.schemas.commandes import (
     CommandeValiderPayload,
     ReservationOut,
 )
+from app.schemas.trace import TraceEventOut
 
 router = APIRouter(prefix="/commandes")
 
@@ -134,7 +138,11 @@ def sweep_reservations(db: Session = Depends(get_db)) -> dict:
 
 
 @router.post("", response_model=CommandeOut, status_code=201)
-def create_commande(payload: CommandeCreate, db: Session = Depends(get_db)) -> Commande:
+def create_commande(
+    payload: CommandeCreate,
+    db: Session = Depends(get_db),
+    _user: UserAccount | None = Depends(require_auth_in_production),
+) -> Commande:
     hopital = db.get(Hopital, payload.hopital_id)
     if hopital is None:
         raise HTTPException(status_code=404, detail="hôpital introuvable")
@@ -162,6 +170,25 @@ def create_commande(payload: CommandeCreate, db: Session = Depends(get_db)) -> C
     db.commit()
     db.refresh(row)
     row = db.execute(select(Commande).where(Commande.id == row.id).options(selectinload(Commande.lignes))).scalar_one()
+    log_event(
+        db,
+        aggregate_type="commande",
+        aggregate_id=row.id,
+        event_type="commande.creee",
+        payload={
+            "commande_id": str(row.id),
+            "hopital_id": str(row.hopital_id),
+            "lignes": [
+                {
+                    "type_produit": l.type_produit,
+                    "groupe_sanguin": l.groupe_sanguin,
+                    "quantite": l.quantite,
+                }
+                for l in row.lignes
+            ],
+        },
+    )
+    db.commit()
     return row
 
 
@@ -191,11 +218,34 @@ def get_commande(commande_id: uuid.UUID, db: Session = Depends(get_db)) -> Comma
     return row
 
 
+@router.get("/{commande_id}/events", response_model=list[TraceEventOut])
+def list_commande_events(
+    commande_id: uuid.UUID,
+    after: dt.datetime | None = Query(default=None),
+    event_type: str | None = Query(default=None, max_length=64),
+    limit: int = Query(default=200, le=1000),
+    db: Session = Depends(get_db),
+) -> list[TraceEvent]:
+    stmt = (
+        select(TraceEvent)
+        .where(TraceEvent.aggregate_type == "commande", TraceEvent.aggregate_id == commande_id)
+        .order_by(TraceEvent.created_at.desc())
+        .limit(limit)
+    )
+    if after is not None:
+        stmt = stmt.where(TraceEvent.created_at > after)
+        stmt = stmt.order_by(TraceEvent.created_at.asc())
+    if event_type is not None:
+        stmt = stmt.where(TraceEvent.event_type == event_type)
+    return list(db.execute(stmt).scalars())
+
+
 @router.post("/{commande_id}/valider", response_model=CommandeValiderOut)
 def valider_commande(
     commande_id: uuid.UUID,
     payload: CommandeValiderPayload,
     db: Session = Depends(get_db),
+    _user: UserAccount | None = Depends(require_auth_in_production),
 ) -> CommandeValiderOut:
     _release_expired_reservations(db)
 
@@ -267,6 +317,18 @@ def valider_commande(
             "dins": dins,
         },
     )
+    log_event(
+        db,
+        aggregate_type="commande",
+        aggregate_id=commande.id,
+        event_type="notification.hopital.poches_disponibles",
+        payload={
+            "commande_id": str(commande.id),
+            "hopital_id": str(commande.hopital_id),
+            "poches_reservees": [str(r.poche_id) for r, _ in rows],
+            "dins": dins,
+        },
+    )
     db.commit()
 
     return CommandeValiderOut(
@@ -291,6 +353,7 @@ def affecter_receveurs(
     commande_id: uuid.UUID,
     payload: CommandeAffecterPayload,
     db: Session = Depends(get_db),
+    _user: UserAccount | None = Depends(require_auth_in_production),
 ) -> dict:
     commande = db.execute(
         select(Commande).where(Commande.id == commande_id).options(selectinload(Commande.lignes))
@@ -358,8 +421,41 @@ def affecter_receveurs(
     return {"commande_id": str(commande.id), "assigned": assigned}
 
 
+@router.post("/{commande_id}/confirmer")
+def confirmer_reservation(
+    commande_id: uuid.UUID,
+    payload: CommandeConfirmationPayload,
+    db: Session = Depends(get_db),
+    _user: UserAccount | None = Depends(require_auth_in_production),
+) -> dict:
+    commande = db.get(Commande, commande_id)
+    if commande is None:
+        raise HTTPException(status_code=404, detail="commande introuvable")
+    if commande.statut != "VALIDEE":
+        raise HTTPException(status_code=409, detail="commande non confirmable")
+
+    log_event(
+        db,
+        aggregate_type="commande",
+        aggregate_id=commande.id,
+        event_type="reservation.confirmee",
+        payload={
+            "commande_id": str(commande.id),
+            "hopital_id": str(commande.hopital_id),
+            "validateur_id": str(payload.validateur_id) if payload.validateur_id else None,
+            "note": payload.note,
+        },
+    )
+    db.commit()
+    return {"commande_id": str(commande.id), "statut": commande.statut}
+
+
 @router.post("/{commande_id}/annuler")
-def annuler_commande(commande_id: uuid.UUID, db: Session = Depends(get_db)) -> dict:
+def annuler_commande(
+    commande_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    _user: UserAccount | None = Depends(require_auth_in_production),
+) -> dict:
     commande = db.get(Commande, commande_id)
     if commande is None:
         raise HTTPException(status_code=404, detail="commande introuvable")
@@ -413,6 +509,7 @@ def servir_commande(
     commande_id: uuid.UUID,
     payload: CommandeServirPayload,
     db: Session = Depends(get_db),
+    _user: UserAccount | None = Depends(require_auth_in_production),
 ) -> dict:
     _release_expired_reservations(db)
 

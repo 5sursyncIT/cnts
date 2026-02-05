@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Toaster } from "sonner";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -25,7 +26,7 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`antialiased`}
       >
         <a
           href="#contenu"
@@ -34,6 +35,7 @@ export default function RootLayout({
           Aller au contenu
         </a>
         <div id="contenu">{children}</div>
+        <Toaster />
       </body>
     </html>
   );

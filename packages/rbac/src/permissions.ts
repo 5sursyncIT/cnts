@@ -8,6 +8,8 @@ export type CntsModule =
   | "stock"
   | "distribution"
   | "hemovigilance"
+  | "analytics"
+  | "parametrage"
   | "administration"
   | "audit";
 
@@ -42,6 +44,8 @@ export const roles = {
       perm("hemovigilance", "write"),
       perm("analytics", "read"),
       perm("analytics", "write"),
+      perm("parametrage", "read"),
+      perm("parametrage", "write"),
       perm("administration", "read"),
       perm("administration", "write"),
       perm("administration", "delete"),

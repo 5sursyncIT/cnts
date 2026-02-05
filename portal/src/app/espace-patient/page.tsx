@@ -27,8 +27,14 @@ export default async function PatientAreaHome() {
             Se connecter
           </Link>
           <Link
+            href="/espace-patient/inscription"
+            className="inline-flex items-center justify-center rounded-md bg-white border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-900/20"
+          >
+            Créer un compte
+          </Link>
+          <Link
             href="/contact"
-            className="inline-flex items-center justify-center rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-900/20"
+            className="inline-flex items-center justify-center rounded-md border border-transparent text-zinc-600 px-4 py-2 text-sm font-medium hover:text-zinc-900 hover:underline"
           >
             Besoin d’aide
           </Link>

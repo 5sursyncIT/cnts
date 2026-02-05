@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, JSON, String, Text, UniqueConstraint, func
+from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -12,7 +12,8 @@ class Donneur(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     cni_hash: Mapped[str] = mapped_column(String(128), unique=True, index=True)
-    cni: Mapped[str | None] = mapped_column(String(64), nullable=True)  # Stockage en clair pour affichage
+    # CNI is NOT stored in plaintext for privacy/GDPR compliance
+    # Only the hash is kept for duplicate detection and lookup
     nom: Mapped[str] = mapped_column(String(120))
     prenom: Mapped[str] = mapped_column(String(120))
     sexe: Mapped[str] = mapped_column(String(1))
@@ -25,6 +26,9 @@ class Donneur(Base):
     email: Mapped[str | None] = mapped_column(String(120), nullable=True)
     profession: Mapped[str | None] = mapped_column(String(120), nullable=True)
     dernier_don: Mapped[Date | None] = mapped_column(Date, nullable=True)
+    
+    # Link to UserAccount for patient access
+    user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("user_accounts.id"), nullable=True, index=True)
 
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[DateTime] = mapped_column(
@@ -34,6 +38,31 @@ class Donneur(Base):
     )
 
     dons: Mapped[list["Don"]] = relationship(back_populates="donneur")
+    user: Mapped["UserAccount"] = relationship(back_populates="donneur")
+    rendez_vous: Mapped[list["RendezVous"]] = relationship(back_populates="donneur")
+    documents: Mapped[list["DocumentMedical"]] = relationship(back_populates="donneur")
+
+
+class ExpirationRule(Base):
+    __tablename__ = "expiration_rules"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    product_type: Mapped[str] = mapped_column(String(32), index=True)
+    preservation_type: Mapped[str] = mapped_column(String(32))  # REFRIGERATED, FROZEN, AMBIENT
+    min_temp: Mapped[float] = mapped_column(Float)
+    max_temp: Mapped[float] = mapped_column(Float)
+    shelf_life_value: Mapped[int] = mapped_column(Integer)
+    shelf_life_unit: Mapped[str] = mapped_column(String(16))  # HOURS, DAYS, MONTHS, YEARS
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    
+    modified_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
 
 
 class Don(Base):
@@ -185,8 +214,16 @@ class Receveur(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     nom: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    prenom: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    sexe: Mapped[str | None] = mapped_column(String(1), nullable=True)
+    date_naissance: Mapped[Date | None] = mapped_column(Date, nullable=True)
+    adresse: Mapped[str | None] = mapped_column(Text, nullable=True)
+    telephone: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    hopital_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("hopitaux.id"), index=True, nullable=True)
     groupe_sanguin: Mapped[str | None] = mapped_column(String(8), index=True, nullable=True)
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    hopital: Mapped["Hopital"] = relationship()
 
 
 class CrossMatch(Base):
@@ -280,6 +317,7 @@ class UserAccount(Base):
     email: Mapped[str] = mapped_column(String(320), unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(Text)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    role: Mapped[str] = mapped_column(String(32), default="PATIENT", index=True)  # PATIENT, MEDECIN, ADMIN
 
     mfa_enabled: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     mfa_secret: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -294,6 +332,7 @@ class UserAccount(Base):
     )
 
     recovery_codes: Mapped[list["UserRecoveryCode"]] = relationship(back_populates="user")
+    donneur: Mapped["Donneur"] = relationship(back_populates="user", uselist=False)
 
 
 class UserRecoveryCode(Base):
@@ -306,3 +345,107 @@ class UserRecoveryCode(Base):
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     user: Mapped["UserAccount"] = relationship(back_populates="recovery_codes")
+
+
+class RendezVous(Base):
+    __tablename__ = "rendez_vous"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    donneur_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("donneurs.id"), index=True)
+    date_prevue: Mapped[DateTime] = mapped_column(DateTime(timezone=True), index=True)
+    type_rdv: Mapped[str] = mapped_column(String(32), default="DON_SANG")  # DON_SANG, CONSULTATION
+    statut: Mapped[str] = mapped_column(String(16), default="CONFIRME")  # CONFIRME, ANNULE, EFFECTUE, MANQUE
+    lieu: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    commentaire: Mapped[str | None] = mapped_column(Text, nullable=True)
+    
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+    donneur: Mapped["Donneur"] = relationship(back_populates="rendez_vous")
+
+
+class DocumentMedical(Base):
+    __tablename__ = "documents_medicaux"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    donneur_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("donneurs.id"), index=True)
+    titre: Mapped[str] = mapped_column(String(200))
+    type_document: Mapped[str] = mapped_column(String(32))  # ANALYSE, COMPTE_RENDU, ATTESTATION
+    fichier_url: Mapped[str] = mapped_column(String(500))
+    date_document: Mapped[Date] = mapped_column(Date)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    donneur: Mapped["Donneur"] = relationship(back_populates="documents")
+
+
+class Article(Base):
+    __tablename__ = "articles"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    slug: Mapped[str] = mapped_column(String(200), unique=True, index=True)
+    title: Mapped[str] = mapped_column(String(200))
+    excerpt: Mapped[str | None] = mapped_column(Text, nullable=True)
+    content: Mapped[str] = mapped_column(Text)
+    category: Mapped[str] = mapped_column(String(64), index=True)
+    image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    published_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    is_published: Mapped[bool] = mapped_column(Boolean, default=True, index=True)  # Deprecated in favor of status
+    
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+    @property
+    def status(self) -> str:
+        return "PUBLISHED" if self.is_published else "DRAFT"
+
+    @property
+    def tags(self) -> list[str]:
+        return []
+
+    @property
+    def author_id(self) -> uuid.UUID | None:
+        return None
+
+
+class ColdChainStorage(Base):
+    __tablename__ = "cold_chain_storages"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    code: Mapped[str] = mapped_column(String(32), unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(120))
+    location: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    min_temp: Mapped[float] = mapped_column(Float)
+    max_temp: Mapped[float] = mapped_column(Float)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+    readings: Mapped[list["ColdChainReading"]] = relationship(back_populates="storage")
+
+
+class ColdChainReading(Base):
+    __tablename__ = "cold_chain_readings"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    storage_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("cold_chain_storages.id"), index=True)
+    temperature_c: Mapped[float] = mapped_column(Float)
+    recorded_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), index=True)
+    source: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    note: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    storage: Mapped["ColdChainStorage"] = relationship(back_populates="readings")

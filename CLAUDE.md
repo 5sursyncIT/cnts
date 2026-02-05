@@ -18,9 +18,9 @@ cp .env.example .env
 # Start PostgreSQL + API
 docker compose up --build
 
-# Verify health
-curl http://localhost:8000/health
-curl http://localhost:8000/health/db
+# Verify health (note: API routes are prefixed with /api)
+curl http://localhost:8000/api/health
+curl http://localhost:8000/api/health/db
 ```
 
 ### Monorepo Setup (Frontend)
@@ -44,7 +44,28 @@ npm run test
 npm run test:coverage
 ```
 
-**Environment Variables**: Create `.env.local` files in `web/` and `portal/` directories. See [web/README.md](web/README.md) and [portal/README.md](portal/README.md) for required variables.
+**Environment Variables**: Create `.env.local` files in `web/` and `portal/` directories.
+
+**Back Office (`web/.env.local`)**:
+```bash
+NEXT_PUBLIC_API_BASE_URL=/api/backend
+BACKOFFICE_API_BASE_URL=http://localhost:8000/api
+BACKOFFICE_SESSION_SECRET=change-me-in-production
+BACKOFFICE_ADMIN_EMAIL=admin@cnts.local
+BACKOFFICE_ADMIN_PASSWORD=admin
+BACKOFFICE_ADMIN_ROLES=admin
+# BACKOFFICE_ADMIN_TOTP_SECRET=  # Uncomment to enable MFA
+```
+
+**Portal (`portal/.env.local`)**:
+```bash
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api
+PORTAL_SESSION_SECRET=change-me-in-production
+PORTAL_DEMO_PATIENT_EMAIL=patient@cnts.local
+PORTAL_DEMO_PATIENT_PASSWORD=patient
+```
+
+See [web/README.md](web/README.md) and [portal/README.md](portal/README.md) for full configuration.
 
 ### Local Backend Development
 ```bash
@@ -63,6 +84,11 @@ alembic upgrade head
 
 # Start API with hot reload
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+**Note**: Si le backend ne démarre pas, installer ces dépendances souvent manquantes:
+```bash
+pip install email-validator python-multipart
 ```
 
 ### Testing & Linting
@@ -188,6 +214,23 @@ backend/
 - `@cnts/monitoring`: Metrics collection and error reporting
 
 All packages use Vitest for testing with coverage reporting.
+
+**@cnts/api Hook Pattern** ([packages/api/src/hooks.ts](packages/api/src/hooks.ts)):
+- Each API client endpoint (`packages/api/src/client.ts`) should have a corresponding hook
+- Hooks use a custom `useQuery`/`useMutation` pattern (not React Query)
+- To add a new hook for a query:
+  ```typescript
+  export function useMyData(api: ApiClient, params?: Parameters<ApiClient["myModule"]["list"]>[0]) {
+    return useQuery(["my-key", JSON.stringify(params)], () => api.myModule.list(params));
+  }
+  ```
+- To add a new hook for a mutation:
+  ```typescript
+  export function useCreateMyData(api: ApiClient) {
+    return useMutation((data: T.MyDataCreate) => api.myModule.create(data));
+  }
+  ```
+- **Important**: The `useEffect` dependencies must use `queryKey.join(",")`, NOT `queryFn` directly (prevents infinite loops)
 
 ### Core Domain Models
 
@@ -456,10 +499,34 @@ See [.env.example](.env.example) for full configuration.
   - State machine: BROUILLON → VALIDEE → SERVIE
   - Can cancel BROUILLON or VALIDEE (releases reservations)
 
+### Hémovigilance Module ([backend/app/api/routes/hemovigilance.py](backend/app/api/routes/hemovigilance.py))
+- **Transfusion Tracking**: `GET /hemovigilance/transfusions` - List transfusion events
+- **Batch Recall** (Rappel de lot):
+  - `POST /hemovigilance/rappels` - Create recall for contaminated products
+  - `GET /hemovigilance/rappels` - List active recalls
+  - `GET /hemovigilance/rappels/{id}/impact` - Calculate impact (affected poches/patients)
+  - `POST /hemovigilance/rappels/{id}/actions` - Record corrective actions
+- **Hooks**: `useActesTransfusionnels`, `useRappels`, `useRappel`, `useCreateRappel`, `useRappelActions`, `useRappelImpacts`
+- **Audit**: All recall actions logged to trace_events
+
+### Analytics Module ([backend/app/api/routes/analytics.py](backend/app/api/routes/analytics.py))
+- `GET /analytics/dashboard` - Aggregate statistics (donation trends, stock by blood type, order status)
+- `GET /analytics/trend/dons` - Donation trends over time
+- `GET /analytics/trend/stock` - Stock evolution
+- `GET /analytics/kpi/*` - KPI endpoints (collection rate, wastage, liberation rate)
+- **Hooks**: `useAnalyticsDashboard`, `useTrendDons`, `useTrendStock`, `useKPIs`, `useStockBreakdown`
+
+### User Management ([backend/app/api/routes/users.py](backend/app/api/routes/users.py))
+- CRUD for user accounts with role assignment
+- Password reset functionality
+- **Hooks**: `useUsers`, `useUser`, `useCreateUser`, `useUpdateUser`, `useDeleteUser`, `useResetUserPassword`
+
 ### Test Coverage
 - [backend/tests/test_liberation.py](backend/tests/test_liberation.py): 10 tests covering biological release workflow
 - [backend/tests/test_poches.py](backend/tests/test_poches.py): 8 tests covering blood bag inventory features
 - [backend/tests/test_distribution.py](backend/tests/test_distribution.py): 14 tests covering hospital orders, FEFO allocation, cross-matching
+- [backend/tests/test_sync_e2e.py](backend/tests/test_sync_e2e.py): Mobile sync tests
+- [backend/tests/test_auth_2fa_disable.py](backend/tests/test_auth_2fa_disable.py): MFA disable/recovery tests
 
 ## Implemented Frontend Modules (v0.3.0+)
 
@@ -533,10 +600,9 @@ All critical business operations now have full UI support.
 
 ## Future Modules (Not Yet Implemented)
 
-**Backend** (API complete, UI optional)
-- **Hémovigilance**: Adverse reaction tracking, batch recall, post-transfusion follow-up
-- **Cross-matching**: Receveur management UI, cross-match recording (backend exists)
-- **Hospital Management**: CRUD for hospitals (backend exists, simple UI needed)
+**Backend UI** (API complete, UI needed)
+- **Cross-matching UI**: Receveur management interface, cross-match recording form
+- **Hospital Management UI**: CRUD interface for hospitals
 
 **Admin Pages** (Lower priority)
 - Product rules management UI (CRUD)

@@ -18,6 +18,13 @@ from app.api.routes.sync import router as sync_router
 from app.api.routes.stock import router as stock_router
 from app.api.routes.analytics import router as analytics_router
 from app.api.routes.trace import router as trace_router
+from app.api.routes.content import router as content_router
+from app.api.routes.patient import router as patient_router
+from app.api.routes.parametrage import router as parametrage_router
+from app.api.routes.etiquetage import router as etiquetage_router
+from app.api.routes.monitoring import router as monitoring_router
+from app.api.routes.upload import router as upload_router
+from app.api.routes.users import router as users_router
 
 
 api_router = APIRouter()
@@ -39,3 +46,10 @@ api_router.include_router(analytics_router, tags=["analytics"])
 api_router.include_router(trace_router, tags=["trace"])
 api_router.include_router(metrics_router, tags=["metrics"])
 api_router.include_router(sync_router, tags=["sync"])
+api_router.include_router(content_router, tags=["content"])
+api_router.include_router(patient_router, tags=["patient"])
+api_router.include_router(parametrage_router, prefix="/parametrage", tags=["parametrage"])
+api_router.include_router(etiquetage_router, prefix="/etiquetage", tags=["etiquetage"])
+api_router.include_router(monitoring_router, prefix="/observability", tags=["observability"])
+api_router.include_router(upload_router, tags=["upload"])
+api_router.include_router(users_router, tags=["users"])

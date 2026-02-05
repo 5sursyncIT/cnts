@@ -20,12 +20,12 @@ export default function StockPage() {
   // Trier par date de péremption si activé
   const sortedPoches = poches
     ? [...poches].sort((a, b) => {
-        if (!sortByExpiration) return 0;
-        return (
-          new Date(a.date_peremption).getTime() -
-          new Date(b.date_peremption).getTime()
-        );
-      })
+      if (!sortByExpiration) return 0;
+      return (
+        new Date(a.date_peremption).getTime() -
+        new Date(b.date_peremption).getTime()
+      );
+    })
     : [];
 
   // Calculer les statistiques
@@ -41,7 +41,7 @@ export default function StockPage() {
       // Alertes péremption (7 jours)
       const daysUntilExpiry = Math.ceil(
         (new Date(poche.date_peremption).getTime() - Date.now()) /
-          (1000 * 60 * 60 * 24)
+        (1000 * 60 * 60 * 24)
       );
       if (daysUntilExpiry <= 7 && daysUntilExpiry >= 0) {
         acc.expiringSoon++;
@@ -76,8 +76,8 @@ export default function StockPage() {
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Gestion du Stock</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-2xl font-bold text-gray-900">Gestion du Stock</h1>
+          <p className="text-gray-700 mt-1">
             Inventaire des poches de sang et fractionnement
           </p>
         </div>
@@ -102,7 +102,7 @@ export default function StockPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
           <div className="bg-white rounded-lg shadow p-4">
             <div className="text-xs text-gray-500 mb-1">Total</div>
-            <div className="text-2xl font-bold">{stats.total}</div>
+            <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
           </div>
           <div className="bg-red-50 rounded-lg shadow p-4">
             <div className="text-xs text-red-600 mb-1">ST</div>
@@ -149,7 +149,7 @@ export default function StockPage() {
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             >
               <option value="">Tous les types</option>
               <option value="ST">Sang Total (ST)</option>
@@ -166,7 +166,7 @@ export default function StockPage() {
             <select
               value={statutFilter}
               onChange={(e) => setStatutFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             >
               <option value="">Tous</option>
               <option value="EN_STOCK">En stock</option>
@@ -199,13 +199,13 @@ export default function StockPage() {
       {/* Liste des poches */}
       <div className="bg-white rounded-lg shadow">
         {status === "loading" && (
-          <div className="p-8 text-center text-gray-500">Chargement...</div>
+          <div className="p-8 text-center text-gray-700">Chargement...</div>
         )}
 
         {status === "error" && (
           <div className="p-8 text-center">
             <div className="text-red-600 mb-2">Erreur de chargement</div>
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-gray-800">
               {error?.status ? `Erreur ${error.status}` : "Erreur inconnue"}
             </div>
             <button
@@ -218,7 +218,7 @@ export default function StockPage() {
         )}
 
         {status === "success" && sortedPoches.length === 0 && (
-          <div className="p-8 text-center text-gray-500">
+          <div className="p-8 text-center text-gray-700">
             Aucune poche en stock
           </div>
         )}
@@ -228,28 +228,28 @@ export default function StockPage() {
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Type
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Groupe
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Volume
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Péremption
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Emplacement
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Statut Stock
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Statut Distrib.
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -263,25 +263,23 @@ export default function StockPage() {
                   return (
                     <tr
                       key={poche.id}
-                      className={`hover:bg-gray-50 transition ${
-                        isExpired
+                      className={`hover:bg-gray-50 transition ${isExpired
                           ? "bg-red-50"
                           : isExpiringSoon
-                          ? "bg-orange-50"
-                          : ""
-                      }`}
+                            ? "bg-orange-50"
+                            : ""
+                        }`}
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
-                          className={`px-2 py-1 text-xs font-semibold rounded ${
-                            poche.type_produit === "ST"
-                              ? "bg-red-100 text-red-800"
+                          className={`px-2 py-1 text-xs font-semibold rounded ${poche.type_produit === "ST"
+                              ? "bg-red-100 text-red-900"
                               : poche.type_produit === "CGR"
-                              ? "bg-orange-100 text-orange-800"
-                              : poche.type_produit === "PFC"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-blue-100 text-blue-800"
-                          }`}
+                                ? "bg-orange-100 text-orange-900"
+                                : poche.type_produit === "PFC"
+                                  ? "bg-yellow-100 text-yellow-900"
+                                  : "bg-blue-100 text-blue-900"
+                            }`}
                         >
                           {poche.type_produit}
                         </span>
@@ -289,7 +287,7 @@ export default function StockPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         {poche.groupe_sanguin || "-"}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
                         {poche.volume_ml ? `${poche.volume_ml}ml` : "-"}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -298,8 +296,8 @@ export default function StockPage() {
                             isExpired
                               ? "text-red-600 font-semibold"
                               : isExpiringSoon
-                              ? "text-orange-600 font-semibold"
-                              : "text-gray-900"
+                                ? "text-orange-600 font-semibold"
+                                : "text-gray-900"
                           }
                         >
                           {new Date(poche.date_peremption).toLocaleDateString(
@@ -312,31 +310,29 @@ export default function StockPage() {
                             : `${daysUntilExpiry}j restant`}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
                         {poche.emplacement_stock}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
-                          className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                            poche.statut_stock === "EN_STOCK"
-                              ? "bg-blue-100 text-blue-800"
+                          className={`px-2 py-1 text-xs font-semibold rounded-full ${poche.statut_stock === "EN_STOCK"
+                              ? "bg-blue-100 text-blue-900"
                               : "bg-gray-100 text-gray-800"
-                          }`}
+                            }`}
                         >
                           {poche.statut_stock}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
-                          className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                            poche.statut_distribution === "DISPONIBLE"
-                              ? "bg-green-100 text-green-800"
+                          className={`px-2 py-1 text-xs font-semibold rounded-full ${poche.statut_distribution === "DISPONIBLE"
+                              ? "bg-green-100 text-green-900"
                               : poche.statut_distribution === "RESERVE"
-                              ? "bg-blue-100 text-blue-800"
-                              : poche.statut_distribution === "DISTRIBUE"
-                              ? "bg-gray-100 text-gray-800"
-                              : "bg-yellow-100 text-yellow-800"
-                          }`}
+                                ? "bg-blue-100 text-blue-900"
+                                : poche.statut_distribution === "DISTRIBUE"
+                                  ? "bg-gray-100 text-gray-800"
+                                  : "bg-yellow-100 text-yellow-900"
+                            }`}
                         >
                           {poche.statut_distribution}
                         </span>
@@ -353,7 +349,7 @@ export default function StockPage() {
                           )}
                         <Link
                           href={`/dons/${poche.don_id}`}
-                          className="text-blue-600 hover:text-blue-900"
+                          className="text-blue-700 hover:text-blue-900 font-semibold hover:underline"
                         >
                           Voir don
                         </Link>
@@ -369,7 +365,7 @@ export default function StockPage() {
 
       {/* Footer */}
       {status === "success" && sortedPoches && (
-        <div className="mt-4 flex justify-between items-center text-sm text-gray-600">
+        <div className="mt-4 flex justify-between items-center text-sm text-gray-800">
           <div>{sortedPoches.length} poche(s) affichée(s)</div>
           {sortByExpiration && (
             <div className="text-xs bg-blue-50 border border-blue-200 rounded px-3 py-1">

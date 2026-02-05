@@ -60,7 +60,7 @@ def setup_database():
 def donneur_id():
     """Créer un donneur de test."""
     response = client.post(
-        "/donneurs",
+        "/api/donneurs",
         json={
             "cni": "1234567890123",
             "nom": "Diop",
@@ -75,7 +75,7 @@ def donneur_id():
 def don_id(donneur_id):
     """Créer un don de test."""
     response = client.post(
-        "/dons",
+        "/api/dons",
         json={
             "donneur_id": donneur_id,
             "date_don": str(dt.date.today()),
@@ -97,8 +97,8 @@ def don_libere(don_id):
         ("SYPHILIS", "NEGATIF"),
     ]
     for type_test, resultat in tests:
-        client.post("/analyses", json={"don_id": don_id, "type_test": type_test, "resultat": resultat})
-    client.post(f"/liberation/{don_id}/liberer")
+        client.post("/api/analyses", json={"don_id": don_id, "type_test": type_test, "resultat": resultat})
+    client.post(f"/api/liberation/{don_id}/liberer")
     return don_id
 
 
@@ -114,7 +114,7 @@ def db_session():
 def test_create_poche(don_id):
     """Test: Créer une poche produit dérivé."""
     response = client.post(
-        "/poches",
+        "/api/poches",
         json={
             "don_id": don_id,
             "type_produit": "CGR",
@@ -142,7 +142,7 @@ def test_list_poches_fefo(don_id):
 
     for poche in poches_data:
         client.post(
-            "/poches",
+            "/api/poches",
             json={
                 "don_id": don_id,
                 "type_produit": poche["type_produit"],
@@ -152,7 +152,7 @@ def test_list_poches_fefo(don_id):
         )
 
     # Lister avec tri FEFO
-    response = client.get("/poches", params={"sort_by_expiration": True, "limit": 100})
+    response = client.get("/api/poches", params={"sort_by_expiration": True, "limit": 100})
     assert response.status_code == 200
 
     poches = response.json()
@@ -179,7 +179,7 @@ def test_alertes_peremption(don_libere):
 
     for date_peremption, type_produit, statut in poches_data:
         response = client.post(
-            "/poches",
+            "/api/poches",
             json={
                 "don_id": don_libere,
                 "type_produit": type_produit,
@@ -192,12 +192,12 @@ def test_alertes_peremption(don_libere):
         # Mettre à jour le statut si nécessaire
         if statut == "DISPONIBLE":
             client.patch(
-                f"/poches/{poche_id}",
+                f"/api/poches/{poche_id}",
                 json={"statut_distribution": statut},
             )
 
     # Obtenir les alertes (7 jours)
-    response = client.get("/poches/alertes/peremption", params={"jours": 7})
+    response = client.get("/api/poches/alertes/peremption", params={"jours": 7})
     assert response.status_code == 200
 
     alertes = response.json()
@@ -224,7 +224,7 @@ def test_stock_summary(don_libere):
 
     for type_produit, statut in poches_data:
         response = client.post(
-            "/poches",
+            "/api/poches",
             json={
                 "don_id": don_libere,
                 "type_produit": type_produit,
@@ -243,10 +243,10 @@ def test_stock_summary(don_libere):
             finally:
                 db.close()
         else:
-            client.patch(f"/poches/{poche_id}", json={"statut_distribution": statut})
+            client.patch(f"/api/poches/{poche_id}", json={"statut_distribution": statut})
 
     # Obtenir le résumé
-    response = client.get("/poches/stock/summary")
+    response = client.get("/api/poches/stock/summary")
     assert response.status_code == 200
 
     summary = {s["type_produit"]: s for s in response.json()}
@@ -267,7 +267,7 @@ def test_update_poche_non_disponible_sans_liberation(don_id):
     """Test: Impossible de rendre une poche DISPONIBLE si le don n'est pas LIBERE."""
     # Créer une poche
     response = client.post(
-        "/poches",
+        "/api/poches",
         json={
             "don_id": don_id,
             "type_produit": "CGR",
@@ -279,7 +279,7 @@ def test_update_poche_non_disponible_sans_liberation(don_id):
 
     # Tenter de rendre la poche DISPONIBLE
     response = client.patch(
-        f"/poches/{poche_id}",
+        f"/api/poches/{poche_id}",
         json={"statut_distribution": "DISPONIBLE"},
     )
     assert response.status_code == 422
@@ -290,7 +290,7 @@ def test_delete_poche_distribuee_interdite(don_libere):
     """Test: Impossible de supprimer une poche déjà distribuée."""
     # Créer et distribuer une poche
     response = client.post(
-        "/poches",
+        "/api/poches",
         json={
             "don_id": don_libere,
             "type_produit": "CGR",
@@ -311,6 +311,6 @@ def test_delete_poche_distribuee_interdite(don_libere):
         db.close()
 
     # Tenter de supprimer
-    response = client.delete(f"/poches/{poche_id}")
+    response = client.delete(f"/api/poches/{poche_id}")
     assert response.status_code == 422
     assert "déjà distribuée" in response.json()["detail"]

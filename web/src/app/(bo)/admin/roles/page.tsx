@@ -13,7 +13,7 @@ export default async function RolesPage() {
     return (
       <main>
         <h1 className="text-2xl font-semibold">Rôles & droits</h1>
-        <div className="mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
+        <div className="mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900" role="alert">
           Accès refusé.
         </div>
       </main>
@@ -30,18 +30,21 @@ export default async function RolesPage() {
       <p className="mt-1 text-sm text-zinc-600">Modèle RBAC avec granularité lecture/écriture/suppression/validation.</p>
 
       <section className="mt-6 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-        <h2 className="text-sm font-semibold">Rôles assignés</h2>
-        <ul className="mt-3 list-disc pl-5 text-sm text-zinc-800">
+        <h2 className="text-sm font-semibold text-gray-900">Rôles assignés</h2>
+        <ul className="mt-3 space-y-2">
           {user.roles.map((r) => (
-            <li key={r.id}>
-              {r.name} <span className="text-xs text-zinc-500">({r.id})</span>
+            <li key={r.id} className="flex items-center">
+              <span className="inline-block px-3 py-1.5 text-sm font-bold rounded bg-purple-100 text-purple-900">
+                {r.name}
+              </span>
+              <span className="ml-2 text-xs text-zinc-500">({r.id})</span>
             </li>
           ))}
         </ul>
       </section>
 
       <section className="mt-4 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-        <h2 className="text-sm font-semibold">Matrice des permissions</h2>
+        <h2 className="text-sm font-semibold text-gray-900">Matrice des permissions</h2>
         <div className="mt-3 overflow-auto">
           <table className="w-full border-collapse text-left text-sm">
             <thead>
@@ -65,14 +68,54 @@ export default async function RolesPage() {
             </thead>
             <tbody>
               {modules.map((moduleName) => (
-                <tr key={moduleName} className="border-b border-zinc-100">
-                  <th scope="row" className="py-2 pr-4 font-medium text-zinc-900">
+                <tr key={moduleName} className="border-b border-zinc-100 hover:bg-gray-50">
+                  <th scope="row" className="py-3 pr-4 font-bold text-gray-900">
                     {moduleName}
                   </th>
-                  <td className="py-2 pr-4">{rights[moduleName]?.read ? "Oui" : "Non"}</td>
-                  <td className="py-2 pr-4">{rights[moduleName]?.write ? "Oui" : "Non"}</td>
-                  <td className="py-2 pr-4">{rights[moduleName]?.delete ? "Oui" : "Non"}</td>
-                  <td className="py-2 pr-4">{rights[moduleName]?.validate ? "Oui" : "Non"}</td>
+                  <td className="py-3 pr-4">
+                    {rights[moduleName]?.read ? (
+                      <span className="inline-block px-3 py-1 text-sm font-bold rounded bg-green-100 text-green-900">
+                        Oui
+                      </span>
+                    ) : (
+                      <span className="inline-block px-3 py-1 text-sm font-bold rounded bg-gray-100 text-gray-700">
+                        Non
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-3 pr-4">
+                    {rights[moduleName]?.write ? (
+                      <span className="inline-block px-3 py-1 text-sm font-bold rounded bg-blue-100 text-blue-900">
+                        Oui
+                      </span>
+                    ) : (
+                      <span className="inline-block px-3 py-1 text-sm font-bold rounded bg-gray-100 text-gray-700">
+                        Non
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-3 pr-4">
+                    {rights[moduleName]?.delete ? (
+                      <span className="inline-block px-3 py-1 text-sm font-bold rounded bg-red-100 text-red-900">
+                        Oui
+                      </span>
+                    ) : (
+                      <span className="inline-block px-3 py-1 text-sm font-bold rounded bg-gray-100 text-gray-700">
+                        Non
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-3 pr-4">
+                    {rights[moduleName]?.validate ? (
+                      <span className="inline-block px-3 py-1 text-sm font-bold rounded bg-purple-100 text-purple-900">
+                        Oui
+                      </span>
+                    ) : (
+                      <span className="inline-block px-3 py-1 text-sm font-bold rounded bg-gray-100 text-gray-700">
+                        Non
+                      </span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

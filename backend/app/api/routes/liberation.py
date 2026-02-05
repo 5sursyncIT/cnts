@@ -4,8 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from app.api.deps import require_auth_in_production
+from app.audit.events import log_event
 from app.core.blood import groupe_from_analyses
-from app.db.models import Analyse, Don, Poche
+from app.db.models import Analyse, Don, Hopital, Poche, UserAccount
 from app.db.session import get_db
 from app.schemas.analyses import AnalyseOut, LiberationBiologiqueOut
 
@@ -13,6 +15,25 @@ router = APIRouter(prefix="/liberation")
 
 # Tests obligatoires selon les normes transfusionnelles
 TESTS_OBLIGATOIRES = {"ABO", "RH", "VIH", "VHB", "VHC", "SYPHILIS"}
+
+
+def _notify_hopitaux_poche_disponible(db: Session, *, poche: Poche, din: str) -> None:
+    hopitaux = list(db.execute(select(Hopital).where(Hopital.convention_actif.is_(True))).scalars())
+    for hopital in hopitaux:
+        log_event(
+            db,
+            aggregate_type="hopital",
+            aggregate_id=hopital.id,
+            event_type="notification.hopital.poches_disponibles",
+            payload={
+                "hopital_id": str(hopital.id),
+                "poche_id": str(poche.id),
+                "din": din,
+                "type_produit": poche.type_produit,
+                "groupe_sanguin": poche.groupe_sanguin,
+                "date_peremption": poche.date_peremption.isoformat() if poche.date_peremption else None,
+            },
+        )
 
 
 @router.get("/{don_id}", response_model=LiberationBiologiqueOut)
@@ -86,7 +107,11 @@ def verifier_liberation(don_id: uuid.UUID, db: Session = Depends(get_db)) -> Lib
 
 
 @router.post("/{don_id}/liberer", response_model=LiberationBiologiqueOut)
-def liberer_don(don_id: uuid.UUID, db: Session = Depends(get_db)) -> LiberationBiologiqueOut:
+def liberer_don(
+    don_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    _user: UserAccount | None = Depends(require_auth_in_production),
+) -> LiberationBiologiqueOut:
     """
     Effectuer la libération biologique d'un don.
 
@@ -130,11 +155,28 @@ def liberer_don(don_id: uuid.UUID, db: Session = Depends(get_db)) -> LiberationB
     if abo is not None and rh is not None and abo != "EN_ATTENTE" and rh != "EN_ATTENTE":
         groupe_sanguin = groupe_from_analyses(abo=abo, rh=rh)
 
+    released_poches: list[Poche] = []
     for poche in poches:
         if poche.statut_distribution == "NON_DISTRIBUABLE":
             poche.statut_distribution = "DISPONIBLE"
+            released_poches.append(poche)
         if groupe_sanguin is not None:
             poche.groupe_sanguin = groupe_sanguin
+
+    for poche in released_poches:
+        log_event(
+            db,
+            aggregate_type="poche",
+            aggregate_id=poche.id,
+            event_type="poche.disponible",
+            payload={
+                "poche_id": str(poche.id),
+                "din": don.din,
+                "type_produit": poche.type_produit,
+                "groupe_sanguin": poche.groupe_sanguin,
+            },
+        )
+        _notify_hopitaux_poche_disponible(db, poche=poche, din=don.din)
 
     db.commit()
     db.refresh(don)

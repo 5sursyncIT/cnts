@@ -5,8 +5,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session, joinedload
 
+from app.api.deps import require_auth_in_production
+from app.audit.events import log_event
 from app.core.blood import normalize_groupe_sanguin
-from app.db.models import Don, Poche
+from app.db.models import UserAccount
+from app.core.isbt128.generator import generate_datamatrix_content
+from app.db.models import Don, Hopital, Poche
 from app.db.session import get_db
 from app.schemas.etiquettes import EtiquetteProduitOut
 from app.schemas.poches import (
@@ -18,6 +22,25 @@ from app.schemas.poches import (
 )
 
 router = APIRouter(prefix="/poches")
+
+
+def _notify_hopitaux_poche_disponible(db: Session, *, poche: Poche, din: str | None) -> None:
+    hopitaux = list(db.execute(select(Hopital).where(Hopital.convention_actif.is_(True))).scalars())
+    for hopital in hopitaux:
+        log_event(
+            db,
+            aggregate_type="hopital",
+            aggregate_id=hopital.id,
+            event_type="notification.hopital.poches_disponibles",
+            payload={
+                "hopital_id": str(hopital.id),
+                "poche_id": str(poche.id),
+                "din": din,
+                "type_produit": poche.type_produit,
+                "groupe_sanguin": poche.groupe_sanguin,
+                "date_peremption": poche.date_peremption.isoformat() if poche.date_peremption else None,
+            },
+        )
 
 
 @router.get("/disponibles", response_model=list[PocheOut])
@@ -37,7 +60,11 @@ def list_poches_disponibles(
 
 
 @router.post("", response_model=PocheOut, status_code=201)
-def create_poche(payload: PocheCreate, db: Session = Depends(get_db)) -> Poche:
+def create_poche(
+    payload: PocheCreate,
+    db: Session = Depends(get_db),
+    _user: UserAccount | None = Depends(require_auth_in_production),
+) -> Poche:
     """
     Créer une nouvelle poche (produit dérivé du fractionnement).
 
@@ -207,6 +234,16 @@ def etiquette_produit(poche_id: uuid.UUID, db: Session = Depends(get_db)) -> Eti
         raise HTTPException(status_code=404, detail="poche not found")
 
     poche, din, date_don = row
+    
+    # Génération du contenu DataMatrix ISBT 128
+    datamatrix_content = generate_datamatrix_content(
+        din=din,
+        product_code=poche.code_produit_isbt or "",
+        expiration_date=poche.date_peremption,
+        blood_group=poche.groupe_sanguin,
+        collection_date=date_don
+    )
+
     payload = {
         "din": din,
         "product_code": poche.code_produit_isbt,
@@ -218,6 +255,7 @@ def etiquette_produit(poche_id: uuid.UUID, db: Session = Depends(get_db)) -> Eti
         "type_produit": poche.type_produit,
         "statut_stock": poche.statut_stock,
         "statut_distribution": poche.statut_distribution,
+        "datamatrix_content": datamatrix_content
     }
 
     return EtiquetteProduitOut(
@@ -242,6 +280,7 @@ def update_poche(
     poche_id: uuid.UUID,
     payload: PocheUpdate,
     db: Session = Depends(get_db),
+    _user: UserAccount | None = Depends(require_auth_in_production),
 ) -> Poche:
     """
     Mettre à jour une poche.
@@ -266,6 +305,7 @@ def update_poche(
     if payload.division is not None:
         poche.division = payload.division
 
+    previous_status = poche.statut_distribution
     if payload.statut_distribution is not None:
         if payload.statut_distribution in {"RESERVE", "DISTRIBUE"}:
             raise HTTPException(
@@ -273,6 +313,7 @@ def update_poche(
                 detail="Utiliser le workflow commandes (réservation/distribution)",
             )
         # Validation: ne pas permettre DISPONIBLE si le don n'est pas LIBERE
+        don = None
         if payload.statut_distribution == "DISPONIBLE":
             don = db.get(Don, poche.don_id)
             if don and don.statut_qualification != "LIBERE":
@@ -281,6 +322,21 @@ def update_poche(
                     detail="Impossible de rendre une poche DISPONIBLE si le don n'est pas LIBERE",
                 )
         poche.statut_distribution = payload.statut_distribution
+        if payload.statut_distribution == "DISPONIBLE" and previous_status != "DISPONIBLE":
+            din = don.din if don else None
+            log_event(
+                db,
+                aggregate_type="poche",
+                aggregate_id=poche.id,
+                event_type="poche.disponible",
+                payload={
+                    "poche_id": str(poche.id),
+                    "din": din,
+                    "type_produit": poche.type_produit,
+                    "groupe_sanguin": poche.groupe_sanguin,
+                },
+            )
+            _notify_hopitaux_poche_disponible(db, poche=poche, din=din)
 
     db.commit()
     db.refresh(poche)
@@ -288,7 +344,11 @@ def update_poche(
 
 
 @router.delete("/{poche_id}", status_code=204)
-def delete_poche(poche_id: uuid.UUID, db: Session = Depends(get_db)) -> None:
+def delete_poche(
+    poche_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    _user: UserAccount | None = Depends(require_auth_in_production),
+) -> None:
     """Supprimer une poche (à utiliser avec précaution)."""
     poche = db.get(Poche, poche_id)
     if poche is None:

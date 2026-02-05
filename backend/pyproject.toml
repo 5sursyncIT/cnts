@@ -8,6 +8,7 @@
    "uvicorn[standard]>=0.27",
    "pydantic>=2.6",
    "pydantic-settings>=2.2",
+   "email-validator>=2.1.0",
    "sqlalchemy>=2.0",
   "psycopg[binary]>=3.1",
   "alembic>=1.13",
@@ -16,6 +17,7 @@
   "python-docx>=1.1",
   "reportlab>=4.0",
   "python-pptx>=0.6",
+  "python-multipart>=0.0.9",
 ]
  
  [project.optional-dependencies]

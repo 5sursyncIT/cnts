@@ -3,15 +3,23 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.api.deps import require_auth_in_production
 from app.audit.events import log_event
 from app.core.config import settings
+from app.db.models import UserAccount
 from app.core.idempotency import get_idempotent_response, store_idempotent_response
-from app.db.models import Don, FractionnementRecette, Poche, ProductRule
+from app.db.models import ColdChainReading, ColdChainStorage, Don, FractionnementRecette, Poche, ProductRule
 from app.db.session import get_db
 from app.schemas.stock import (
+    ColdChainAlertOut,
+    ColdChainReadingCreate,
+    ColdChainReadingOut,
+    ColdChainStorageCreate,
+    ColdChainStorageOut,
+    ColdChainStorageUpdate,
     FractionnementComposant,
     FractionnementCreate,
     FractionnementDepuisRecetteCreate,
@@ -20,7 +28,9 @@ from app.schemas.stock import (
     RecetteFractionnementOut,
     RecetteFractionnementUpsert,
     RecetteComposant,
- )
+    ProductRuleOut,
+    ProductRuleUpdate,
+)
 
 router = APIRouter(prefix="/stock")
 
@@ -161,6 +171,7 @@ def upsert_regle(
     type_produit: str,
     payload: dict,
     db: Session = Depends(get_db),
+    _user: UserAccount | None = Depends(require_auth_in_production),
 ) -> dict:
     shelf_life_days = payload.get("shelf_life_days")
     if not isinstance(shelf_life_days, int) or shelf_life_days <= 0:
@@ -212,7 +223,11 @@ def list_poches(
 
 
 @router.post("/fractionnements", response_model=FractionnementOut)
-def fractionner(payload: FractionnementCreate, db: Session = Depends(get_db)) -> JSONResponse | dict:
+def fractionner(
+    payload: FractionnementCreate,
+    db: Session = Depends(get_db),
+    _user: UserAccount | None = Depends(require_auth_in_production),
+) -> JSONResponse | dict:
     scope = "fractionnement"
     if payload.idempotency_key:
         hit = get_idempotent_response(
@@ -253,6 +268,46 @@ def fractionner(payload: FractionnementCreate, db: Session = Depends(get_db)) ->
     return response
 
 
+@router.get("/regles", response_model=list[ProductRuleOut])
+def list_product_rules(db: Session = Depends(get_db)) -> list[ProductRule]:
+    # Ensure default rules exist
+    defaults = ["ST", "CGR", "PFC", "CP"]
+    for type_produit in defaults:
+        _get_product_rule(db, type_produit)
+    
+    stmt = select(ProductRule).order_by(ProductRule.type_produit)
+    return list(db.execute(stmt).scalars())
+
+
+@router.put("/regles/{type_produit}", response_model=ProductRuleOut)
+def update_product_rule(
+    type_produit: str,
+    payload: ProductRuleUpdate,
+    db: Session = Depends(get_db),
+    _user: UserAccount | None = Depends(require_auth_in_production),
+) -> ProductRule:
+    rule = _get_product_rule(db, type_produit)
+    rule.shelf_life_days = payload.shelf_life_days
+    rule.default_volume_ml = payload.default_volume_ml
+    rule.min_volume_ml = payload.min_volume_ml
+    rule.max_volume_ml = payload.max_volume_ml
+    rule.isbt_product_code = payload.isbt_product_code
+    
+    db.commit()
+    db.refresh(rule)
+    
+    log_event(
+        db,
+        aggregate_type="system",
+        aggregate_id=uuid.uuid4(),
+        event_type="product_rule.updated",
+        payload={"type_produit": type_produit, "changes": payload.model_dump()},
+    )
+    db.commit()
+    
+    return rule
+
+
 @router.get("/recettes", response_model=list[RecetteFractionnementOut])
 def list_recettes(
     site_code: str | None = Query(default=None, max_length=32),
@@ -288,6 +343,7 @@ def upsert_recette(
     code: str,
     payload: RecetteFractionnementUpsert,
     db: Session = Depends(get_db),
+    _user: UserAccount | None = Depends(require_auth_in_production),
 ) -> FractionnementRecette:
     for c in payload.composants:
         _get_product_rule(db, c.type_produit)
@@ -308,7 +364,11 @@ def upsert_recette(
 
 
 @router.delete("/recettes/{code}")
-def disable_recette(code: str, db: Session = Depends(get_db)) -> dict:
+def disable_recette(
+    code: str,
+    db: Session = Depends(get_db),
+    _user: UserAccount | None = Depends(require_auth_in_production),
+) -> dict:
     row = db.get(FractionnementRecette, code)
     if row is None:
         raise HTTPException(status_code=404, detail="recette introuvable")
@@ -322,6 +382,7 @@ def fractionner_depuis_recette(
     code: str,
     payload: FractionnementDepuisRecetteCreate,
     db: Session = Depends(get_db),
+    _user: UserAccount | None = Depends(require_auth_in_production),
 ) -> JSONResponse | dict:
     scope = f"fractionnement_recette:{code}"
     if payload.idempotency_key:
@@ -368,3 +429,184 @@ def fractionner_depuis_recette(
         return JSONResponse(status_code=201, content=response)
 
     return response
+
+
+@router.get("/cold-chain/storages", response_model=list[ColdChainStorageOut])
+def list_cold_chain_storages(
+    is_active: bool | None = Query(default=None),
+    db: Session = Depends(get_db),
+) -> list[ColdChainStorage]:
+    stmt = select(ColdChainStorage)
+    if is_active is not None:
+        stmt = stmt.where(ColdChainStorage.is_active.is_(is_active))
+    stmt = stmt.order_by(ColdChainStorage.code.asc())
+    return list(db.execute(stmt).scalars())
+
+
+@router.get("/cold-chain/storages/{storage_id}", response_model=ColdChainStorageOut)
+def get_cold_chain_storage(
+    storage_id: uuid.UUID,
+    db: Session = Depends(get_db),
+) -> ColdChainStorage:
+    row = db.get(ColdChainStorage, storage_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="stockage introuvable")
+    return row
+
+
+@router.post("/cold-chain/storages", response_model=ColdChainStorageOut, status_code=201)
+def create_cold_chain_storage(
+    payload: ColdChainStorageCreate,
+    db: Session = Depends(get_db),
+    _user: UserAccount | None = Depends(require_auth_in_production),
+) -> ColdChainStorage:
+    if payload.min_temp >= payload.max_temp:
+        raise HTTPException(status_code=400, detail="min_temp doit être < max_temp")
+    existing = db.execute(
+        select(ColdChainStorage).where(ColdChainStorage.code == payload.code)
+    ).scalar_one_or_none()
+    if existing is not None:
+        raise HTTPException(status_code=409, detail="code déjà utilisé")
+    row = ColdChainStorage(
+        code=payload.code,
+        name=payload.name,
+        location=payload.location,
+        min_temp=payload.min_temp,
+        max_temp=payload.max_temp,
+        is_active=payload.is_active,
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return row
+
+
+@router.patch("/cold-chain/storages/{storage_id}", response_model=ColdChainStorageOut)
+def update_cold_chain_storage(
+    storage_id: uuid.UUID,
+    payload: ColdChainStorageUpdate,
+    db: Session = Depends(get_db),
+    _user: UserAccount | None = Depends(require_auth_in_production),
+) -> ColdChainStorage:
+    row = db.get(ColdChainStorage, storage_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="stockage introuvable")
+    if payload.code is not None and payload.code != row.code:
+        existing = db.execute(
+            select(ColdChainStorage).where(ColdChainStorage.code == payload.code)
+        ).scalar_one_or_none()
+        if existing is not None:
+            raise HTTPException(status_code=409, detail="code déjà utilisé")
+        row.code = payload.code
+    if payload.name is not None:
+        row.name = payload.name
+    if payload.location is not None:
+        row.location = payload.location
+    if payload.is_active is not None:
+        row.is_active = payload.is_active
+    new_min = row.min_temp if payload.min_temp is None else payload.min_temp
+    new_max = row.max_temp if payload.max_temp is None else payload.max_temp
+    if new_min >= new_max:
+        raise HTTPException(status_code=400, detail="min_temp doit être < max_temp")
+    row.min_temp = new_min
+    row.max_temp = new_max
+    db.commit()
+    db.refresh(row)
+    return row
+
+
+@router.get("/cold-chain/readings", response_model=list[ColdChainReadingOut])
+def list_cold_chain_readings(
+    storage_id: uuid.UUID | None = Query(default=None),
+    start: dt.datetime | None = Query(default=None),
+    end: dt.datetime | None = Query(default=None),
+    limit: int = Query(default=200, ge=1, le=1000),
+    db: Session = Depends(get_db),
+) -> list[ColdChainReading]:
+    stmt = select(ColdChainReading)
+    if storage_id is not None:
+        stmt = stmt.where(ColdChainReading.storage_id == storage_id)
+    if start is not None:
+        stmt = stmt.where(ColdChainReading.recorded_at >= start)
+    if end is not None:
+        stmt = stmt.where(ColdChainReading.recorded_at <= end)
+    stmt = stmt.order_by(ColdChainReading.recorded_at.desc()).limit(limit)
+    return list(db.execute(stmt).scalars())
+
+
+@router.post("/cold-chain/readings", response_model=ColdChainReadingOut, status_code=201)
+def create_cold_chain_reading(
+    payload: ColdChainReadingCreate,
+    db: Session = Depends(get_db),
+    _user: UserAccount | None = Depends(require_auth_in_production),
+) -> ColdChainReading:
+    storage = db.get(ColdChainStorage, payload.storage_id)
+    if storage is None:
+        raise HTTPException(status_code=404, detail="stockage introuvable")
+    recorded_at = payload.recorded_at or dt.datetime.now(dt.timezone.utc)
+    row = ColdChainReading(
+        storage_id=payload.storage_id,
+        temperature_c=payload.temperature_c,
+        recorded_at=recorded_at,
+        source=payload.source,
+        note=payload.note,
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return row
+
+
+@router.get("/cold-chain/alerts", response_model=list[ColdChainAlertOut])
+def list_cold_chain_alerts(db: Session = Depends(get_db)) -> list[ColdChainAlertOut]:
+    storages = list(
+        db.execute(select(ColdChainStorage).where(ColdChainStorage.is_active.is_(True))).scalars()
+    )
+    latest_subq = (
+        select(
+            ColdChainReading.storage_id,
+            func.max(ColdChainReading.recorded_at).label("latest_at"),
+        )
+        .group_by(ColdChainReading.storage_id)
+        .subquery()
+    )
+    latest_readings = db.execute(
+        select(ColdChainReading)
+        .join(
+            latest_subq,
+            (ColdChainReading.storage_id == latest_subq.c.storage_id)
+            & (ColdChainReading.recorded_at == latest_subq.c.latest_at),
+        )
+    ).scalars()
+    latest_by_storage = {r.storage_id: r for r in latest_readings}
+    alerts: list[ColdChainAlertOut] = []
+    for storage in storages:
+        reading = latest_by_storage.get(storage.id)
+        if reading is None:
+            alerts.append(
+                ColdChainAlertOut(
+                    storage_id=storage.id,
+                    storage_code=storage.code,
+                    storage_name=storage.name,
+                    min_temp=storage.min_temp,
+                    max_temp=storage.max_temp,
+                    last_temperature_c=None,
+                    last_recorded_at=None,
+                    status="NO_DATA",
+                )
+            )
+            continue
+        out_of_range = reading.temperature_c < storage.min_temp or reading.temperature_c > storage.max_temp
+        alerts.append(
+            ColdChainAlertOut(
+                storage_id=storage.id,
+                storage_code=storage.code,
+                storage_name=storage.name,
+                min_temp=storage.min_temp,
+                max_temp=storage.max_temp,
+                last_temperature_c=reading.temperature_c,
+                last_recorded_at=reading.recorded_at,
+                status="OUT_OF_RANGE" if out_of_range else "OK",
+            )
+        )
+    return alerts

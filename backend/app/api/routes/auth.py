@@ -36,7 +36,7 @@ def login(payload: LoginIn, db: Session = Depends(get_db)) -> LoginOut:
         secret=settings.auth_token_secret,
         ttl_seconds=8 * 60 * 60,
     )
-    return LoginOut(mfa_required=False, access_token=access)
+    return LoginOut(mfa_required=False, access_token=access, user=user)
 
 
 @router.post("/mfa/verify", response_model=MfaVerifyOut)

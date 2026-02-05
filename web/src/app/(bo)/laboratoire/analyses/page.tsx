@@ -86,7 +86,7 @@ export default function AnalysesPage() {
       setFormData((prev) => {
         // Ne pas écraser si déjà saisi
         if (prev.ABO.resultat && prev.RH.resultat) return prev;
-        
+
         return {
           ...prev,
           ABO: { ...prev.ABO, resultat: prev.ABO.resultat || abo },
@@ -174,12 +174,12 @@ export default function AnalysesPage() {
       <div className="mb-6">
         <Link
           href="/laboratoire"
-          className="text-blue-600 hover:text-blue-800 text-sm mb-2 inline-block"
+          className="text-blue-600 hover:text-blue-900 text-sm mb-2 inline-block"
         >
           ← Retour au laboratoire
         </Link>
-        <h1 className="text-2xl font-bold">Saisie des Analyses Biologiques</h1>
-        <p className="text-gray-600 mt-1">
+        <h1 className="text-2xl font-bold text-gray-900">Saisie des Analyses Biologiques</h1>
+        <p className="text-gray-700 mt-1">
           Enregistrement des résultats de tests pour validation biologique
         </p>
       </div>
@@ -203,7 +203,7 @@ export default function AnalysesPage() {
                   onChange={(e) => setSearchDin(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSearchByDin()}
                   placeholder="Ex: CNTS2600X123456"
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                 />
                 <button
                   onClick={handleSearchByDin}
@@ -222,7 +222,7 @@ export default function AnalysesPage() {
               <select
                 value={selectedDonId}
                 onChange={(e) => setSelectedDonId(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
               >
                 <option value="">-- Choisir un don --</option>
                 {donsEnAttente?.map((d) => (
@@ -239,7 +239,7 @@ export default function AnalysesPage() {
             <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6">
               {successMessage && (
                 <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-md">
-                  <div className="text-sm font-medium text-green-800">
+                  <div className="text-sm font-medium text-green-900">
                     {successMessage}
                   </div>
                 </div>
@@ -265,7 +265,7 @@ export default function AnalysesPage() {
                           )}
                         </label>
                         {existante && (
-                          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                          <span className="text-xs bg-green-100 text-green-900 px-2 py-1 rounded">
                             ✓ Déjà effectué: {existante.resultat}
                           </span>
                         )}
@@ -284,7 +284,7 @@ export default function AnalysesPage() {
                                 },
                               })
                             }
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2 text-gray-900"
                           >
                             <option value="">-- Sélectionner --</option>
                             {test.options.map((opt) => (
@@ -307,7 +307,7 @@ export default function AnalysesPage() {
                               })
                             }
                             placeholder="Note (optionnelle)"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                           />
                         </>
                       )}
@@ -358,7 +358,7 @@ export default function AnalysesPage() {
                 <div>
                   <dt className="text-gray-500">Statut</dt>
                   <dd>
-                    <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs">
+                    <span className="px-2 py-1 bg-yellow-100 text-yellow-900 rounded text-xs">
                       {don.statut_qualification}
                     </span>
                   </dd>
@@ -366,7 +366,7 @@ export default function AnalysesPage() {
               </dl>
               <Link
                 href={`/dons/${don.id}`}
-                className="block mt-4 text-sm text-blue-600 hover:text-blue-800"
+                className="block mt-4 text-sm text-blue-600 hover:text-blue-900"
               >
                 Voir la fiche complète →
               </Link>
@@ -378,7 +378,7 @@ export default function AnalysesPage() {
               <h3 className="font-medium text-green-900 mb-2 text-sm">
                 Analyses déjà effectuées
               </h3>
-              <ul className="text-xs text-green-800 space-y-1">
+              <ul className="text-xs text-green-900 space-y-1">
                 {analysesExistantes.map((a) => (
                   <li key={a.id}>
                     • {a.type_test}: {a.resultat}
@@ -392,7 +392,7 @@ export default function AnalysesPage() {
             <h3 className="font-medium text-blue-900 mb-2 text-sm">
               Tests obligatoires
             </h3>
-            <ul className="text-xs text-blue-800 space-y-1">
+            <ul className="text-xs text-blue-900 space-y-1">
               <li>• Groupage: ABO + Rhésus</li>
               <li>• Sérologie: VIH, VHB, VHC, Syphilis</li>
               <li>• Tous doivent être NÉGATIF pour libération</li>

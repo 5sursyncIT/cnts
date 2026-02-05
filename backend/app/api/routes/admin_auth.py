@@ -1,4 +1,5 @@
 import datetime as dt
+import hmac
 import uuid
 
 from fastapi import APIRouter, Depends, Header, HTTPException
@@ -19,7 +20,8 @@ def require_admin(
     x_admin_token: str = Header(..., alias="X-Admin-Token"),
     x_admin_email: str = Header(..., alias="X-Admin-Email"),
 ) -> str:
-    if x_admin_token != settings.admin_token:
+    # Use constant-time comparison to prevent timing attacks
+    if not hmac.compare_digest(x_admin_token.encode(), settings.admin_token.encode()):
         raise HTTPException(status_code=403, detail="admin_forbidden")
     return x_admin_email
 

@@ -1,0 +1,6 @@
+<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="600" fill="#fee2e2" />
+  <circle cx="400" cy="300" r="150" fill="#ef4444" opacity="0.2" />
+  <path d="M400 450 C250 350 200 250 200 200 C200 130 260 80 330 80 C370 80 390 100 400 120 C410 100 430 80 470 80 C540 80 600 130 600 200 C600 250 550 350 400 450 Z" fill="#ef4444" />
+  <text x="400" y="550" font-family="Arial, sans-serif" font-size="40" text-anchor="middle" fill="#991b1b" font-weight="bold">14 JUIN</text>
+</svg>

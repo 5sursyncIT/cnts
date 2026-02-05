@@ -9,7 +9,8 @@ describe("portal session", () => {
     const session: PortalSession = {
       userId: "p1",
       email: "patient@cnts.local",
-      displayName: "Patient"
+      displayName: "Patient",
+      accessToken: "fake-access-token"
     };
     const token = await signSession(session, 60);
     await expect(verifySessionToken(token)).resolves.toEqual(session);

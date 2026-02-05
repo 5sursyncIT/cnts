@@ -13,8 +13,8 @@ export default function LaboratoirePage() {
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold">Laboratoire</h1>
-        <p className="text-gray-600 mt-1">
+        <h1 className="text-2xl font-bold text-gray-900">Laboratoire</h1>
+        <p className="text-gray-700 mt-1">
           Gestion des analyses biologiques et libération des dons
         </p>
       </div>
@@ -30,7 +30,7 @@ export default function LaboratoirePage() {
               <h2 className="text-xl font-semibold text-gray-900 mb-2">
                 📋 Analyses Biologiques
               </h2>
-              <p className="text-gray-600 text-sm mb-4">
+              <p className="text-gray-800 text-sm mb-4">
                 Saisie des résultats de tests : ABO, Rh, sérologie infectieuse
               </p>
               <div className="text-blue-600 text-sm font-medium">
@@ -49,7 +49,7 @@ export default function LaboratoirePage() {
               <h2 className="text-xl font-semibold text-gray-900 mb-2">
                 ✅ Libération Biologique
               </h2>
-              <p className="text-gray-600 text-sm mb-4">
+              <p className="text-gray-800 text-sm mb-4">
                 Validation finale et libération des dons pour distribution
               </p>
               <div className="text-green-600 text-sm font-medium">
@@ -66,7 +66,7 @@ export default function LaboratoirePage() {
           <h3 className="font-semibold text-yellow-900 mb-2">
             ⏳ Dons en attente de libération
           </h3>
-          <p className="text-sm text-yellow-800 mb-4">
+          <p className="text-sm text-yellow-900 mb-4">
             {donsEnAttente.length} don(s) nécessite(nt) des analyses ou une
             libération biologique
           </p>
@@ -84,7 +84,7 @@ export default function LaboratoirePage() {
         <h3 className="font-medium text-blue-900 mb-2 text-sm">
           Workflow de validation
         </h3>
-        <ol className="text-xs text-blue-800 space-y-1">
+        <ol className="text-xs text-blue-900 space-y-1">
           <li>1. Collecte du don → Génération DIN + poche ST</li>
           <li>
             2. Analyses biologiques → 6 tests obligatoires (ABO, Rh, VIH, VHB,

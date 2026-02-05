@@ -2,6 +2,7 @@
 
 import { useCommandes, useHopitaux } from "@cnts/api";
 import Link from "next/link";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { apiClient } from "@/lib/api-client";
 
 export default function DistributionPage() {
@@ -15,6 +16,69 @@ export default function DistributionPage() {
     convention_actif: true,
     limit: 100,
   });
+
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
+  const [refreshState, setRefreshState] = useState<"idle" | "loading" | "error">("idle");
+  const [refreshError, setRefreshError] = useState<string | null>(null);
+  const inflightRef = useRef(false);
+  const lastFetchAtRef = useRef(0);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = window.localStorage.getItem("bo.autoRefreshEnabled");
+    if (stored === "false") setAutoRefreshEnabled(false);
+
+    const onRefreshSetting = (event: Event) => {
+      const customEvent = event as CustomEvent<{ enabled?: boolean }>;
+      if (typeof customEvent.detail?.enabled === "boolean") {
+        setAutoRefreshEnabled(customEvent.detail.enabled);
+      }
+    };
+
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === "bo.autoRefreshEnabled") {
+        setAutoRefreshEnabled(event.newValue !== "false");
+      }
+    };
+
+    window.addEventListener("bo:autoRefreshChanged", onRefreshSetting as EventListener);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener("bo:autoRefreshChanged", onRefreshSetting as EventListener);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
+
+  const refreshData = useCallback(async (options?: { force?: boolean }) => {
+    const now = Date.now();
+    if (!options?.force && now - lastFetchAtRef.current < 5000) return;
+    if (inflightRef.current) return;
+    inflightRef.current = true;
+    lastFetchAtRef.current = now;
+    setRefreshState("loading");
+    setRefreshError(null);
+    try {
+      await refetch();
+      setRefreshState("idle");
+    } catch (err) {
+      setRefreshState("error");
+      setRefreshError(err instanceof Error ? err.message : "Connexion interrompue");
+    } finally {
+      inflightRef.current = false;
+    }
+  }, [refetch]);
+
+  useEffect(() => {
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+    if (autoRefreshEnabled) {
+      intervalId = window.setInterval(() => {
+        refreshData();
+      }, 15000);
+    }
+    return () => {
+      if (intervalId) window.clearInterval(intervalId);
+    };
+  }, [autoRefreshEnabled, refreshData]);
 
   // Calculer les statistiques
   const stats = commandes
@@ -42,17 +106,41 @@ export default function DistributionPage() {
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Distribution</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-2xl font-bold text-gray-900">Distribution</h1>
+          <p className="text-gray-700 mt-1">
             Gestion des commandes hospitalières et réservations
           </p>
         </div>
-        <Link
-          href="/distribution/commandes/nouvelle"
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-        >
-          + Nouvelle commande
-        </Link>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 text-xs text-gray-700" title={refreshError ?? undefined}>
+            <span
+              className={`h-2 w-2 rounded-full ${
+                refreshState === "loading"
+                  ? "bg-blue-500 animate-pulse"
+                  : refreshState === "error"
+                  ? "bg-red-500"
+                  : autoRefreshEnabled
+                  ? "bg-green-500"
+                  : "bg-gray-400"
+              }`}
+            />
+            <span>
+              {autoRefreshEnabled
+                ? refreshState === "loading"
+                  ? "Mise à jour..."
+                  : refreshState === "error"
+                  ? "Connexion interrompue"
+                  : "Données à jour"
+                : "Rafraîchissement désactivé"}
+            </span>
+          </div>
+          <Link
+            href="/distribution/commandes/nouvelle"
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+          >
+            + Nouvelle commande
+          </Link>
+        </div>
       </div>
 
       {/* Statistiques */}
@@ -60,10 +148,10 @@ export default function DistributionPage() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
           <div className="bg-white rounded-lg shadow p-4">
             <div className="text-xs text-gray-500 mb-1">Total</div>
-            <div className="text-2xl font-bold">{stats.total}</div>
+            <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
           </div>
           <div className="bg-gray-50 rounded-lg shadow p-4">
-            <div className="text-xs text-gray-600 mb-1">Brouillon</div>
+            <div className="text-xs text-gray-800 mb-1">Brouillon</div>
             <div className="text-2xl font-bold text-gray-900">
               {stats.brouillon}
             </div>
@@ -95,8 +183,8 @@ export default function DistributionPage() {
         >
           <div className="flex items-start justify-between">
             <div>
-              <h2 className="text-lg font-semibold mb-2">Toutes les commandes</h2>
-              <p className="text-sm text-gray-600">
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">Toutes les commandes</h2>
+              <p className="text-sm text-gray-800">
                 Voir l'historique complet des commandes hospitalières
               </p>
             </div>
@@ -110,8 +198,8 @@ export default function DistributionPage() {
         >
           <div className="flex items-start justify-between">
             <div>
-              <h2 className="text-lg font-semibold mb-2">Hôpitaux</h2>
-              <p className="text-sm text-gray-600">
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">Hôpitaux</h2>
+              <p className="text-sm text-gray-800">
                 Gérer les hôpitaux et les conventions
               </p>
             </div>
@@ -125,8 +213,8 @@ export default function DistributionPage() {
         >
           <div className="flex items-start justify-between">
             <div>
-              <h2 className="text-lg font-semibold mb-2">Receveurs</h2>
-              <p className="text-sm text-gray-600">
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">Receveurs</h2>
+              <p className="text-sm text-gray-800">
                 Gérer les receveurs et les cross-matchings
               </p>
             </div>
@@ -138,17 +226,17 @@ export default function DistributionPage() {
       {/* Commandes en attente */}
       <div className="bg-white rounded-lg shadow">
         <div className="p-6 border-b border-gray-200 flex justify-between items-center">
-          <h2 className="text-lg font-semibold">Commandes en attente</h2>
+          <h2 className="text-lg font-semibold text-gray-900">Commandes en attente</h2>
           <button
             onClick={() => refetch()}
-            className="text-sm text-blue-600 hover:text-blue-800"
+            className="text-sm text-blue-600 hover:text-blue-900"
           >
             Actualiser
           </button>
         </div>
 
         {status === "loading" && (
-          <div className="p-8 text-center text-gray-500">Chargement...</div>
+          <div className="p-8 text-center text-gray-700">Chargement...</div>
         )}
 
         {status === "error" && (
@@ -164,11 +252,11 @@ export default function DistributionPage() {
         )}
 
         {status === "success" && (!commandesEnAttente || commandesEnAttente.length === 0) && (
-          <div className="p-8 text-center text-gray-500">
+          <div className="p-8 text-center text-gray-700">
             <div className="mb-2">Aucune commande en attente</div>
             <Link
               href="/distribution/commandes/nouvelle"
-              className="text-sm text-blue-600 hover:text-blue-800"
+              className="text-sm text-blue-600 hover:text-blue-900"
             >
               Créer une commande →
             </Link>
@@ -180,22 +268,22 @@ export default function DistributionPage() {
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Hôpital
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Date demande
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Livraison prévue
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Lignes
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Statut
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -208,17 +296,17 @@ export default function DistributionPage() {
                         {getHopitalNom(commande.hopital_id)}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
                       {new Date(commande.date_demande).toLocaleDateString("fr-FR")}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
                       {commande.date_livraison_prevue
                         ? new Date(commande.date_livraison_prevue).toLocaleDateString(
                             "fr-FR"
                           )
                         : "-"}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
                       {commande.lignes.length} ligne(s)
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -227,10 +315,10 @@ export default function DistributionPage() {
                           commande.statut === "BROUILLON"
                             ? "bg-gray-100 text-gray-800"
                             : commande.statut === "VALIDEE"
-                            ? "bg-blue-100 text-blue-800"
+                            ? "bg-blue-100 text-blue-900"
                             : commande.statut === "SERVIE"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
+                            ? "bg-green-100 text-green-900"
+                            : "bg-red-100 text-red-900"
                         }`}
                       >
                         {commande.statut}
@@ -239,7 +327,7 @@ export default function DistributionPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <Link
                         href={`/distribution/commandes/${commande.id}`}
-                        className="text-blue-600 hover:text-blue-900"
+                        className="text-blue-700 hover:text-blue-900 font-semibold hover:underline"
                       >
                         Gérer →
                       </Link>
@@ -257,7 +345,7 @@ export default function DistributionPage() {
         <h3 className="font-medium text-blue-900 mb-2 text-sm">
           Workflow de distribution
         </h3>
-        <ul className="text-xs text-blue-800 space-y-1">
+        <ul className="text-xs text-blue-900 space-y-1">
           <li>
             1. <strong>BROUILLON</strong>: Commande créée, lignes spécifiées
           </li>

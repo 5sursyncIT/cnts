@@ -1,7 +1,7 @@
 import datetime as dt
 import uuid
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.donneurs import DonneurOut
 
@@ -22,8 +22,7 @@ class DonOut(BaseModel):
     type_don: str
     statut_qualification: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class EtiquetteOut(BaseModel):

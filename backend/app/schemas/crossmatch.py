@@ -1,7 +1,7 @@
 import datetime as dt
 import uuid
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class CrossMatchCreate(BaseModel):
@@ -19,5 +19,4 @@ class CrossMatchOut(BaseModel):
     validateur_id: uuid.UUID | None
     created_at: dt.datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

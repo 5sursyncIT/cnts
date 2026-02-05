@@ -61,8 +61,17 @@ export default async function PatientLoginPage(props: {
 
           <div className="mt-6 text-xs text-zinc-600">
             <div>Démo :</div>
-            <div>Email : patient@cnts.local</div>
+            <div>Email : patient@example.com</div>
             <div>Mot de passe : patient</div>
+          </div>
+          
+          <div className="mt-6 border-t border-zinc-100 pt-6 text-center">
+            <p className="text-sm text-zinc-600">
+              Pas encore de compte ?{" "}
+              <a href="/espace-patient/inscription" className="font-medium text-primary hover:underline">
+                S'inscrire
+              </a>
+            </p>
           </div>
         </div>
       </section>

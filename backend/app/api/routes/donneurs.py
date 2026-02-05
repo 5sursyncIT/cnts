@@ -4,9 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, or_
 from sqlalchemy.orm import Session
 
+from app.api.deps import require_auth_in_production
 from app.core.dates import add_months
 from app.core.security import hash_cni
-from app.db.models import Donneur
+from app.db.models import Donneur, UserAccount
 from app.db.session import get_db
 from app.schemas.donneurs import DonneurCreate, DonneurOut, DonneurUpdate, EligibiliteOut
 
@@ -14,14 +15,19 @@ router = APIRouter(prefix="/donneurs")
 
 
 @router.post("", response_model=DonneurOut)
-def create_donneur(payload: DonneurCreate, db: Session = Depends(get_db)) -> Donneur:
+def create_donneur(
+    payload: DonneurCreate,
+    db: Session = Depends(get_db),
+    _user: UserAccount | None = Depends(require_auth_in_production),
+) -> Donneur:
     cni_hash = hash_cni(payload.cni)
     existing = db.execute(select(Donneur).where(Donneur.cni_hash == cni_hash)).scalar_one_or_none()
     if existing is not None:
         return existing
     row = Donneur(
         cni_hash=cni_hash,
-        cni=payload.cni,  # Store clear CNI
+        # CNI is NOT stored in plaintext for privacy/GDPR compliance
+        # Only the hash is kept for duplicate detection
         nom=payload.nom,
         prenom=payload.prenom,
         sexe=payload.sexe,
@@ -54,10 +60,10 @@ def list_donneurs(
     stmt = select(Donneur)
     
     if q:
+        # Search by name only - CNI is not stored/searchable for privacy reasons
         search_filter = or_(
             Donneur.nom.ilike(f"%{q}%"),
             Donneur.prenom.ilike(f"%{q}%"),
-            Donneur.cni.ilike(f"%{q}%")
         )
         stmt = stmt.where(search_filter)
 
@@ -86,15 +92,16 @@ def update_donneur(
     donneur_id: str,
     payload: DonneurUpdate,
     db: Session = Depends(get_db),
+    _user: UserAccount | None = Depends(require_auth_in_production),
 ) -> Donneur:
     row = db.get(Donneur, donneur_id)
     if row is None:
         raise HTTPException(status_code=404, detail="donneur not found")
 
     if payload.cni is not None:
-        row.cni = payload.cni
+        # Update only the hash, not the plaintext CNI (privacy/GDPR)
         row.cni_hash = hash_cni(payload.cni)
-    
+
     if payload.nom is not None:
         row.nom = payload.nom
     if payload.prenom is not None:
@@ -141,7 +148,11 @@ def eligibilite(
 
 
 @router.delete("/{donneur_id}", status_code=204)
-def delete_donneur(donneur_id: str, db: Session = Depends(get_db)) -> None:
+def delete_donneur(
+    donneur_id: str,
+    db: Session = Depends(get_db),
+    _user: UserAccount | None = Depends(require_auth_in_production),
+) -> None:
     row = db.get(Donneur, donneur_id)
     if row is None:
         raise HTTPException(status_code=404, detail="donneur not found")

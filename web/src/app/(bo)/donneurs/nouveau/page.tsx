@@ -26,8 +26,8 @@ export default function NouveauDonneurPage() {
   });
 
   const REGIONS_SENEGAL = [
-    "Dakar", "Diourbel", "Fatick", "Kaffrine", "Kaolack", "Kédougou", 
-    "Kolda", "Louga", "Matam", "Saint-Louis", "Sédhiou", "Tambacounda", 
+    "Dakar", "Diourbel", "Fatick", "Kaffrine", "Kaolack", "Kédougou",
+    "Kolda", "Louga", "Matam", "Saint-Louis", "Sédhiou", "Tambacounda",
     "Thiès", "Ziguinchor"
   ];
 
@@ -75,7 +75,7 @@ export default function NouveauDonneurPage() {
         email: formData.email || undefined,
         profession: formData.profession || undefined,
       };
-      
+
       const donneur = await createDonneur(payload);
       // Rediriger vers la fiche du donneur créé
       router.push(`/donneurs/${donneur.id}`);
@@ -91,12 +91,12 @@ export default function NouveauDonneurPage() {
       <div className="mb-6">
         <Link
           href="/donneurs"
-          className="text-blue-600 hover:text-blue-800 text-sm mb-2 inline-block"
+          className="text-blue-600 hover:text-blue-900 text-sm mb-2 inline-block"
         >
           ← Retour à la liste
         </Link>
-        <h1 className="text-2xl font-bold">Nouveau Donneur</h1>
-        <p className="text-gray-600 mt-1">
+        <h1 className="text-2xl font-bold text-gray-900">Nouveau Donneur</h1>
+        <p className="text-gray-700 mt-1">
           Enregistrer un nouveau donneur dans le système
         </p>
       </div>
@@ -106,7 +106,7 @@ export default function NouveauDonneurPage() {
         {/* Erreur globale */}
         {status === "error" && error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
-            <div className="text-sm font-medium text-red-800">
+            <div className="text-sm font-medium text-red-900">
               Erreur lors de la création
             </div>
             <div className="text-sm text-red-600 mt-1">
@@ -130,9 +130,8 @@ export default function NouveauDonneurPage() {
               <input
                 type="text"
                 id="cni"
-                className={`w-full p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.cni ? "border-red-300" : "border-gray-300"
-                }`}
+                className={`w-full p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 ${errors.cni ? "border-red-300" : "border-gray-300"
+                  }`}
                 value={formData.cni}
                 onChange={(e) =>
                   setFormData({ ...formData, cni: e.target.value })
@@ -154,7 +153,7 @@ export default function NouveauDonneurPage() {
               <input
                 type="date"
                 id="date_naissance"
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                 value={formData.date_naissance}
                 onChange={(e) =>
                   setFormData({ ...formData, date_naissance: e.target.value })
@@ -175,9 +174,8 @@ export default function NouveauDonneurPage() {
               <input
                 type="text"
                 id="prenom"
-                className={`w-full p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.prenom ? "border-red-300" : "border-gray-300"
-                }`}
+                className={`w-full p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 ${errors.prenom ? "border-red-300" : "border-gray-300"
+                  }`}
                 value={formData.prenom}
                 onChange={(e) =>
                   setFormData({ ...formData, prenom: e.target.value })
@@ -199,9 +197,8 @@ export default function NouveauDonneurPage() {
               <input
                 type="text"
                 id="nom"
-                className={`w-full p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.nom ? "border-red-300" : "border-gray-300"
-                }`}
+                className={`w-full p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 ${errors.nom ? "border-red-300" : "border-gray-300"
+                  }`}
                 value={formData.nom}
                 onChange={(e) =>
                   setFormData({ ...formData, nom: e.target.value })
@@ -224,7 +221,7 @@ export default function NouveauDonneurPage() {
               </label>
               <select
                 id="sexe"
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                 value={formData.sexe}
                 onChange={(e) =>
                   setFormData({
@@ -248,7 +245,7 @@ export default function NouveauDonneurPage() {
               </label>
               <select
                 id="groupe_sanguin"
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                 value={formData.groupe_sanguin}
                 onChange={(e) =>
                   setFormData({ ...formData, groupe_sanguin: e.target.value })
@@ -267,7 +264,7 @@ export default function NouveauDonneurPage() {
           {/* Coordonnées */}
           <div className="pt-4 border-t border-gray-200">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Coordonnées</h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               {/* Adresse */}
               <div className="md:col-span-2">
@@ -280,7 +277,7 @@ export default function NouveauDonneurPage() {
                 <input
                   type="text"
                   id="adresse"
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                   value={formData.adresse}
                   onChange={(e) =>
                     setFormData({ ...formData, adresse: e.target.value })
@@ -298,7 +295,7 @@ export default function NouveauDonneurPage() {
                 </label>
                 <select
                   id="region"
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                   value={formData.region}
                   onChange={(e) =>
                     setFormData({ ...formData, region: e.target.value })
@@ -324,7 +321,7 @@ export default function NouveauDonneurPage() {
                 <input
                   type="text"
                   id="departement"
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                   value={formData.departement}
                   onChange={(e) =>
                     setFormData({ ...formData, departement: e.target.value })
@@ -343,7 +340,7 @@ export default function NouveauDonneurPage() {
                 <input
                   type="tel"
                   id="telephone"
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                   value={formData.telephone}
                   onChange={(e) =>
                     setFormData({ ...formData, telephone: e.target.value })
@@ -362,7 +359,7 @@ export default function NouveauDonneurPage() {
                 <input
                   type="email"
                   id="email"
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                   value={formData.email}
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
@@ -375,7 +372,7 @@ export default function NouveauDonneurPage() {
           {/* Informations complémentaires */}
           <div className="pt-4 border-t border-gray-200">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Informations complémentaires</h3>
-            
+
             {/* Profession */}
             <div>
               <label
@@ -387,7 +384,7 @@ export default function NouveauDonneurPage() {
               <input
                 type="text"
                 id="profession"
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                 value={formData.profession}
                 onChange={(e) =>
                   setFormData({ ...formData, profession: e.target.value })
@@ -405,10 +402,10 @@ export default function NouveauDonneurPage() {
             </Link>
             <button
               type="submit"
-              disabled={status === "pending"}
+              disabled={status === "loading"}
               className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
             >
-              {status === "pending" ? "Création..." : "Créer le donneur"}
+              {status === "loading" ? "Création..." : "Créer le donneur"}
             </button>
           </div>
         </div>
@@ -419,7 +416,7 @@ export default function NouveauDonneurPage() {
         <h3 className="font-medium text-blue-900 mb-2">
           Règles de création d'un donneur
         </h3>
-        <ul className="text-sm text-blue-800 space-y-1">
+        <ul className="text-sm text-blue-900 space-y-1">
           <li>• Le numéro CNI est hashé et indexé pour détecter les doublons</li>
           <li>
             • Les délais d'éligibilité sont automatiquement calculés selon le

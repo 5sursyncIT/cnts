@@ -4,8 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.api.deps import require_auth_in_production
 from app.core.blood import validate_analyse_resultat
-from app.db.models import Analyse, Don
+from app.db.models import Analyse, Don, UserAccount
 from app.db.session import get_db
 from app.schemas.analyses import AnalyseCreate, AnalyseOut, AnalyseUpdate
 
@@ -13,7 +14,11 @@ router = APIRouter(prefix="/analyses")
 
 
 @router.post("", response_model=AnalyseOut, status_code=201)
-def create_analyse(payload: AnalyseCreate, db: Session = Depends(get_db)) -> Analyse:
+def create_analyse(
+    payload: AnalyseCreate,
+    db: Session = Depends(get_db),
+    _user: UserAccount | None = Depends(require_auth_in_production),
+) -> Analyse:
     """
     Créer une nouvelle analyse pour un don.
 

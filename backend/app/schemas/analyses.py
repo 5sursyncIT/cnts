@@ -1,7 +1,7 @@
 import datetime as dt
 import uuid
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.core.blood import validate_analyse_resultat
 
@@ -44,8 +44,7 @@ class AnalyseOut(BaseModel):
     validateur_id: uuid.UUID | None
     created_at: dt.datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class LiberationBiologiqueOut(BaseModel):

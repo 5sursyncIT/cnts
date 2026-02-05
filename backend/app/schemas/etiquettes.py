@@ -18,3 +18,10 @@ class EtiquetteProduitOut(BaseModel):
     statut_stock: str
     statut_distribution: str
     payload: dict = Field(default_factory=dict)
+
+
+class LabelGenerationRequest(BaseModel):
+    din: str
+    product_code: str
+    abo_rh: str
+    expiration: str

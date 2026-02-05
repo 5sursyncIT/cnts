@@ -4,6 +4,7 @@ import "./globals.css";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { ConsentBanner } from "@/components/consent-banner";
+import { ServiceWorkerRegister } from "@/components/service-worker-register";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,7 +18,14 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Portail Patient — SGI-CNTS",
-  description: "Site institutionnel et espace patient"
+  description: "Site institutionnel et espace patient",
+  manifest: "/manifest.json",
+  themeColor: "#d32f2f",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "CNTS Patient",
+  },
 };
 
 export default function RootLayout({
@@ -37,9 +45,10 @@ export default function RootLayout({
           Aller au contenu
         </a>
         <SiteHeader />
-        <div id="contenu">{children}</div>
+        <main id="contenu">{children}</main>
         <SiteFooter />
         <ConsentBanner />
+        <ServiceWorkerRegister />
       </body>
     </html>
   );

@@ -25,12 +25,12 @@ export default function CommandesPage() {
   // Calculer les statistiques
   const stats = commandes
     ? {
-        total: commandes.length,
-        brouillon: commandes.filter((c) => c.statut === "BROUILLON").length,
-        validee: commandes.filter((c) => c.statut === "VALIDEE").length,
-        servie: commandes.filter((c) => c.statut === "SERVIE").length,
-        annulee: commandes.filter((c) => c.statut === "ANNULEE").length,
-      }
+      total: commandes.length,
+      brouillon: commandes.filter((c) => c.statut === "BROUILLON").length,
+      validee: commandes.filter((c) => c.statut === "VALIDEE").length,
+      servie: commandes.filter((c) => c.statut === "SERVIE").length,
+      annulee: commandes.filter((c) => c.statut === "ANNULEE").length,
+    }
     : { total: 0, brouillon: 0, validee: 0, servie: 0, annulee: 0 };
 
   return (
@@ -40,12 +40,12 @@ export default function CommandesPage() {
         <div>
           <Link
             href="/distribution"
-            className="text-blue-600 hover:text-blue-800 text-sm mb-2 inline-block"
+            className="text-blue-600 hover:text-blue-900 text-sm mb-2 inline-block"
           >
             ← Retour à la distribution
           </Link>
-          <h1 className="text-2xl font-bold">Commandes Hospitalières</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-2xl font-bold text-gray-900">Commandes Hospitalières</h1>
+          <p className="text-gray-700 mt-1">
             Historique complet des commandes de sang
           </p>
         </div>
@@ -61,11 +61,11 @@ export default function CommandesPage() {
       {status === "success" && commandes && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
           <div className="bg-white rounded-lg shadow p-4">
-            <div className="text-sm text-gray-500 mb-1">Total</div>
-            <div className="text-2xl font-bold">{stats.total}</div>
+            <div className="text-sm text-gray-700 mb-1">Total</div>
+            <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
           </div>
           <div className="bg-gray-50 rounded-lg shadow p-4">
-            <div className="text-sm text-gray-600 mb-1">Brouillon</div>
+            <div className="text-sm text-gray-800 mb-1">Brouillon</div>
             <div className="text-2xl font-bold text-gray-900">
               {stats.brouillon}
             </div>
@@ -95,7 +95,7 @@ export default function CommandesPage() {
             <select
               value={hopitalFilter}
               onChange={(e) => setHopitalFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             >
               <option value="">Tous les hôpitaux</option>
               {hopitaux?.map((h) => (
@@ -113,7 +113,7 @@ export default function CommandesPage() {
             <select
               value={statutFilter}
               onChange={(e) => setStatutFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             >
               <option value="">Tous</option>
               <option value="BROUILLON">Brouillon</option>
@@ -135,13 +135,13 @@ export default function CommandesPage() {
       {/* Liste des commandes */}
       <div className="bg-white rounded-lg shadow">
         {status === "loading" && (
-          <div className="p-8 text-center text-gray-500">Chargement...</div>
+          <div className="p-8 text-center text-gray-700">Chargement...</div>
         )}
 
         {status === "error" && (
           <div className="p-8 text-center">
             <div className="text-red-600 mb-2">Erreur de chargement</div>
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-gray-800">
               {error?.status ? `Erreur ${error.status}` : "Erreur inconnue"}
             </div>
             <button
@@ -154,11 +154,11 @@ export default function CommandesPage() {
         )}
 
         {status === "success" && commandes && commandes.length === 0 && (
-          <div className="p-8 text-center text-gray-500">
+          <div className="p-8 text-center text-gray-700">
             <div className="mb-2">Aucune commande trouvée</div>
             <Link
               href="/distribution/commandes/nouvelle"
-              className="text-sm text-blue-600 hover:text-blue-800"
+              className="text-sm text-blue-600 hover:text-blue-900"
             >
               Créer une commande →
             </Link>
@@ -170,22 +170,22 @@ export default function CommandesPage() {
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Hôpital
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Date demande
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Livraison prévue
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Lignes
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Statut
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -208,19 +208,19 @@ export default function CommandesPage() {
                         day: "numeric",
                       })}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
                       {commande.date_livraison_prevue
                         ? new Date(commande.date_livraison_prevue).toLocaleDateString(
-                            "fr-FR",
-                            {
-                              year: "numeric",
-                              month: "short",
-                              day: "numeric",
-                            }
-                          )
+                          "fr-FR",
+                          {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          }
+                        )
                         : "-"}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
                       <div>{commande.lignes.length} ligne(s)</div>
                       <div className="text-xs text-gray-500">
                         {commande.lignes.reduce(
@@ -232,15 +232,14 @@ export default function CommandesPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
-                        className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                          commande.statut === "BROUILLON"
+                        className={`px-2 py-1 text-xs font-semibold rounded-full ${commande.statut === "BROUILLON"
                             ? "bg-gray-100 text-gray-800"
                             : commande.statut === "VALIDEE"
-                            ? "bg-blue-100 text-blue-800"
-                            : commande.statut === "SERVIE"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
-                        }`}
+                              ? "bg-blue-100 text-blue-900"
+                              : commande.statut === "SERVIE"
+                                ? "bg-green-100 text-green-900"
+                                : "bg-red-100 text-red-900"
+                          }`}
                       >
                         {commande.statut}
                       </span>
@@ -248,7 +247,7 @@ export default function CommandesPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <Link
                         href={`/distribution/commandes/${commande.id}`}
-                        className="text-blue-600 hover:text-blue-900"
+                        className="text-blue-700 hover:text-blue-900 font-semibold hover:underline"
                       >
                         Gérer
                       </Link>
@@ -263,7 +262,7 @@ export default function CommandesPage() {
 
       {/* Footer */}
       {status === "success" && commandes && (
-        <div className="mt-4 text-sm text-gray-600 text-right">
+        <div className="mt-4 text-sm text-gray-800 text-right">
           {commandes.length} commande(s) affichée(s)
         </div>
       )}

@@ -4,6 +4,7 @@ export type PortalSession = {
   userId: string;
   email: string;
   displayName: string;
+  accessToken: string;
 };
 
 export const sessionCookieName = "cnts_portal_session";
@@ -25,17 +26,15 @@ export async function signSession(session: PortalSession, ttlSeconds: number): P
 export async function verifySessionToken(token: string): Promise<PortalSession | null> {
   try {
     const { payload } = await jwtVerify(token, getSecretKey());
-    const userId = payload.userId;
-    const email = payload.email;
-    const displayName = payload.displayName;
+    const userId = payload.userId as string;
+    const email = payload.email as string;
+    const displayName = payload.displayName as string;
+    const accessToken = payload.accessToken as string;
 
-    if (typeof userId !== "string") return null;
-    if (typeof email !== "string") return null;
-    if (typeof displayName !== "string") return null;
+    if (!userId || !email || !accessToken) return null;
 
-    return { userId, email, displayName };
+    return { userId, email, displayName, accessToken };
   } catch {
     return null;
   }
 }
-

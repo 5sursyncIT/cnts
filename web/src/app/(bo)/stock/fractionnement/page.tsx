@@ -153,12 +153,12 @@ export default function FractionnementPage() {
       <div className="mb-6">
         <Link
           href="/stock"
-          className="text-blue-600 hover:text-blue-800 text-sm mb-2 inline-block"
+          className="text-blue-600 hover:text-blue-900 text-sm mb-2 inline-block"
         >
           ← Retour au stock
         </Link>
-        <h1 className="text-2xl font-bold">Fractionnement de Sang Total</h1>
-        <p className="text-gray-600 mt-1">
+        <h1 className="text-2xl font-bold text-gray-900">Fractionnement de Sang Total</h1>
+        <p className="text-gray-700 mt-1">
           Séparation d'une poche ST en composants sanguins (CGR, PFC, CP)
         </p>
       </div>
@@ -166,7 +166,7 @@ export default function FractionnementPage() {
       {/* Messages */}
       {successMessage && (
         <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-md">
-          <div className="text-sm font-medium text-green-800">
+          <div className="text-sm font-medium text-green-900">
             {successMessage}
           </div>
           <div className="text-xs text-green-600 mt-1">
@@ -177,7 +177,7 @@ export default function FractionnementPage() {
 
       {errorMessage && (
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
-          <div className="text-sm font-medium text-red-800">
+          <div className="text-sm font-medium text-red-900">
             Erreur de fractionnement
           </div>
           <div className="text-sm text-red-600 mt-1">{errorMessage}</div>
@@ -199,7 +199,7 @@ export default function FractionnementPage() {
                 <select
                   value={selectedPocheId}
                   onChange={(e) => setSelectedPocheId(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                   required
                 >
                   <option value="">-- Choisir une poche --</option>
@@ -211,7 +211,7 @@ export default function FractionnementPage() {
                   ))}
                 </select>
                 {pochesDisponibles?.length === 0 && (
-                  <p className="mt-2 text-sm text-gray-600">
+                  <p className="mt-2 text-sm text-gray-800">
                     Aucune poche ST disponible pour fractionnement
                   </p>
                 )}
@@ -228,11 +228,10 @@ export default function FractionnementPage() {
                   <button
                     type="button"
                     onClick={() => setMode("recette")}
-                    className={`flex-1 px-4 py-2 rounded-md transition ${
-                      mode === "recette"
-                        ? "bg-purple-600 text-white"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
+                    className={`flex-1 px-4 py-2 rounded-md transition ${mode === "recette"
+                      ? "bg-purple-600 text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      }`}
                   >
                     Recette prédéfinie
                   </button>
@@ -242,11 +241,10 @@ export default function FractionnementPage() {
                       setMode("manuel");
                       setComposants([]);
                     }}
-                    className={`flex-1 px-4 py-2 rounded-md transition ${
-                      mode === "manuel"
-                        ? "bg-purple-600 text-white"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
+                    className={`flex-1 px-4 py-2 rounded-md transition ${mode === "manuel"
+                      ? "bg-purple-600 text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      }`}
                   >
                     Manuel
                   </button>
@@ -261,7 +259,7 @@ export default function FractionnementPage() {
                     <select
                       value={selectedRecetteCode}
                       onChange={(e) => setSelectedRecetteCode(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                       required={mode === "recette"}
                     >
                       <option value="">-- Choisir une recette --</option>
@@ -272,11 +270,11 @@ export default function FractionnementPage() {
                       ))}
                     </select>
                     {recettes?.length === 0 && (
-                      <p className="mt-2 text-sm text-gray-600">
+                      <p className="mt-2 text-sm text-gray-800">
                         Aucune recette active.{" "}
                         <Link
                           href="/stock/recettes"
-                          className="text-blue-600 hover:text-blue-800"
+                          className="text-blue-600 hover:text-blue-900"
                         >
                           Créer une recette →
                         </Link>
@@ -288,106 +286,106 @@ export default function FractionnementPage() {
                 {/* Composants (recette ou manuel) */}
                 {((mode === "recette" && recetteSelectionnee) ||
                   mode === "manuel") && (
-                  <div className="mt-6">
-                    <div className="flex justify-between items-center mb-3">
-                      <h3 className="text-sm font-medium text-gray-900">
-                        Composants à créer
-                      </h3>
-                      {mode === "manuel" && (
-                        <button
-                          type="button"
-                          onClick={ajouterComposant}
-                          className="text-sm text-blue-600 hover:text-blue-800"
-                        >
-                          + Ajouter
-                        </button>
-                      )}
-                    </div>
-
-                    {composants.length === 0 ? (
-                      <div className="text-sm text-gray-500 text-center py-4">
-                        Aucun composant défini
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {composants.map((composant, index) => (
-                          <div
-                            key={index}
-                            className="flex gap-3 items-start p-3 bg-gray-50 rounded-md"
+                    <div className="mt-6">
+                      <div className="flex justify-between items-center mb-3">
+                        <h3 className="text-sm font-medium text-gray-900">
+                          Composants à créer
+                        </h3>
+                        {mode === "manuel" && (
+                          <button
+                            type="button"
+                            onClick={ajouterComposant}
+                            className="text-sm text-blue-600 hover:text-blue-900"
                           >
-                            <div className="flex-1">
-                              <label className="block text-xs text-gray-600 mb-1">
-                                Type
-                              </label>
-                              <select
-                                value={composant.type_produit}
-                                onChange={(e) =>
-                                  modifierComposant(
-                                    index,
-                                    "type_produit",
-                                    e.target.value
-                                  )
-                                }
-                                disabled={mode === "recette"}
-                                className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-                              >
-                                <option value="CGR">CGR</option>
-                                <option value="PFC">PFC</option>
-                                <option value="CP">CP</option>
-                              </select>
-                            </div>
-                            <div className="flex-1">
-                              <label className="block text-xs text-gray-600 mb-1">
-                                Volume (ml)
-                              </label>
-                              <input
-                                type="number"
-                                value={composant.volume_ml}
-                                onChange={(e) =>
-                                  modifierComposant(
-                                    index,
-                                    "volume_ml",
-                                    parseInt(e.target.value, 10)
-                                  )
-                                }
-                                disabled={mode === "recette"}
-                                min="1"
-                                className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-                              />
-                            </div>
-                            {mode === "manuel" && (
-                              <button
-                                type="button"
-                                onClick={() => supprimerComposant(index)}
-                                className="mt-6 text-red-600 hover:text-red-800 text-sm"
-                              >
-                                Supprimer
-                              </button>
-                            )}
-                          </div>
-                        ))}
+                            + Ajouter
+                          </button>
+                        )}
                       </div>
-                    )}
 
-                    {/* Volume total */}
-                    <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-blue-900 font-medium">
-                          Volume total des composants:
-                        </span>
-                        <span className="text-blue-900 font-bold">
-                          {volumeTotal}ml
-                        </span>
-                      </div>
-                      {pocheSelectionnee && (
-                        <div className="flex justify-between text-xs text-blue-700 mt-1">
-                          <span>Volume source:</span>
-                          <span>{pocheSelectionnee.volume_ml || "?"}ml</span>
+                      {composants.length === 0 ? (
+                        <div className="text-sm text-gray-700 text-center py-4">
+                          Aucun composant défini
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {composants.map((composant, index) => (
+                            <div
+                              key={index}
+                              className="flex gap-3 items-start p-3 bg-gray-50 rounded-md"
+                            >
+                              <div className="flex-1">
+                                <label className="block text-xs text-gray-800 mb-1">
+                                  Type
+                                </label>
+                                <select
+                                  value={composant.type_produit}
+                                  onChange={(e) =>
+                                    modifierComposant(
+                                      index,
+                                      "type_produit",
+                                      e.target.value
+                                    )
+                                  }
+                                  disabled={mode === "recette"}
+                                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 text-gray-900"
+                                >
+                                  <option value="CGR">CGR</option>
+                                  <option value="PFC">PFC</option>
+                                  <option value="CP">CP</option>
+                                </select>
+                              </div>
+                              <div className="flex-1">
+                                <label className="block text-xs text-gray-800 mb-1">
+                                  Volume (ml)
+                                </label>
+                                <input
+                                  type="number"
+                                  value={composant.volume_ml}
+                                  onChange={(e) =>
+                                    modifierComposant(
+                                      index,
+                                      "volume_ml",
+                                      parseInt(e.target.value, 10)
+                                    )
+                                  }
+                                  disabled={mode === "recette"}
+                                  min="1"
+                                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 text-gray-900"
+                                />
+                              </div>
+                              {mode === "manuel" && (
+                                <button
+                                  type="button"
+                                  onClick={() => supprimerComposant(index)}
+                                  className="mt-6 text-red-600 hover:text-red-900 text-sm"
+                                >
+                                  Supprimer
+                                </button>
+                              )}
+                            </div>
+                          ))}
                         </div>
                       )}
+
+                      {/* Volume total */}
+                      <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-blue-900 font-medium">
+                            Volume total des composants:
+                          </span>
+                          <span className="text-blue-900 font-bold">
+                            {volumeTotal}ml
+                          </span>
+                        </div>
+                        {pocheSelectionnee && (
+                          <div className="flex justify-between text-xs text-blue-700 mt-1">
+                            <span>Volume source:</span>
+                            <span>{pocheSelectionnee.volume_ml || "?"}ml</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
               </div>
             )}
 
@@ -457,7 +455,7 @@ export default function FractionnementPage() {
               </dl>
               <Link
                 href={`/dons/${pocheSelectionnee.don_id}`}
-                className="block mt-4 text-sm text-blue-600 hover:text-blue-800"
+                className="block mt-4 text-sm text-blue-600 hover:text-blue-900"
               >
                 Voir le don →
               </Link>
@@ -468,7 +466,7 @@ export default function FractionnementPage() {
             <h3 className="font-medium text-blue-900 mb-2 text-sm">
               Produits dérivés du sang
             </h3>
-            <ul className="text-xs text-blue-800 space-y-1">
+            <ul className="text-xs text-blue-900 space-y-1">
               <li>
                 <strong>CGR</strong>: Concentré Globules Rouges (~280ml, 42j)
               </li>
@@ -485,7 +483,7 @@ export default function FractionnementPage() {
             <h3 className="font-medium text-yellow-900 mb-2 text-sm">
               ⚠️ Règles de fractionnement
             </h3>
-            <ul className="text-xs text-yellow-800 space-y-1">
+            <ul className="text-xs text-yellow-900 space-y-1">
               <li>• Seules les poches ST peuvent être fractionnées</li>
               <li>• La poche doit être EN_STOCK</li>
               <li>• Volume total ≤ volume source + tolérance (250ml)</li>

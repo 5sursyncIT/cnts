@@ -6,7 +6,7 @@ import { sessionCookieName, verifySessionToken } from "./session";
 export async function getCurrentUser(): Promise<User | null> {
   const token = (await cookies()).get(sessionCookieName)?.value;
   if (!token) return null;
-  const session = await verifySessionToken(token);
+  const session = await verifySessionToken(token); 
   if (!session) return null;
 
   const resolvedRoles = session.roleIds

@@ -1,7 +1,7 @@
 import datetime as dt
 import uuid
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ActeTransfusionnelOut(BaseModel):
@@ -17,8 +17,7 @@ class ActeTransfusionnelOut(BaseModel):
     type_produit: str | None = None
     lot: str | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class RappelActionCreate(BaseModel):
@@ -34,14 +33,20 @@ class RappelActionOut(BaseModel):
     note: str | None
     created_at: dt.datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class RappelCreate(BaseModel):
     type_cible: str = Field(pattern="^(DIN|LOT)$")
     valeur_cible: str = Field(min_length=2, max_length=64)
     motif: str | None = Field(default=None, max_length=2000)
+
+
+class RappelAutoCreate(BaseModel):
+    type_cible: str = Field(pattern="^(DIN|LOT)$")
+    valeur_cible: str = Field(min_length=2, max_length=64)
+    motif: str | None = Field(default=None, max_length=2000)
+    source: str | None = Field(default=None, max_length=200)
 
 
 class RappelOut(BaseModel):
@@ -56,8 +61,7 @@ class RappelOut(BaseModel):
     closed_at: dt.datetime | None = None
     created_at: dt.datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ImpactRappelOut(BaseModel):
@@ -71,3 +75,41 @@ class ImpactRappelOut(BaseModel):
     receveur_id: uuid.UUID | None = None
     commande_id: uuid.UUID | None = None
     date_transfusion: dt.datetime | None = None
+
+
+class RappelStatutStat(BaseModel):
+    statut: str
+    total: int
+
+
+class TransfusionHopitalStat(BaseModel):
+    hopital_id: uuid.UUID | None
+    total: int
+
+
+class RappelLotStat(BaseModel):
+    lot: str | None
+    total: int
+
+
+class RapportAutoriteOut(BaseModel):
+    generated_at: dt.datetime
+    rappels_par_statut: list[RappelStatutStat]
+    transfusions_par_hopital: list[TransfusionHopitalStat]
+    rappels_par_lot: list[RappelLotStat]
+
+
+class PartenaireEventOut(BaseModel):
+    id: uuid.UUID
+    aggregate_type: str
+    aggregate_id: uuid.UUID
+    event_type: str
+    payload: dict
+    created_at: dt.datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PartenaireFluxOut(BaseModel):
+    events: list[PartenaireEventOut]
+    next_cursor: str | None = None

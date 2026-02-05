@@ -34,7 +34,7 @@ export default function LiberationPage() {
   // Charger le don sélectionné
   const { data: don, refetch: refetchDon } = useDon(
     apiClient,
-    selectedDonId || null
+    selectedDonId
   );
 
   // Charger les analyses
@@ -45,7 +45,7 @@ export default function LiberationPage() {
   // Vérifier l'état de libération
   const { data: liberation, refetch: refetchLiberation } = useCheckLiberation(
     apiClient,
-    selectedDonId || null
+    selectedDonId
   );
 
   // Recherche par DIN
@@ -94,12 +94,12 @@ export default function LiberationPage() {
       <div className="mb-6">
         <Link
           href="/laboratoire"
-          className="text-blue-600 hover:text-blue-800 text-sm mb-2 inline-block"
+          className="text-blue-600 hover:text-blue-900 text-sm mb-2 inline-block"
         >
           ← Retour au laboratoire
         </Link>
-        <h1 className="text-2xl font-bold">Libération Biologique</h1>
-        <p className="text-gray-600 mt-1">
+        <h1 className="text-2xl font-bold text-gray-900">Libération Biologique</h1>
+        <p className="text-gray-700 mt-1">
           Validation finale et libération des dons pour distribution
         </p>
       </div>
@@ -107,7 +107,7 @@ export default function LiberationPage() {
       {/* Message de succès */}
       {liberationStatus === "success" && (
         <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-md">
-          <div className="text-sm font-medium text-green-800">
+          <div className="text-sm font-medium text-green-900">
             ✓ Don libéré avec succès ! Redirection en cours...
           </div>
         </div>
@@ -116,7 +116,7 @@ export default function LiberationPage() {
       {/* Message d'erreur */}
       {liberationStatus === "error" && (
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
-          <div className="text-sm font-medium text-red-800">
+          <div className="text-sm font-medium text-red-900">
             Erreur lors de la libération
           </div>
           <div className="text-sm text-red-600 mt-1">{errorMessage}</div>
@@ -142,7 +142,7 @@ export default function LiberationPage() {
                   onChange={(e) => setSearchDin(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSearchByDin()}
                   placeholder="Ex: CNTS2600X123456"
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                 />
                 <button
                   onClick={handleSearchByDin}
@@ -161,7 +161,7 @@ export default function LiberationPage() {
               <select
                 value={selectedDonId}
                 onChange={(e) => setSelectedDonId(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
               >
                 <option value="">-- Choisir un don --</option>
                 {donsEnAttente?.map((d) => (
@@ -183,7 +183,7 @@ export default function LiberationPage() {
                   <div className="mb-2">Aucune analyse enregistrée</div>
                   <Link
                     href={`/laboratoire/analyses?don_id=${selectedDonId}`}
-                    className="text-sm text-blue-600 hover:text-blue-800"
+                    className="text-sm text-blue-600 hover:text-blue-900"
                   >
                     Ajouter des analyses →
                   </Link>
@@ -200,23 +200,22 @@ export default function LiberationPage() {
                         <div>
                           <div className="font-medium text-gray-900">{testType}</div>
                           {analyse && analyse.note && (
-                            <div className="text-sm text-gray-600 mt-1">
+                            <div className="text-sm text-gray-800 mt-1">
                               {analyse.note}
                             </div>
                           )}
                         </div>
                         {analyse ? (
                           <span
-                            className={`px-3 py-1 text-sm font-semibold rounded-full ${
-                              analyse.resultat === "NEGATIF" ||
+                            className={`px-3 py-1 text-sm font-semibold rounded-full ${analyse.resultat === "NEGATIF" ||
                               ["A", "B", "AB", "O", "POS", "NEG"].includes(
                                 analyse.resultat
                               )
-                                ? "bg-green-100 text-green-800"
-                                : analyse.resultat === "POSITIF"
-                                ? "bg-red-100 text-red-800"
-                                : "bg-yellow-100 text-yellow-800"
-                            }`}
+                              ? "bg-green-100 text-green-900"
+                              : analyse.resultat === "POSITIF"
+                                ? "bg-red-100 text-red-900"
+                                : "bg-yellow-100 text-yellow-900"
+                              }`}
                           >
                             {analyse.resultat}
                           </span>
@@ -256,11 +255,10 @@ export default function LiberationPage() {
                   <dt className="text-gray-500">Statut actuel</dt>
                   <dd>
                     <span
-                      className={`px-2 py-1 rounded text-xs ${
-                        don.statut_qualification === "LIBERE"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-yellow-100 text-yellow-800"
-                      }`}
+                      className={`px-2 py-1 rounded text-xs ${don.statut_qualification === "LIBERE"
+                        ? "bg-green-100 text-green-900"
+                        : "bg-yellow-100 text-yellow-900"
+                        }`}
                     >
                       {don.statut_qualification}
                     </span>
@@ -269,7 +267,7 @@ export default function LiberationPage() {
               </dl>
               <Link
                 href={`/dons/${don.id}`}
-                className="block mt-4 text-sm text-blue-600 hover:text-blue-800"
+                className="block mt-4 text-sm text-blue-600 hover:text-blue-900"
               >
                 Voir la fiche complète →
               </Link>
@@ -286,24 +284,21 @@ export default function LiberationPage() {
               </h2>
 
               <div
-                className={`p-4 rounded-lg mb-4 ${
-                  liberation.liberable
-                    ? "bg-green-50 border border-green-200"
-                    : "bg-red-50 border border-red-200"
-                }`}
+                className={`p-4 rounded-lg mb-4 ${liberation.liberable
+                  ? "bg-green-50 border border-green-200"
+                  : "bg-red-50 border border-red-200"
+                  }`}
               >
                 <div
-                  className={`text-lg font-semibold mb-2 ${
-                    liberation.liberable ? "text-green-900" : "text-red-900"
-                  }`}
+                  className={`text-lg font-semibold mb-2 ${liberation.liberable ? "text-green-900" : "text-red-900"
+                    }`}
                 >
                   {liberation.liberable ? "✓ Libérable" : "✗ Non libérable"}
                 </div>
                 {liberation.raison && (
                   <div
-                    className={`text-sm ${
-                      liberation.liberable ? "text-green-700" : "text-red-700"
-                    }`}
+                    className={`text-sm ${liberation.liberable ? "text-green-700" : "text-red-700"
+                      }`}
                   >
                     {liberation.raison}
                   </div>
@@ -322,7 +317,7 @@ export default function LiberationPage() {
                   </ul>
                   <Link
                     href={`/laboratoire/analyses?don_id=${selectedDonId}`}
-                    className="block mt-3 text-sm text-blue-600 hover:text-blue-800"
+                    className="block mt-3 text-sm text-blue-600 hover:text-blue-900"
                   >
                     Compléter les analyses →
                   </Link>
@@ -360,7 +355,7 @@ export default function LiberationPage() {
               )}
 
               {don?.statut_qualification === "LIBERE" && (
-                <div className="p-3 bg-green-50 border border-green-200 rounded-md text-sm text-green-800">
+                <div className="p-3 bg-green-50 border border-green-200 rounded-md text-sm text-green-900">
                   ✓ Ce don a déjà été libéré
                 </div>
               )}
@@ -379,7 +374,7 @@ export default function LiberationPage() {
             <h3 className="font-medium text-red-900 mb-2 text-sm">
               ⚠️ Règle de libération
             </h3>
-            <ul className="text-xs text-red-800 space-y-1">
+            <ul className="text-xs text-red-900 space-y-1">
               <li>• Tous les 6 tests doivent être effectués</li>
               <li>• Groupage (ABO + Rh) doit être déterminé</li>
               <li>• Sérologies (VIH, VHB, VHC, Syphilis) doivent être NÉGATIF</li>
@@ -391,7 +386,7 @@ export default function LiberationPage() {
             <h3 className="font-medium text-blue-900 mb-2 text-sm">
               Workflow de libération
             </h3>
-            <ul className="text-xs text-blue-800 space-y-1">
+            <ul className="text-xs text-blue-900 space-y-1">
               <li>1. Vérifier toutes les analyses</li>
               <li>2. Confirmer la conformité biologique</li>
               <li>3. Libérer le don</li>
@@ -423,7 +418,7 @@ export default function LiberationPage() {
                 </ul>
               </div>
               {analyses && (
-                <div className="text-xs text-gray-600">
+                <div className="text-xs text-gray-800">
                   <strong>Résumé:</strong>{" "}
                   {analyses.length} analyse(s) validée(s)
                 </div>
