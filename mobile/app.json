@@ -1,0 +1,63 @@
+{
+  "expo": {
+    "name": "CNTS Agent",
+    "slug": "cnts-agent",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "cnts-agent",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#B91C1C"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "sn.cnts.agent",
+      "infoPlist": {
+        "NSCameraUsageDescription": "L'application a besoin d'accéder à la caméra pour prendre la photo du donneur.",
+        "NSPhotoLibraryUsageDescription": "L'application a besoin d'accéder à la galerie pour choisir la photo du donneur."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#B91C1C"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "sn.cnts.agent",
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-sqlite",
+      "@react-native-community/datetimepicker",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "L'application a besoin d'accéder à vos photos pour la photo du donneur.",
+          "cameraPermission": "L'application a besoin de la caméra pour prendre la photo du donneur."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "REPLACE_WITH_EAS_PROJECT_ID"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/REPLACE_WITH_EAS_PROJECT_ID"
+    }
+  }
+}

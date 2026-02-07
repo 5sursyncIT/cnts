@@ -102,6 +102,7 @@ def update_analyse(
     analyse_id: uuid.UUID,
     payload: AnalyseUpdate,
     db: Session = Depends(get_db),
+    _user: UserAccount | None = Depends(require_auth_in_production),
 ) -> Analyse:
     """
     Mettre à jour le résultat d'une analyse.
@@ -125,7 +126,11 @@ def update_analyse(
 
 
 @router.delete("/{analyse_id}", status_code=204)
-def delete_analyse(analyse_id: uuid.UUID, db: Session = Depends(get_db)) -> None:
+def delete_analyse(
+    analyse_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    _user: UserAccount | None = Depends(require_auth_in_production),
+) -> None:
     """Supprimer une analyse (à utiliser avec précaution)."""
     analyse = db.get(Analyse, analyse_id)
     if analyse is None:

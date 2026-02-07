@@ -4,6 +4,7 @@
   "workspaces": [
     "web",
     "portal",
+    "mobile",
     "packages/*"
   ],
   "engines": {

@@ -435,8 +435,8 @@ def get_stock_breakdown(db: Session = Depends(get_db)):
 
 @router.get("/export")
 def export_report(
-    format: str = Query(..., pattern="^(csv|excel|pdf)$"),
-    report_type: str = Query(..., pattern="^(activity|stock)$"),
+    format: str = Query(..., pattern=r"^(csv|excel|pdf)$"),
+    report_type: str = Query(..., pattern=r"^(activity|stock)$"),
     db: Session = Depends(get_db),
 ):
     """

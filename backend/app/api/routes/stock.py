@@ -9,9 +9,8 @@ from sqlalchemy.orm import Session
 from app.api.deps import require_auth_in_production
 from app.audit.events import log_event
 from app.core.config import settings
-from app.db.models import UserAccount
 from app.core.idempotency import get_idempotent_response, store_idempotent_response
-from app.db.models import ColdChainReading, ColdChainStorage, Don, FractionnementRecette, Poche, ProductRule
+from app.db.models import ColdChainReading, ColdChainStorage, Don, FractionnementRecette, Poche, ProductRule, UserAccount
 from app.db.session import get_db
 from app.schemas.stock import (
     ColdChainAlertOut,
@@ -149,64 +148,6 @@ def _expand_recette_composants(recette: FractionnementRecette) -> list[Fractionn
             )
     return expanded
 
-
-
-@router.get("/regles")
-def list_regles(db: Session = Depends(get_db)) -> list[dict]:
-    rows = list(db.execute(select(ProductRule).order_by(ProductRule.type_produit.asc())).scalars())
-    return [
-        {
-            "type_produit": r.type_produit,
-            "shelf_life_days": r.shelf_life_days,
-            "default_volume_ml": r.default_volume_ml,
-            "min_volume_ml": r.min_volume_ml,
-            "max_volume_ml": r.max_volume_ml,
-        }
-        for r in rows
-    ]
-
-
-@router.put("/regles/{type_produit}")
-def upsert_regle(
-    type_produit: str,
-    payload: dict,
-    db: Session = Depends(get_db),
-    _user: UserAccount | None = Depends(require_auth_in_production),
-) -> dict:
-    shelf_life_days = payload.get("shelf_life_days")
-    if not isinstance(shelf_life_days, int) or shelf_life_days <= 0:
-        raise HTTPException(status_code=400, detail="shelf_life_days requis (int > 0)")
-
-    def _opt_int(key: str) -> int | None:
-        v = payload.get(key)
-        if v is None:
-            return None
-        if not isinstance(v, int):
-            raise HTTPException(status_code=400, detail=f"{key} doit être un int")
-        return v
-
-    default_volume_ml = _opt_int("default_volume_ml")
-    min_volume_ml = _opt_int("min_volume_ml")
-    max_volume_ml = _opt_int("max_volume_ml")
-    if min_volume_ml is not None and max_volume_ml is not None and min_volume_ml > max_volume_ml:
-        raise HTTPException(status_code=400, detail="min_volume_ml > max_volume_ml")
-
-    row = db.get(ProductRule, type_produit)
-    if row is None:
-        row = ProductRule(type_produit=type_produit, shelf_life_days=shelf_life_days)
-        db.add(row)
-    row.shelf_life_days = shelf_life_days
-    row.default_volume_ml = default_volume_ml
-    row.min_volume_ml = min_volume_ml
-    row.max_volume_ml = max_volume_ml
-    db.commit()
-    return {
-        "type_produit": row.type_produit,
-        "shelf_life_days": row.shelf_life_days,
-        "default_volume_ml": row.default_volume_ml,
-        "min_volume_ml": row.min_volume_ml,
-        "max_volume_ml": row.max_volume_ml,
-    }
 
 
 @router.get("/poches", response_model=list[PocheOut])

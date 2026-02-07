@@ -132,7 +132,10 @@ def _reserve_one_poche(
 
 
 @router.post("/reservations/sweep")
-def sweep_reservations(db: Session = Depends(get_db)) -> dict:
+def sweep_reservations(
+    db: Session = Depends(get_db),
+    _user: UserAccount | None = Depends(require_auth_in_production),
+) -> dict:
     released = _release_expired_reservations(db)
     return {"released": released}
 

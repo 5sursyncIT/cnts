@@ -2,682 +2,221 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Overview
+## Apercu du Projet
 
-**SGI-CNTS**: Blood transfusion management system for Centre National de Transfusion Sanguine (CNTS) Dakar, Senegal. The system ensures complete traceability "from donor vein to recipient vein" following international blood safety standards (ISBT 128).
+**SGI-CNTS** : Systeme de gestion de la transfusion sanguine pour le Centre National de Transfusion Sanguine (CNTS) de Dakar, Senegal. Assure la tracabilite complete "de la veine du donneur a la veine du receveur" selon les normes ISBT 128.
 
-**Architecture**: Modular monolith FastAPI backend + PostgreSQL, with npm workspaces monorepo containing Next.js Back Office (admin web UI with MFA/RBAC), Next.js Patient Portal (public website + secure patient space), shared TypeScript packages (@cnts/api, @cnts/rbac, @cnts/monitoring), and planned React Native mobile app (offline-first for blood drives).
+**Architecture** : Monolithe modulaire FastAPI + PostgreSQL, avec un monorepo npm workspaces contenant un Back Office Next.js (interface admin avec MFA/RBAC), un Portail Patient Next.js (site public + espace patient securise), et des packages TypeScript partages (@cnts/api, @cnts/rbac, @cnts/monitoring).
 
-## Development Commands
+## Commandes de Developpement
 
-### Using Docker (Recommended for Quick Start)
+### Demarrage rapide avec Docker
 ```bash
-# Copy environment config
 cp .env.example .env
-
-# Start PostgreSQL + API
 docker compose up --build
-
-# Verify health (note: API routes are prefixed with /api)
 curl http://localhost:8000/api/health
-curl http://localhost:8000/api/health/db
 ```
 
-### Monorepo Setup (Frontend)
+### Backend
 ```bash
-# Install all workspace dependencies (from project root)
+cd backend
+python3 -m venv .venv && source .venv/bin/activate
+pip install -U pip && pip install -e ".[dev]"
+pip install email-validator python-multipart  # souvent manquants
+alembic upgrade head
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+### Frontend
+```bash
 npm install --workspaces --include-workspace-root
-
-# Start Back Office (admin) on http://localhost:3000
-npm -w web run dev
-
-# Start Patient Portal on http://localhost:3001
-npm -w portal run dev
-
-# Run linting across all workspaces
-npm run lint
-
-# Run tests across all workspaces
-npm run test
-
-# Run tests with coverage
-npm run test:coverage
+npm -w web run dev       # Back Office → http://localhost:3000
+npm -w portal run dev    # Portail Patient → http://localhost:3001
 ```
 
-**Environment Variables**: Create `.env.local` files in `web/` and `portal/` directories.
-
-**Back Office (`web/.env.local`)**:
-```bash
+Creer `web/.env.local` :
+```
 NEXT_PUBLIC_API_BASE_URL=/api/backend
 BACKOFFICE_API_BASE_URL=http://localhost:8000/api
 BACKOFFICE_SESSION_SECRET=change-me-in-production
 BACKOFFICE_ADMIN_EMAIL=admin@cnts.local
 BACKOFFICE_ADMIN_PASSWORD=admin
 BACKOFFICE_ADMIN_ROLES=admin
-# BACKOFFICE_ADMIN_TOTP_SECRET=  # Uncomment to enable MFA
 ```
 
-**Portal (`portal/.env.local`)**:
-```bash
+Creer `portal/.env.local` :
+```
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api
 PORTAL_SESSION_SECRET=change-me-in-production
 PORTAL_DEMO_PATIENT_EMAIL=patient@cnts.local
 PORTAL_DEMO_PATIENT_PASSWORD=patient
 ```
 
-See [web/README.md](web/README.md) and [portal/README.md](portal/README.md) for full configuration.
-
-### Local Backend Development
+### Tests et Linting
 ```bash
-cd backend
+# Backend
+cd backend && pytest                        # tous les tests
+pytest tests/test_liberation.py             # un fichier
+pytest -v -k test_name                      # un test precis
+ruff check . && ruff format .               # lint + formatage
 
-# Setup virtual environment
-python3 -m venv .venv
-source .venv/bin/activate  # or `. .venv/bin/activate`
-
-# Install dependencies (includes dev tools: pytest, httpx, ruff)
-pip install -U pip
-pip install -e ".[dev]"
-
-# Run database migrations
-alembic upgrade head
-
-# Start API with hot reload
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-**Note**: Si le backend ne démarre pas, installer ces dépendances souvent manquantes:
-```bash
-pip install email-validator python-multipart
-```
-
-### Testing & Linting
-
-**Backend (Python)**
-```bash
-cd backend
-
-# Run all tests
-pytest
-
-# Run specific test file
-pytest tests/test_liberation.py
-
-# Run tests with verbose output
-pytest -v
-
-# Lint with ruff
-ruff check .
-
-# Format with ruff
-ruff format .
-```
-
-**Frontend (TypeScript/JavaScript)**
-```bash
-# From project root - run across all workspaces
-npm run test
-npm run test:coverage
+# Frontend (depuis la racine du projet)
+npm run test                                # tous les workspaces
+npm -w web run test                         # un workspace specifique
+npm -w @cnts/api run test                   # un package partage
 npm run lint
-
-# Specific workspace
-npm -w web run test
-npm -w web run test:coverage
-npm -w web run lint
-
-npm -w portal run test
-npm -w portal run lint
-
-# Shared packages
-npm -w @cnts/api run test
-npm -w @cnts/rbac run test
-npm -w @cnts/monitoring run test
 ```
 
-### Database Migrations
+### Migrations de Base de Donnees
 ```bash
 cd backend
-
-# Apply migrations
-alembic upgrade head
-
-# Create new migration (after modifying models)
-alembic revision --autogenerate -m "description"
-
-# Rollback one migration
-alembic downgrade -1
+alembic upgrade head                              # appliquer
+alembic revision --autogenerate -m "description"  # creer
+alembic downgrade -1                              # annuler
 ```
 
-## Architecture Overview
+## Architecture
 
-### Monorepo Structure
 ```
 .
-├── backend/           # FastAPI backend + PostgreSQL
-├── web/               # Back Office (Next.js 16 + React 19)
-├── portal/            # Patient Portal (Next.js 16 + React 19)
-├── packages/          # Shared TypeScript packages
-│   ├── api/           # @cnts/api - API client
-│   ├── rbac/          # @cnts/rbac - Role-based access control
-│   └── monitoring/    # @cnts/monitoring - Metrics & reporting
-├── mobile/            # React Native app (planned)
-├── docs/              # Technical documentation
-└── package.json       # Root workspace configuration
+├── backend/           # FastAPI + PostgreSQL
+│   ├── app/
+│   │   ├── api/
+│   │   │   ├── deps.py        # Dependances auth (get_current_user, require_auth_in_production)
+│   │   │   ├── router.py      # Agregation des routes
+│   │   │   └── routes/        # Modules endpoints par domaine
+│   │   ├── audit/events.py    # log_event() pour la piste d'audit
+│   │   ├── core/              # Logique metier (din.py, security.py, idempotency.py, rate_limit.py)
+│   │   ├── db/models.py       # Modeles SQLAlchemy
+│   │   └── schemas/           # DTOs Pydantic
+│   ├── alembic/               # Migrations
+│   └── tests/
+├── web/               # Back Office (Next.js 16 + React 19, App Router)
+├── portal/            # Portail Patient (Next.js 16 + React 19, App Router)
+└── packages/
+    ├── api/           # @cnts/api - Client API type-safe + hooks React
+    ├── rbac/          # @cnts/rbac - Controle d'acces base sur les roles
+    └── monitoring/    # @cnts/monitoring - Metriques et rapport d'erreurs
 ```
 
-### Backend Structure
-```
-backend/
-├── app/
-│   ├── api/routes/     # API endpoints by domain
-│   │   ├── donneurs.py      # Donor management
-│   │   ├── dons.py          # Donation collection
-│   │   ├── analyses.py      # Lab test results
-│   │   ├── liberation.py    # Biological release
-│   │   ├── poches.py        # Blood bag inventory
-│   │   └── stock.py         # Fractionnement & product rules
-│   ├── audit/          # Event sourcing & audit trail
-│   ├── core/           # Business logic & utilities
-│   │   ├── din.py           # DIN generation (ISBT 128)
-│   │   ├── security.py      # CNI hashing
-│   │   ├── idempotency.py   # Mobile sync support
-│   │   └── config.py        # Settings
-│   ├── db/             # SQLAlchemy models, session
-│   └── schemas/        # Pydantic DTOs
-├── alembic/            # Database migrations
-└── tests/              # Pytest test suite
+### Backend : Toutes les routes API sont prefixees par `/api` (configure dans `app/main.py`).
+
+### Frontend : Le Back Office utilise le proxy `/api/backend/*` pour eviter les problemes CORS. Les deux apps utilisent App Router, Server Components par defaut, cookies de session httpOnly, Tailwind CSS 4 et Vitest pour les tests.
+
+### Pattern Hooks @cnts/api
+
+Les hooks dans [packages/api/src/hooks.ts](packages/api/src/hooks.ts) utilisent un pattern custom `useQuery`/`useMutation` (pas React Query) :
+
+```typescript
+// Hook de requete
+export function useMyData(api: ApiClient, params?: Params) {
+  return useQuery(["my-key", JSON.stringify(params)], () => api.myModule.list(params));
+}
+
+// Hook de mutation
+export function useCreateMyData(api: ApiClient) {
+  return useMutation((data: T.MyDataCreate) => api.myModule.create(data));
+}
 ```
 
-### Frontend Applications
+**Critique** : Les dependances du `useEffect` doivent utiliser `queryKey.join(",")`, et NON `queryFn` directement (empeche les boucles de re-rendu infinies).
 
-**web/ (Back Office)**
-- Next.js 16 App Router with React 19
-- Secure admin interface for CNTS staff and healthcare facilities
-- Authentication: Login + MFA (TOTP via otplib), httpOnly session cookies
-- RBAC: Role-based permissions (read/write/delete/validate per module)
-- Local audit trail: Logs administrative actions
-- API Proxy: `/api/backend/*` proxies to FastAPI backend (anti-CORS)
-- Stack: Next.js, jose (JWT), otplib (TOTP), Tailwind CSS 4, Vitest
-- Environment: See [web/README.md](web/README.md) for required env vars
+## Modeles du Domaine
 
-**portal/ (Patient Portal)**
-- Next.js 16 App Router with React 19
-- Public website (services, team, contact, news)
-- Secure patient space (appointments, reports, messaging, documents, notifications)
-- GDPR compliance: Cookie consent banner, explicit consent for health data access
-- Stack: Next.js, jose (JWT), Tailwind CSS 4, Vitest
-- Environment: See [portal/README.md](portal/README.md) for required env vars
+**Donneur** → identifie par `cni_hash` (HMAC-SHA256, le CNI n'est jamais stocke en clair). Eligibilite : hommes 60 jours, femmes 120 jours entre les dons.
 
-**Shared Packages** (TypeScript, ES modules)
-- `@cnts/api`: Type-safe API client for FastAPI backend, includes monitoring integration
-- `@cnts/rbac`: RBAC model and permission checks (roles, resources, actions)
-- `@cnts/monitoring`: Metrics collection and error reporting
+**Don** → `din` unique (format ISBT 128 : `{SITE_CODE}{AA}{JJJ}{NNNNNN}`). Machine a etats : `statut_qualification` EN_ATTENTE → LIBERE.
 
-All packages use Vitest for testing with coverage reporting.
+**Poche** (Poche de sang) → produits : ST, CGR, PFC, CP. Deux machines a etats paralleles :
+- `statut_stock` : EN_STOCK → FRACTIONNEE
+- `statut_distribution` : NON_DISTRIBUABLE → DISPONIBLE → RESERVE → DISTRIBUE
+- `source_poche_id` trace la chaine de fractionnement. Indexe par `(type_produit, date_peremption)` pour le FEFO.
 
-**@cnts/api Hook Pattern** ([packages/api/src/hooks.ts](packages/api/src/hooks.ts)):
-- Each API client endpoint (`packages/api/src/client.ts`) should have a corresponding hook
-- Hooks use a custom `useQuery`/`useMutation` pattern (not React Query)
-- To add a new hook for a query:
-  ```typescript
-  export function useMyData(api: ApiClient, params?: Parameters<ApiClient["myModule"]["list"]>[0]) {
-    return useQuery(["my-key", JSON.stringify(params)], () => api.myModule.list(params));
-  }
-  ```
-- To add a new hook for a mutation:
-  ```typescript
-  export function useCreateMyData(api: ApiClient) {
-    return useMutation((data: T.MyDataCreate) => api.myModule.create(data));
-  }
-  ```
-- **Important**: The `useEffect` dependencies must use `queryKey.join(",")`, NOT `queryFn` directly (prevents infinite loops)
+**Analyse** → 6 tests requis : ABO, RH, VIH, VHB, VHC, SYPHILIS. Resultats : POSITIF/NEGATIF/EN_ATTENTE.
 
-### Core Domain Models
+**Commande** → commandes hospitalieres. Machine a etats : BROUILLON → VALIDEE → SERVIE (ou ANNULEE). Allocation FEFO avec reservations a duree limitee (defaut 24h).
 
-**Donneur (Donor)**
-- Identified via `cni_hash` (HMAC-SHA256 of national ID number)
-- Tracks `dernier_don` (last donation date) for eligibility calculation
-- Males: 2 months between donations, Females: 4 months
+**ProductRule** → duree de conservation et contraintes de volume par type de produit. **FractionnementRecette** → recettes predefinies pour fractionner le ST en composants.
 
-**Don (Donation)**
-- Each donation receives unique `din` (Donation Identification Number) via ISBT 128 format: `{SITE_CODE}{YY}{DDD}{NNNNNN}` (site code + year + day-of-year + sequence)
-- `statut_qualification`: state machine (EN_ATTENTE → LIBERE)
-- Links to multiple `Analyse` (lab tests) and `Poche` (blood products)
+## Architecture de Securite
 
-**Poche (Blood Bag)**
-- Derived products: ST (whole blood), CGR (packed RBC), PFC (plasma), CP (platelets)
-- Two parallel state machines:
-  - `statut_stock`: EN_STOCK → FRACTIONNEE (for inventory tracking)
-  - `statut_distribution`: NON_DISTRIBUABLE → DISPONIBLE → RESERVE → DISTRIBUE (for clinical use)
-- `source_poche_id`: Tracks fractionnement chain (ST → CGR/PFC/CP)
-- `volume_ml`: Volume in milliliters (optional but recommended)
-- Indexed by `(type_produit, date_peremption)` for FEFO (First Expired, First Out)
-
-**Analyse (Lab Test)**
-- Types: ABO grouping, Rh factor, infectious disease screening (VIH, VHB, VHC, SYPHILIS)
-- `resultat`: POSITIF/NEGATIF/EN_ATTENTE
-- **Critical Rule**: Blood bag CANNOT be marked DISPONIBLE if any test is POSITIF or EN_ATTENTE
-
-**ProductRule** (Configuration)
-- Defines shelf life and volume constraints per product type
-- `shelf_life_days`: Days from donation date to expiration
-- `default_volume_ml`, `min_volume_ml`, `max_volume_ml`: Volume constraints
-- Used by fractionnement to calculate expiration dates and validate volumes
-
-**FractionnementRecette** (Recipe)
-- Predefined recipes for splitting blood products (e.g., "ST_STANDARD": 1 CGR + 1 PFC + 1 CP)
-- `composants`: JSONB array of `{type_produit, volume_ml, quantite}`
-- `site_code`: Optional site-specific recipes (null = global)
-- `actif`: Enable/disable recipes without deletion
-
-**TraceEvent** (Audit Trail)
-- Event sourcing for critical operations (fractionnement, liberation, etc.)
-- `aggregate_type`, `aggregate_id`: Entity being tracked
-- `event_type`: Operation performed (e.g., "poche.fractionnee")
-- `payload`: JSONB snapshot of operation details
-
-### Key Technical Patterns
-
-**DIN Generation** ([backend/app/core/din.py](backend/app/core/din.py))
-- Uses PostgreSQL sequence `din_seq` for unique serial numbers
-- Format ensures global uniqueness and ISBT 128 compliance
-
-**CNI Hashing** ([backend/app/core/security.py](backend/app/core/security.py))
-- Donor CNI is HMAC-hashed with secret key (`CNTS_CNI_HASH_KEY`)
-- Normalized (alphanumeric, uppercase) before hashing to handle duplicates
-- Hash is indexed for fast lookup, original CNI not stored in DB
-
-**Idempotency Support** ([backend/app/core/idempotency.py](backend/app/core/idempotency.py))
-- Critical for mobile offline-first sync (prevents duplicate donations on retry)
-- Endpoints that modify state accept `idempotency_key` in request body
-- System tracks processed keys to reject duplicates
-- Used in: `/dons`, `/stock/fractionnements`, `/stock/fractionnements/recette/{code}`
-
-**Audit Trail** ([backend/app/audit/events.py](backend/app/audit/events.py))
-- `log_event()` function records critical operations in `trace_events` table
-- Event sourcing pattern for compliance and debugging
-- Currently tracks: fractionnement operations
-- Future: liberation, distribution, adverse reactions
-
-**State Machine Validation**
-- Use explicit status enums in models (e.g., `statut_qualification`, `statut_distribution`, `statut_stock`)
-- Database constraints enforce business rules (e.g., CHECK constraints, foreign keys)
-- State transitions should be atomic (use DB transactions)
-
-**Fractionnement Workflow** ([backend/app/api/routes/stock.py](backend/app/api/routes/stock.py))
-1. Validate source poche is ST and EN_STOCK
-2. Lookup ProductRule for each component to get shelf_life_days and volume constraints
-3. Create derived poches with calculated expiration dates
-4. Validate total volume doesn't exceed source + max_overage (default 250ml)
-5. Mark source as FRACTIONNEE
-6. Log event to audit trail
-7. Return list of created poches
-
-### Configuration
-
-Environment variables (all prefixed with `CNTS_`):
-- `CNTS_DATABASE_URL`: PostgreSQL connection string (use `postgresql+psycopg://...`)
-- `CNTS_CNI_HASH_KEY`: HMAC secret for hashing donor IDs (MUST change in production)
-- `CNTS_DIN_SITE_CODE`: Site identifier for DIN generation (default: "CNTS")
-- `CNTS_FRACTIONNEMENT_MAX_OVERAGE_ML`: Max volume overage allowed (default: 250ml)
-- `CNTS_ENV`: dev/staging/prod
-- `CNTS_LOG_LEVEL`: INFO/DEBUG/WARNING/ERROR
-
-See [.env.example](.env.example) for full configuration.
-
-## Critical Business Rules
-
-1. **Biological Release Gate**: A `Poche` MUST NOT transition to `DISPONIBLE` status unless:
-   - All required `Analyse` records exist for the parent `Don` (ABO, RH, VIH, VHB, VHC, SYPHILIS)
-   - All test results are `NEGATIF`
-   - `Don.statut_qualification` is `LIBERE`
-
-2. **Donor Eligibility**: Before accepting a donation, verify:
-   - Males: `dernier_don` is NULL or >= 60 days ago
-   - Females: `dernier_don` is NULL or >= 120 days ago
-   - Pre-donation questionnaire flags are reviewed by medical staff
-
-3. **Anonymization**: Blood bag labels contain ONLY:
-   - DIN (unique identifier)
-   - Blood group (ABO + Rh)
-   - Product type (ST/CGR/PFC/CP)
-   - Expiration date
-   - NEVER the donor's name or CNI
-
-4. **Fractionnement Rules**:
-   - Only ST (Sang Total) can be fractionned
-   - Source poche must be EN_STOCK status
-   - Total component volume must not exceed source volume + max_overage
-   - Each component expiration = donation_date + product_rule.shelf_life_days
-   - Source poche becomes FRACTIONNEE and moved to FRACTIONNEMENT location
-
-5. **Audit Trail**: All state transitions and critical operations MUST be logged via `log_event()` for regulatory compliance.
-
-## Development Guidelines
-
-- **Index Strategy**: The models already have indexes on frequently queried columns (`cni_hash`, `din`, `type_produit + date_peremption`, status fields). Add new indexes sparingly after measuring query performance.
-
-- **API Pagination**: All list endpoints MUST support pagination (`offset`/`limit`). Default page size should be 20-200 items depending on data size.
-
-- **Error Handling**: Use FastAPI's `HTTPException` with appropriate status codes:
-  - 404: Resource not found
-  - 409: Business rule violation (e.g., poche already FRACTIONNEE)
-  - 422: Invalid data / unprocessable entity
-  - Provide clear error messages in French (user-facing API)
-
-- **Mobile Sync**: When implementing mobile endpoints, ensure:
-  - Accept `idempotency_key` to prevent duplicate submissions
-  - Return incremental updates via cursor-based sync (timestamp or event sequence)
-  - Handle clock skew (use server timestamps for authoritative ordering)
-
-- **Testing**: Use pytest fixtures for database setup. Test files are in `backend/tests/`. Use SQLite in-memory database for fast tests. See test_liberation.py and test_poches.py for examples.
-
-- **Audit Logging**: When adding new state-changing endpoints, call `log_event()` to record the operation:
+### Authentification (`app/api/deps.py`)
+- **`get_current_user`** : Auth stricte via token OAuth2 Bearer. Retourne `UserAccount` ou leve 401.
+- **`require_auth_in_production`** : Utilise sur tous les endpoints d'ecriture. Exige l'auth en prod/staging, autorise l'acces anonyme en dev. A ajouter sur les nouveaux endpoints d'ecriture :
   ```python
-  from app.audit.events import log_event
+  from app.api.deps import require_auth_in_production
+  from app.db.models import UserAccount
 
-  log_event(
-      db,
-      aggregate_type="poche",
-      aggregate_id=poche.id,
-      event_type="poche.fractionnee",
-      payload={"key": "value", ...}
-  )
+  @router.post("/resource")
+  def create_resource(
+      payload: ResourceCreate,
+      db: Session = Depends(get_db),
+      _user: UserAccount | None = Depends(require_auth_in_production),
+  ) -> Resource:
   ```
 
-### Frontend Development Guidelines
+### Rate Limiting (`app/core/rate_limit.py`)
+Fenetre glissante par IP, desactive en dev. Limites : auth 10/min, admin 30/min, ecriture 60/min, lecture 100/min.
 
-- **Monorepo Practices**: Use workspace dependencies (`@cnts/*` packages) for shared code. Changes to packages are automatically reflected in dependent apps during development.
+### CORS (`app/main.py`)
+Methodes et en-tetes restreints (pas `*`). En-tetes de securite ajoutes via middleware : `X-Content-Type-Options`, `X-Frame-Options`, `X-XSS-Protection`, `Referrer-Policy`.
 
-- **Next.js Patterns**:
-  - Use App Router (not Pages Router)
-  - Server Components by default, Client Components only when needed ('use client')
-  - API routes in `app/api/` for backend proxy and server-side logic
-  - Middleware for authentication/session checks
+### Hachage du CNI (`app/core/security.py`)
+Le CNI du donneur est hache par HMAC, normalise (alphanumerique majuscule) avant hachage. Le CNI original n'est jamais stocke.
 
-- **Authentication & Security**:
-  - Back Office: Use httpOnly session cookies (never localStorage)
-  - Verify sessions in middleware.ts before allowing access to protected routes
-  - MFA (TOTP) required for admin users - use otplib for generation/validation
-  - RBAC checks: Use @cnts/rbac package for permission validation
+### Validation des secrets en production (`app/core/config.py`)
+`@model_validator` leve `ValueError` si des secrets par defaut non securises sont utilises en prod/staging.
 
-- **API Communication**:
-  - Use @cnts/api client for type-safe backend requests
-  - Back Office: Prefer `/api/backend/*` proxy to avoid CORS
-  - Portal: Can call backend directly or via proxy
-  - Include error handling and monitoring integration
+## Regles Metier Critiques
 
-- **Testing**: All new components and utilities should have Vitest tests. Use happy-dom for DOM testing. Run `npm run test:coverage` to ensure coverage thresholds.
+1. **Porte de liberation biologique** : Une `Poche` NE DOIT PAS devenir `DISPONIBLE` sauf si les 6 resultats d'`Analyse` sont `NEGATIF` et `Don.statut_qualification` est `LIBERE`.
 
-- **Styling**: Use Tailwind CSS 4 utility classes. Follow existing patterns for consistency (see web/src/components/ for examples).
+2. **Eligibilite du donneur** : Hommes ≥ 60 jours depuis le dernier don, Femmes ≥ 120 jours.
 
-- **Accessibility**: Use semantic HTML and ARIA attributes where needed. Run ESLint with jsx-a11y plugin to catch issues.
+3. **Anonymisation** : Les etiquettes de poches contiennent UNIQUEMENT : DIN, groupe sanguin, type de produit, date de peremption. Jamais le nom ou le CNI du donneur.
 
-## Implemented Modules (v0.2.0+)
+4. **Fractionnement** : Seul le ST → composants. La source doit etre EN_STOCK. Volume total ≤ source + surcote max (defaut 250ml). Peremption = date_don + product_rule.shelf_life_days.
 
-### Donor Management ([backend/app/api/routes/donneurs.py](backend/app/api/routes/donneurs.py))
-- CRUD for donors with CNI hashing
-- Eligibility calculation based on gender and last donation date
-- Automatic duplicate detection via CNI hash
+5. **Piste d'audit** : Toutes les operations modifiant l'etat DOIVENT appeler `log_event()` pour la conformite reglementaire.
 
-### Donation Collection ([backend/app/api/routes/dons.py](backend/app/api/routes/dons.py))
-- Create donations with automatic DIN generation (ISBT 128)
-- Idempotency support for mobile sync
-- Automatic ST poche creation on donation
-- Etiquette generation endpoint
+## Patterns de Developpement
 
-### Laboratory Module ([backend/app/api/routes/analyses.py](backend/app/api/routes/analyses.py))
-- Complete CRUD for lab test results (Analyse model)
-- Required tests: ABO, RH, VIH, VHB, VHC, SYPHILIS
-- Validation prevents duplicate tests for same donation
-- Filtering by don_id, type_test, resultat
+### Gestion des erreurs
+Utiliser `HTTPException` avec : 404 (non trouve), 409 (violation regle metier), 422 (donnees invalides). Messages d'erreur en francais.
 
-### Biological Release ([backend/app/api/routes/liberation.py](backend/app/api/routes/liberation.py))
-- `GET /liberation/{don_id}` - Verify if donation can be released
-- `POST /liberation/{don_id}/liberer` - Perform biological release
-- **Critical business logic**: Enforces all required tests are NEGATIF before release
-- Automatically updates Don status: EN_ATTENTE → LIBERE
-- Automatically updates Poche status: NON_DISTRIBUABLE → DISPONIBLE
-
-### Blood Bag Inventory ([backend/app/api/routes/poches.py](backend/app/api/routes/poches.py))
-- FEFO sorting: `GET /poches?sort_by_expiration=true`
-- Expiration alerts: `GET /poches/alertes/peremption?jours=7`
-- Stock summary by product type: `GET /poches/stock/summary`
-- Comprehensive filtering: type_produit, statut_distribution, emplacement_stock
-- Protection: Cannot delete DISTRIBUE poches, cannot make DISPONIBLE without LIBERE don
-
-### Fractionnement & Stock Management ([backend/app/api/routes/stock.py](backend/app/api/routes/stock.py))
-- **Product Rules**: Configure shelf life and volume constraints per product type
-  - `GET /stock/regles` - List all product rules
-  - `PUT /stock/regles/{type_produit}` - Create/update product rule
-
-- **Manual Fractionnement**: Split ST into components with custom volumes
-  - `POST /stock/fractionnements` - Fractionner with explicit component list
-  - Validates volumes against ProductRule constraints
-  - Calculates expiration dates automatically
-
-- **Recipe-based Fractionnement**: Use predefined recipes for consistent splitting
-  - `GET /stock/recettes` - List recipes (filter by site_code, actif)
-  - `GET /stock/recettes/{code}` - Get recipe details
-  - `PUT /stock/recettes/{code}` - Create/update recipe
-  - `DELETE /stock/recettes/{code}` - Deactivate recipe (sets actif=false)
-  - `POST /stock/fractionnements/recette/{code}` - Split using recipe
-
-- **Stock Queries**:
-  - `GET /stock/poches` - List poches with FEFO sorting (EN_STOCK by default)
-
-- **Idempotency**: Both fractionnement endpoints support `idempotency_key`
-- **Audit**: All fractionnement operations logged to `trace_events` table
-
-### Distribution Module ([backend/app/api/routes/](backend/app/api/routes/))
-- **Hospital Management** (`hopitaux.py`)
-  - `GET /hopitaux` - List hospitals with convention filter
-  - `POST /hopitaux` - Create hospital
-  - `GET /hopitaux/{id}` - Get hospital details
-
-- **Order Management** (`commandes.py`)
-  - `GET /commandes` - List orders (filter by statut, hopital_id)
-  - `POST /commandes` - Create order with multiple lines
-  - `GET /commandes/{id}` - Get order details with lines
-  - `POST /commandes/{id}/valider` - Validate and reserve poches (FEFO)
-  - `POST /commandes/{id}/affecter` - Assign receveurs to poches
-  - `POST /commandes/{id}/servir` - Serve order (marks DISTRIBUE)
-  - `POST /commandes/{id}/annuler` - Cancel order (releases reservations)
-
-- **Receveur Management** (`receveurs.py`)
-  - `GET /receveurs` - List receveurs (filter by groupe_sanguin)
-  - `POST /receveurs` - Create receveur
-  - `GET /receveurs/{id}` - Get receveur details
-
-- **Cross-Matching** (`cross_match.py`)
-  - `POST /cross-match` - Record compatibility test result
-
-- **Business Logic**:
-  - Automatic FEFO allocation (First Expired, First Out)
-  - Blood group compatibility validation
-  - Reservation expiration (configurable, default 24h)
-  - State machine: BROUILLON → VALIDEE → SERVIE
-  - Can cancel BROUILLON or VALIDEE (releases reservations)
-
-### Hémovigilance Module ([backend/app/api/routes/hemovigilance.py](backend/app/api/routes/hemovigilance.py))
-- **Transfusion Tracking**: `GET /hemovigilance/transfusions` - List transfusion events
-- **Batch Recall** (Rappel de lot):
-  - `POST /hemovigilance/rappels` - Create recall for contaminated products
-  - `GET /hemovigilance/rappels` - List active recalls
-  - `GET /hemovigilance/rappels/{id}/impact` - Calculate impact (affected poches/patients)
-  - `POST /hemovigilance/rappels/{id}/actions` - Record corrective actions
-- **Hooks**: `useActesTransfusionnels`, `useRappels`, `useRappel`, `useCreateRappel`, `useRappelActions`, `useRappelImpacts`
-- **Audit**: All recall actions logged to trace_events
-
-### Analytics Module ([backend/app/api/routes/analytics.py](backend/app/api/routes/analytics.py))
-- `GET /analytics/dashboard` - Aggregate statistics (donation trends, stock by blood type, order status)
-- `GET /analytics/trend/dons` - Donation trends over time
-- `GET /analytics/trend/stock` - Stock evolution
-- `GET /analytics/kpi/*` - KPI endpoints (collection rate, wastage, liberation rate)
-- **Hooks**: `useAnalyticsDashboard`, `useTrendDons`, `useTrendStock`, `useKPIs`, `useStockBreakdown`
-
-### User Management ([backend/app/api/routes/users.py](backend/app/api/routes/users.py))
-- CRUD for user accounts with role assignment
-- Password reset functionality
-- **Hooks**: `useUsers`, `useUser`, `useCreateUser`, `useUpdateUser`, `useDeleteUser`, `useResetUserPassword`
-
-### Test Coverage
-- [backend/tests/test_liberation.py](backend/tests/test_liberation.py): 10 tests covering biological release workflow
-- [backend/tests/test_poches.py](backend/tests/test_poches.py): 8 tests covering blood bag inventory features
-- [backend/tests/test_distribution.py](backend/tests/test_distribution.py): 14 tests covering hospital orders, FEFO allocation, cross-matching
-- [backend/tests/test_sync_e2e.py](backend/tests/test_sync_e2e.py): Mobile sync tests
-- [backend/tests/test_auth_2fa_disable.py](backend/tests/test_auth_2fa_disable.py): MFA disable/recovery tests
-
-## Implemented Frontend Modules (v0.3.0+)
-
-### Back Office (web/) - Admin Interface ✅
-
-**Authentication & Authorization** (Complete)
-- Login + MFA (TOTP via otplib), httpOnly session cookies
-- RBAC system with 4 roles: admin, biologiste, technicien_labo, agent_distribution
-- Permission-based access control via @cnts/rbac package
-- Local audit trail for administrative actions
-- API proxy: `/api/backend/*` for CORS-free backend communication
-
-**Core Modules** (Complete - ~95% of business functionality)
-
-**1. Donneurs (Donor Management)** - 3 pages
-- [web/src/app/(bo)/donneurs/page.tsx](web/src/app/(bo)/donneurs/page.tsx) - List with search/filter
-- [web/src/app/(bo)/donneurs/nouveau/page.tsx](web/src/app/(bo)/donneurs/nouveau/page.tsx) - Create donor with CNI validation
-- [web/src/app/(bo)/donneurs/[id]/page.tsx](web/src/app/(bo)/donneurs/[id]/page.tsx) - Detail with real-time eligibility check and donation history
-
-**2. Dons (Donation Collection)** - 3 pages
-- [web/src/app/(bo)/dons/page.tsx](web/src/app/(bo)/dons/page.tsx) - List with filters and statistics
-- [web/src/app/(bo)/dons/nouveau/page.tsx](web/src/app/(bo)/dons/nouveau/page.tsx) - Create donation with eligibility verification
-- [web/src/app/(bo)/dons/[id]/page.tsx](web/src/app/(bo)/dons/[id]/page.tsx) - Detail with analyses, poches, liberation status, etiquette download
-
-**3. Laboratoire (Laboratory)** - 3 pages
-- [web/src/app/(bo)/laboratoire/page.tsx](web/src/app/(bo)/laboratoire/page.tsx) - Landing page with workflow overview
-- [web/src/app/(bo)/laboratoire/analyses/page.tsx](web/src/app/(bo)/laboratoire/analyses/page.tsx) - Batch test entry for 6 required tests (ABO, RH, VIH, VHB, VHC, SYPHILIS)
-- [web/src/app/(bo)/laboratoire/liberation/page.tsx](web/src/app/(bo)/laboratoire/liberation/page.tsx) - Biological release validation and execution
-
-**4. Stock (Inventory & Fractionnement)** - 2 pages
-- [web/src/app/(bo)/stock/page.tsx](web/src/app/(bo)/stock/page.tsx) - FEFO inventory with expiration alerts and statistics
-- [web/src/app/(bo)/stock/fractionnement/page.tsx](web/src/app/(bo)/stock/fractionnement/page.tsx) - Split ST into components (recipe-based or manual)
-
-**5. Distribution (Hospital Orders)** - 4 pages
-- [web/src/app/(bo)/distribution/page.tsx](web/src/app/(bo)/distribution/page.tsx) - Dashboard with pending orders
-- [web/src/app/(bo)/distribution/commandes/page.tsx](web/src/app/(bo)/distribution/commandes/page.tsx) - Order list with filters
-- [web/src/app/(bo)/distribution/commandes/nouvelle/page.tsx](web/src/app/(bo)/distribution/commandes/nouvelle/page.tsx) - Create order with dynamic lines
-- [web/src/app/(bo)/distribution/commandes/[id]/page.tsx](web/src/app/(bo)/distribution/commandes/[id]/page.tsx) - Order detail with validation, serving, cancellation
-
-**Shared Infrastructure**
-- `@cnts/api`: Complete type-safe API client with 50+ endpoints, React hooks for all operations
-- `@cnts/rbac`: RBAC engine (roles, permissions, policy validation)
-- `@cnts/monitoring`: Instrumented fetch with metrics and error reporting
-
-**Complete "Vein to Vein" Workflow** - Fully Functional
-```
-Donor Registration → Donation → Lab Tests → Biological Release →
-Fractionnement → Stock Management → Hospital Order → Distribution
+### Journalisation d'audit
+```python
+from app.audit.events import log_event
+log_event(db, aggregate_type="poche", aggregate_id=poche.id,
+          event_type="poche.fractionnee", payload={...})
 ```
 
-All critical business operations now have full UI support.
+### Idempotence
+Les endpoints d'ecriture supportant la synchro mobile acceptent `idempotency_key` dans le body. Utilise dans : `/dons`, `/stock/fractionnements`.
 
-### Patient Portal (portal/) - Public Website + Patient Space
+### Pagination
+Tous les endpoints de liste DOIVENT supporter les parametres `offset`/`limit`.
 
-**Public Website** (Complete)
-- Landing page with services overview
-- Team page (staff profiles)
-- Contact page with form
-- News/Blog section
-- GDPR compliance: Cookie consent banner
+### Tests
+Le backend utilise pytest avec SQLite en memoire. Fichiers de tests dans `backend/tests/`. Le frontend utilise Vitest + happy-dom.
 
-**Patient Space** (Complete)
-- Patient authentication with secure sessions
-- Dashboard with key metrics
-- Appointments management
-- Medical reports access
-- Secure messaging with staff
-- Document library
-- Notifications center
-- Health data access consent (GDPR)
+### RBAC (Back Office)
+4 roles : admin, biologiste, technicien_labo, agent_distribution. Utiliser `@cnts/rbac` pour les verifications de permissions. Sessions via cookies httpOnly + MFA (TOTP via otplib).
 
-## Future Modules (Not Yet Implemented)
+## Configuration
 
-**Backend UI** (API complete, UI needed)
-- **Cross-matching UI**: Receveur management interface, cross-match recording form
-- **Hospital Management UI**: CRUD interface for hospitals
+Variables d'environnement backend (prefixees `CNTS_`) :
+- `CNTS_DATABASE_URL` : Connexion PostgreSQL (`postgresql+psycopg://...`)
+- `CNTS_CNI_HASH_KEY` : Secret HMAC pour le hachage des CNI
+- `CNTS_DIN_SITE_CODE` : Identifiant du site pour la generation DIN (defaut : "CNTS")
+- `CNTS_FRACTIONNEMENT_MAX_OVERAGE_ML` : Surcote de volume max (defaut : 250ml)
+- `CNTS_ENV` : dev/staging/prod
+- `CNTS_LOG_LEVEL` : INFO/DEBUG/WARNING/ERROR
 
-**Admin Pages** (Lower priority)
-- Product rules management UI (CRUD)
-- Fractionnement recipes management UI (CRUD)
-- User management UI (create/edit users, assign roles)
-- Enhanced audit log viewer
+Voir [.env.example](.env.example) pour la liste complete.
 
-**Analytics** (Lower priority)
-- Dashboard with charts (donation trends, stock levels, distribution statistics)
-- KPI tracking (donation rate, waste rate, distribution efficiency)
-- Reports generation (monthly summaries, compliance reports)
+## Problemes Connus
 
-**Mobile**
-- **Mobile App** (React Native): Offline-first blood drive collection with donor questionnaire, event log sync
-
-## Common Workflows
-
-### Complete Blood Donation Flow (Full "Vein to Vein" Traceability)
-1. **Donor Registration** (`/donneurs/nouveau`)
-   - Enter CNI (hashed), name, sex
-   - System checks eligibility (60 days male, 120 days female)
-   - Create donor record
-
-2. **Donation Collection** (`/dons/nouveau`)
-   - Select eligible donor
-   - Generate unique DIN (ISBT 128 format)
-   - Automatic ST poche creation (NON_DISTRIBUABLE)
-   - Download anonymous etiquette
-
-3. **Laboratory Testing** (`/laboratoire/analyses`)
-   - Enter 6 required test results (ABO, RH, VIH, VHB, VHC, SYPHILIS)
-   - Batch submission with validation
-
-4. **Biological Release** (`/laboratoire/liberation`)
-   - Verify all tests complete and NEGATIF
-   - Validate and release don (LIBERE)
-   - Poche becomes DISPONIBLE for distribution
-
-5. **Fractionnement** (Optional, `/stock/fractionnement`)
-   - Split ST into components (CGR, PFC, CP)
-   - Use predefined recipe or manual specification
-   - Automatic expiration calculation per product rule
-
-6. **Stock Management** (`/stock`)
-   - FEFO inventory (First Expired, First Out)
-   - Expiration alerts
-   - Product tracking by type and blood group
-
-7. **Hospital Order** (`/distribution/commandes/nouvelle`)
-   - Create order with multiple lines (type, group, quantity)
-   - Validation reserves poches automatically (FEFO)
-   - Affectation to specific receveurs (optional)
-
-8. **Distribution** (`/distribution/commandes/{id}`)
-   - Serve order (marks poches DISTRIBUE)
-   - Complete traceability maintained
-   - Ready for transfusion at hospital
-
-### Fractionnement with Recipe
-1. Admin creates ProductRule for each product type (shelf_life_days, volume constraints)
-2. Admin creates FractionnementRecette (e.g., "ST_STANDARD": 1 CGR 280ml + 1 PFC 220ml + 1 CP 50ml)
-3. Lab/Tech calls `POST /stock/fractionnements/recette/ST_STANDARD` with source poche
-4. System validates, creates components, marks source as FRACTIONNEE, logs event
-
-### Example: Define Product Rules
-```bash
-# CGR: 42 days shelf life, 250-300ml volume
-curl -X PUT http://localhost:8000/stock/regles/CGR \
-  -H "Content-Type: application/json" \
-  -d '{"shelf_life_days": 42, "default_volume_ml": 280, "min_volume_ml": 250, "max_volume_ml": 300}'
-
-# PFC: 365 days (frozen), 200-250ml
-curl -X PUT http://localhost:8000/stock/regles/PFC \
-  -H "Content-Type: application/json" \
-  -d '{"shelf_life_days": 365, "default_volume_ml": 220, "min_volume_ml": 200, "max_volume_ml": 250}'
-```
-
-See [docs/API_EXAMPLES.md](docs/API_EXAMPLES.md) for more examples.
+- `stock.py` a des definitions de routes en double pour `GET /regles` et `PUT /regles/{type_produit}` (lignes ~146-200 et ~258-294). Le second jeu utilise des schemas Pydantic, le premier utilise un `dict` brut.
+- `tests/api/routes/test_patient.py` a un import casse (`get_password_hash` depuis `app.core.security`).
+- Certains echecs de tests sont dus a des problemes preexistants de configuration des routes (404 sur les routes prefixees `/api/` dans le client de test).

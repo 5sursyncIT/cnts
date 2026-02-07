@@ -8,9 +8,8 @@ from sqlalchemy.orm import Session, joinedload
 from app.api.deps import require_auth_in_production
 from app.audit.events import log_event
 from app.core.blood import normalize_groupe_sanguin
-from app.db.models import UserAccount
 from app.core.isbt128.generator import generate_datamatrix_content
-from app.db.models import Don, Hopital, Poche
+from app.db.models import Don, Hopital, Poche, UserAccount
 from app.db.session import get_db
 from app.schemas.etiquettes import EtiquetteProduitOut
 from app.schemas.poches import (

@@ -4,9 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.api.deps import require_auth_in_production
 from app.audit.events import log_event
 from app.core.blood import is_compatible_rbc
-from app.db.models import CrossMatch, Don, Poche, Receveur
+from app.db.models import CrossMatch, Don, Poche, Receveur, UserAccount
 from app.db.session import get_db
 from app.schemas.crossmatch import CrossMatchCreate, CrossMatchOut
 
@@ -14,7 +15,11 @@ router = APIRouter(prefix="/cross-match")
 
 
 @router.post("", response_model=CrossMatchOut, status_code=201)
-def create_or_update_crossmatch(payload: CrossMatchCreate, db: Session = Depends(get_db)) -> CrossMatch:
+def create_or_update_crossmatch(
+    payload: CrossMatchCreate,
+    db: Session = Depends(get_db),
+    _user: UserAccount | None = Depends(require_auth_in_production),
+) -> CrossMatch:
     poche = db.get(Poche, payload.poche_id)
     if poche is None:
         raise HTTPException(status_code=404, detail="poche introuvable")

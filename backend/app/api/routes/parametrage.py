@@ -1,19 +1,19 @@
 import uuid
-from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
-from app.api.deps import get_db
-from app.db.models import ExpirationRule
+from app.api.deps import require_auth_in_production
+from app.db.models import ExpirationRule, UserAccount
+from app.db.session import get_db
 from app.schemas import parametrage as schemas
 
 router = APIRouter()
 
 
 @router.get("/regions", response_model=list[str])
-async def get_regions() -> Any:
+def get_regions() -> list[str]:
     """
     Get list of regions (Senegal).
     """
@@ -31,81 +31,77 @@ async def get_regions() -> Any:
         "Sédhiou",
         "Tambacounda",
         "Thiès",
-        "Ziguinchor"
+        "Ziguinchor",
     ]
 
 
 @router.get("/rules", response_model=list[schemas.ExpirationRule])
-async def read_expiration_rules(
+def read_expiration_rules(
     skip: int = 0,
     limit: int = 100,
-    db: AsyncSession = Depends(get_db),
-) -> Any:
+    db: Session = Depends(get_db),
+) -> list[ExpirationRule]:
     """
     Retrieve expiration rules.
     """
     stmt = select(ExpirationRule).offset(skip).limit(limit)
-    result = await db.execute(stmt)
-    rules = result.scalars().all()
-    return rules
+    return list(db.execute(stmt).scalars())
 
 
 @router.post("/rules", response_model=schemas.ExpirationRule)
-async def create_expiration_rule(
-    *,
-    db: AsyncSession = Depends(get_db),
+def create_expiration_rule(
     rule_in: schemas.ExpirationRuleCreate,
-) -> Any:
+    db: Session = Depends(get_db),
+    _user: UserAccount | None = Depends(require_auth_in_production),
+) -> ExpirationRule:
     """
     Create new expiration rule.
     """
     rule = ExpirationRule(**rule_in.model_dump())
     db.add(rule)
-    await db.commit()
-    await db.refresh(rule)
+    db.commit()
+    db.refresh(rule)
     return rule
 
 
 @router.put("/rules/{rule_id}", response_model=schemas.ExpirationRule)
-async def update_expiration_rule(
-    *,
-    db: AsyncSession = Depends(get_db),
+def update_expiration_rule(
     rule_id: uuid.UUID,
     rule_in: schemas.ExpirationRuleUpdate,
-) -> Any:
+    db: Session = Depends(get_db),
+    _user: UserAccount | None = Depends(require_auth_in_production),
+) -> ExpirationRule:
     """
     Update an expiration rule.
     """
-    rule = await db.get(ExpirationRule, rule_id)
+    rule = db.get(ExpirationRule, rule_id)
     if not rule:
         raise HTTPException(status_code=404, detail="Rule not found")
-    
+
     update_data = rule_in.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(rule, field, value)
-    
-    # Increment version
+
     rule.version += 1
-    
-    db.add(rule)
-    await db.commit()
-    await db.refresh(rule)
+
+    db.commit()
+    db.refresh(rule)
     return rule
 
 
 @router.delete("/rules/{rule_id}", response_model=schemas.ExpirationRule)
-async def delete_expiration_rule(
-    *,
-    db: AsyncSession = Depends(get_db),
+def delete_expiration_rule(
     rule_id: uuid.UUID,
-) -> Any:
+    db: Session = Depends(get_db),
+    _user: UserAccount | None = Depends(require_auth_in_production),
+) -> ExpirationRule:
     """
-    Delete an expiration rule (Logical delete could be implemented, here physical).
+    Delete an expiration rule.
     """
-    rule = await db.get(ExpirationRule, rule_id)
+    rule = db.get(ExpirationRule, rule_id)
     if not rule:
         raise HTTPException(status_code=404, detail="Rule not found")
-    
-    await db.delete(rule)
-    await db.commit()
+
+    db.delete(rule)
+    db.commit()
     return rule

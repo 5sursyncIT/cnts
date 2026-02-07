@@ -1,0 +1,12 @@
+# Fichiers inutiles pour le build EAS
+.expo/
+dist/
+web-build/
+ios/
+android/
+*.md
+*.tsbuildinfo
+.DS_Store
+npm-debug.*
+yarn-debug.*
+yarn-error.*
