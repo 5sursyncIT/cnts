@@ -41,7 +41,7 @@ export default function CommandeDetailPage() {
   });
   const { data: hopital } = useHopital(
     apiClient,
-    commande?.hopital_id || null
+    commande?.hopital_id || ""
   );
 
   const { mutate: validerCommande, status: validerStatus } =
@@ -99,14 +99,14 @@ export default function CommandeDetailPage() {
   }, [refetch, refetchEvents]);
 
   useEffect(() => {
-    let intervalId: ReturnType<typeof setInterval> | null = null;
+    let intervalId: number | null = null;
     if (autoRefreshEnabled) {
       intervalId = window.setInterval(() => {
         refreshData();
-      }, 15000);
+      }, 15000) as unknown as number;
     }
     return () => {
-      if (intervalId) window.clearInterval(intervalId);
+      if (intervalId !== null) window.clearInterval(intervalId);
     };
   }, [autoRefreshEnabled, refreshData]);
 

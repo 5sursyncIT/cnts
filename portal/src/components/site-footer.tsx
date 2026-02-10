@@ -34,28 +34,29 @@ export function SiteFooter() {
             </div>
           </div>
 
-          {/* Column 2: Quick Links */}
+          {/* Column 2: Le CNTS & Don */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-white">Liens Rapides</h3>
+            <h3 className="text-lg font-semibold text-white">Le CNTS</h3>
             <ul className="space-y-2 text-sm">
-              <li><Link href="/donner-sang" className="hover:text-white transition-colors">Pourquoi donner ?</Link></li>
-              <li><Link href="/services" className="hover:text-white transition-colors">Nos services</Link></li>
-              <li><Link href="/equipe" className="hover:text-white transition-colors">Notre équipe</Link></li>
-              <li><Link href="/actualites" className="hover:text-white transition-colors">Actualités</Link></li>
-              <li><Link href="/espace-patient" className="hover:text-white transition-colors">Espace Patient</Link></li>
-              <li><Link href="/faq" className="hover:text-white transition-colors">Questions fréquentes</Link></li>
+              <li><Link href="/qui-sommes-nous" className="hover:text-white transition-colors">Qui sommes-nous</Link></li>
+              <li><Link href="/qui-sommes-nous/organisation" className="hover:text-white transition-colors">Organisation & Réseau</Link></li>
+              <li><Link href="/qui-sommes-nous/textes-reference" className="hover:text-white transition-colors">Textes de référence</Link></li>
+              <li><Link href="/qui-sommes-nous/partenaires" className="hover:text-white transition-colors">Partenaires</Link></li>
+              <li><Link href="/recherche" className="hover:text-white transition-colors">Recherche & Innovation</Link></li>
+              <li><Link href="/collectes" className="hover:text-white transition-colors">Collectes à venir</Link></li>
             </ul>
           </div>
 
-          {/* Column 3: Services */}
+          {/* Column 3: Services & Don */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-white">Nos Services</h3>
+            <h3 className="text-lg font-semibold text-white">Services & Don</h3>
             <ul className="space-y-2 text-sm">
-              <li><Link href="/services#don" className="hover:text-white transition-colors">Don de sang</Link></li>
-              <li><Link href="/services#distribution" className="hover:text-white transition-colors">Distribution</Link></li>
-              <li><Link href="/services#laboratoire" className="hover:text-white transition-colors">Laboratoire d'analyses</Link></li>
-              <li><Link href="/services#formation" className="hover:text-white transition-colors">Formation & Recherche</Link></li>
-              <li><Link href="/services#hemovigilance" className="hover:text-white transition-colors">Hémovigilance</Link></li>
+              <li><Link href="/donner-sang" className="hover:text-white transition-colors">Donner son sang</Link></li>
+              <li><Link href="/donner-sang/qui-peut-donner" className="hover:text-white transition-colors">Qui peut donner ?</Link></li>
+              <li><Link href="/donner-sang/parcours-donneur" className="hover:text-white transition-colors">Parcours du donneur</Link></li>
+              <li><Link href="/services/produits-sanguins" className="hover:text-white transition-colors">Produits sanguins</Link></li>
+              <li><Link href="/services/laboratoires" className="hover:text-white transition-colors">Laboratoires</Link></li>
+              <li><Link href="/services/hematologie" className="hover:text-white transition-colors">Hématologie clinique</Link></li>
             </ul>
           </div>
 

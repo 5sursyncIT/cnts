@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
-from app.core.security import get_password_hash
+from app.core.passwords import hash_password as get_password_hash
 from app.db.models import UserAccount, Donneur
 import uuid
 

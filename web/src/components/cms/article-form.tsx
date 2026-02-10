@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Image as ImageIcon, X, Eye, Edit2, UploadCloud, Bold, Italic, List, Link as LinkIcon, Heading, Quote, Code } from "lucide-react";
+import { Loader2, Image as ImageIcon, X, Eye, Edit2, UploadCloud, Bold, Italic, List, Link as LinkIcon, Heading, Quote, Code, Trash } from "lucide-react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 
@@ -176,7 +176,7 @@ export function ArticleForm({
                 <div className="flex items-center gap-2 bg-zinc-100 p-1 rounded-lg">
                   <Button
                     type="button"
-                    variant={!isPreviewMode ? "white" : "ghost"}
+                    variant={!isPreviewMode ? "outline" : "ghost"}
                     size="sm"
                     className={cn("h-7 text-xs", !isPreviewMode && "bg-white shadow-sm")}
                     onClick={() => setIsPreviewMode(false)}
@@ -186,7 +186,7 @@ export function ArticleForm({
                   </Button>
                   <Button
                     type="button"
-                    variant={isPreviewMode ? "white" : "ghost"}
+                    variant={isPreviewMode ? "outline" : "ghost"}
                     size="sm"
                     className={cn("h-7 text-xs", isPreviewMode && "bg-white shadow-sm")}
                     onClick={() => setIsPreviewMode(true)}

@@ -19,6 +19,12 @@ export function PatientNav(props: { patient: PortalSession }) {
           <Link className="text-sm text-zinc-700 hover:text-zinc-900" href="/espace-patient/messagerie">
             Messagerie
           </Link>
+          <Link className="text-sm text-zinc-700 hover:text-zinc-900" href="/espace-patient/historique">
+            Mes dons
+          </Link>
+          <Link className="text-sm text-zinc-700 hover:text-zinc-900" href="/espace-patient/carte-donneur">
+            Carte donneur
+          </Link>
           <Link className="text-sm text-zinc-700 hover:text-zinc-900" href="/espace-patient/documents">
             Documents
           </Link>

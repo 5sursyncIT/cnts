@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 500" fill="none">
+  <!-- Background -->
+  <circle cx="300" cy="250" r="220" fill="#fef2f2" />
+  <circle cx="300" cy="250" r="180" fill="#fee2e2" opacity="0.4" />
+
+  <!-- Mobile collection van -->
+  <g transform="translate(130, 180)">
+    <!-- Van body -->
+    <rect x="0" y="40" width="200" height="100" rx="8" fill="#ffffff" stroke="#d32f2f" stroke-width="2.5"/>
+    <!-- Van cabin -->
+    <path d="M200 70 L240 70 Q260 70 260 90 L260 140 L200 140 Z" fill="#ffffff" stroke="#d32f2f" stroke-width="2.5"/>
+    <!-- Windshield -->
+    <path d="M205 75 L235 75 Q250 75 250 90 L250 110 L205 110 Z" fill="#dbeafe" stroke="#93c5fd" stroke-width="1"/>
+    <!-- Red cross on van -->
+    <rect x="80" y="72" width="40" height="12" rx="2" fill="#d32f2f"/>
+    <rect x="94" y="58" width="12" height="40" rx="2" fill="#d32f2f"/>
+    <!-- Door -->
+    <rect x="150" y="60" width="35" height="65" rx="3" fill="none" stroke="#d1d5db" stroke-width="1.5"/>
+    <circle cx="180" cy="92" r="2.5" fill="#6b7280"/>
+    <!-- Windows -->
+    <rect x="20" y="55" width="40" height="25" rx="4" fill="#dbeafe" stroke="#93c5fd" stroke-width="1"/>
+    <rect x="70" y="55" width="40" height="25" rx="4" fill="#dbeafe" stroke="#93c5fd" stroke-width="1"/>
+    <!-- Wheels -->
+    <circle cx="50" cy="145" r="18" fill="#374151"/>
+    <circle cx="50" cy="145" r="10" fill="#6b7280"/>
+    <circle cx="50" cy="145" r="4" fill="#9ca3af"/>
+    <circle cx="210" cy="145" r="18" fill="#374151"/>
+    <circle cx="210" cy="145" r="10" fill="#6b7280"/>
+    <circle cx="210" cy="145" r="4" fill="#9ca3af"/>
+    <!-- CNTS text -->
+    <text x="65" y="120" fill="#d32f2f" font-size="14" font-weight="bold" font-family="sans-serif">CNTS</text>
+    <text x="40" y="135" fill="#6b7280" font-size="8" font-family="sans-serif">Collecte Mobile</text>
+  </g>
+
+  <!-- People in queue -->
+  <g transform="translate(400, 230)">
+    <!-- Person 1 -->
+    <circle cx="20" cy="20" r="12" fill="#f59e0b" opacity="0.5"/>
+    <rect x="12" y="33" width="16" height="28" rx="6" fill="#f59e0b" opacity="0.35"/>
+    <!-- Person 2 -->
+    <circle cx="55" cy="15" r="12" fill="#3b82f6" opacity="0.5"/>
+    <rect x="47" y="28" width="16" height="28" rx="6" fill="#3b82f6" opacity="0.35"/>
+    <!-- Person 3 -->
+    <circle cx="90" cy="20" r="12" fill="#16a34a" opacity="0.5"/>
+    <rect x="82" y="33" width="16" height="28" rx="6" fill="#16a34a" opacity="0.35"/>
+    <!-- Arrow pointing to van -->
+    <path d="M0 40 L-30 40" stroke="#d32f2f" stroke-width="2" stroke-dasharray="4,3" opacity="0.4" marker-end="url(#arrow2)"/>
+  </g>
+
+  <!-- Tent/canopy -->
+  <g transform="translate(80, 80)">
+    <path d="M0 60 L50 10 L100 60" fill="#d32f2f" opacity="0.15" stroke="#d32f2f" stroke-width="1.5"/>
+    <line x1="5" y1="60" x2="5" y2="90" stroke="#6b7280" stroke-width="1.5"/>
+    <line x1="95" y1="60" x2="95" y2="90" stroke="#6b7280" stroke-width="1.5"/>
+    <!-- Banner -->
+    <rect x="10" y="48" width="80" height="14" rx="2" fill="#d32f2f" opacity="0.7"/>
+    <text x="50" y="59" text-anchor="middle" fill="#ffffff" font-size="7" font-weight="bold" font-family="sans-serif">DON DE SANG</text>
+  </g>
+
+  <!-- Calendar icon -->
+  <g transform="translate(430, 80)">
+    <rect x="0" y="10" width="70" height="65" rx="8" fill="#ffffff" stroke="#d32f2f" stroke-width="2"/>
+    <rect x="0" y="10" width="70" height="22" rx="8" fill="#d32f2f"/>
+    <!-- Calendar pins -->
+    <rect x="15" y="3" width="4" height="14" rx="2" fill="#374151"/>
+    <rect x="51" y="3" width="4" height="14" rx="2" fill="#374151"/>
+    <!-- Date -->
+    <text x="35" y="27" text-anchor="middle" fill="#ffffff" font-size="9" font-weight="bold" font-family="sans-serif">FEV 2026</text>
+    <!-- Days -->
+    <text x="15" y="48" fill="#6b7280" font-size="7" font-family="sans-serif">L  M  M  J  V</text>
+    <text x="15" y="58" fill="#374151" font-size="8" font-family="sans-serif">3  4  5  6  7</text>
+    <text x="15" y="68" fill="#374151" font-size="8" font-family="sans-serif">10 11 12 13 14</text>
+    <!-- Highlighted date -->
+    <circle cx="39" cy="55" r="7" fill="#d32f2f" opacity="0.2"/>
+    <circle cx="51" cy="65" r="7" fill="#d32f2f" opacity="0.15"/>
+  </g>
+
+  <!-- Location pin -->
+  <g transform="translate(500, 180)">
+    <path d="M20 0 C8 0 0 8 0 18 Q0 32 20 50 Q40 32 40 18 C40 8 32 0 20 0Z" fill="#d32f2f" opacity="0.6"/>
+    <circle cx="20" cy="17" r="7" fill="#ffffff"/>
+  </g>
+
+  <!-- Decorative elements -->
+  <circle cx="80" cy="400" r="4" fill="#d32f2f" opacity="0.3"/>
+  <circle cx="520" cy="350" r="5" fill="#f59e0b" opacity="0.3"/>
+  <circle cx="300" cy="450" r="3" fill="#3b82f6" opacity="0.3"/>
+
+  <!-- Heart with people -->
+  <g transform="translate(260, 380)">
+    <path d="M40-15 C30-30 5-30 5-15 C5 0 40 25 40 30 C40 25 75 0 75-15 C75-30 50-30 40-15Z" fill="#d32f2f" opacity="0.15" stroke="#d32f2f" stroke-width="1.5"/>
+  </g>
+
+  <defs>
+    <marker id="arrow2" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#d32f2f" opacity="0.4"/>
+    </marker>
+  </defs>
+</svg>

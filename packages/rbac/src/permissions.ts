@@ -11,7 +11,11 @@ export type CntsModule =
   | "analytics"
   | "parametrage"
   | "administration"
-  | "audit";
+  | "audit"
+  | "qualite"
+  | "facturation"
+  | "collectes"
+  | "sites";
 
 export function perm(module: CntsModule, action: PermissionAction): Permission {
   return { module, action };
@@ -49,7 +53,15 @@ export const roles = {
       perm("administration", "read"),
       perm("administration", "write"),
       perm("administration", "delete"),
-      perm("audit", "read")
+      perm("audit", "read"),
+      perm("qualite", "read"),
+      perm("qualite", "write"),
+      perm("facturation", "read"),
+      perm("facturation", "write"),
+      perm("collectes", "read"),
+      perm("collectes", "write"),
+      perm("sites", "read"),
+      perm("sites", "write")
     ]
   } satisfies Role,
   agentStock: {

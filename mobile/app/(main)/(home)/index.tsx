@@ -129,6 +129,16 @@ export default function HomeScreen() {
         </Card>
       </Pressable>
 
+      <Pressable onPress={() => router.push("/(main)/carte")}>
+        <Card style={styles.actionCard}>
+          <Text style={styles.actionIcon}>📇</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.actionTitle}>Ma carte donneur</Text>
+            <Text style={styles.actionSub}>QR code, points fidélité, niveau</Text>
+          </View>
+        </Card>
+      </Pressable>
+
       {/* Sync status */}
       {lastSyncAt && (
         <Text style={styles.syncInfo}>

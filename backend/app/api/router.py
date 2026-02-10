@@ -25,6 +25,28 @@ from app.api.routes.etiquetage import router as etiquetage_router
 from app.api.routes.monitoring import router as monitoring_router
 from app.api.routes.upload import router as upload_router
 from app.api.routes.users import router as users_router
+from app.api.routes.notifications import router as notifications_router
+from app.api.routes.sites import router as sites_router
+from app.api.routes.phenotypage import router as phenotypage_router
+from app.api.routes.rai import router as rai_router
+from app.api.routes.nat import router as nat_router
+from app.api.routes.reactions_donneur import router as reactions_donneur_router
+from app.api.routes.culm import router as culm_router
+from app.api.routes.suivi_transfusion import router as suivi_transfusion_router
+from app.api.routes.eir import router as eir_router
+from app.api.routes.apherese import router as apherese_router
+from app.api.routes.collectes import router as collectes_router
+from app.api.routes.prevision import router as prevision_router
+from app.api.routes.transport import router as transport_router
+from app.api.routes.qualite import router as qualite_router
+from app.api.routes.equipements import router as equipements_router
+from app.api.routes.formations import router as formations_router
+from app.api.routes.automates import router as automates_router
+from app.api.routes.fhir import router as fhir_router
+from app.api.routes.dhis2 import router as dhis2_router
+from app.api.routes.facturation import router as facturation_router
+from app.api.routes.consommables import router as consommables_router
+from app.api.routes.fidelisation import router as fidelisation_router
 
 
 api_router = APIRouter()
@@ -53,3 +75,25 @@ api_router.include_router(etiquetage_router, prefix="/etiquetage", tags=["etique
 api_router.include_router(monitoring_router, prefix="/observability", tags=["observability"])
 api_router.include_router(upload_router, tags=["upload"])
 api_router.include_router(users_router, tags=["users"])
+api_router.include_router(notifications_router, tags=["notifications"])
+api_router.include_router(sites_router, tags=["sites"])
+api_router.include_router(phenotypage_router, tags=["phenotypage"])
+api_router.include_router(rai_router, tags=["rai"])
+api_router.include_router(nat_router, tags=["nat"])
+api_router.include_router(reactions_donneur_router, tags=["reactions-donneur"])
+api_router.include_router(culm_router, tags=["culm"])
+api_router.include_router(suivi_transfusion_router, tags=["suivi-transfusion"])
+api_router.include_router(eir_router, tags=["eir"])
+api_router.include_router(apherese_router, tags=["apherese"])
+api_router.include_router(collectes_router, tags=["collectes"])
+api_router.include_router(prevision_router, tags=["prevision"])
+api_router.include_router(transport_router, tags=["transport"])
+api_router.include_router(qualite_router, prefix="/qualite", tags=["qualite"])
+api_router.include_router(equipements_router, tags=["equipements"])
+api_router.include_router(formations_router, tags=["formations"])
+api_router.include_router(automates_router, tags=["automates"])
+api_router.include_router(fhir_router, tags=["fhir"])
+api_router.include_router(dhis2_router, tags=["dhis2"])
+api_router.include_router(facturation_router, prefix="/facturation", tags=["facturation"])
+api_router.include_router(consommables_router, tags=["consommables"])
+api_router.include_router(fidelisation_router, tags=["fidelisation"])

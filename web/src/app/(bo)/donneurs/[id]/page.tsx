@@ -1,6 +1,6 @@
 "use client";
 
-import { useDonneur, useCheckEligibilite, useDons, useUpdateDonneur, useDeleteDonneur, useRegions } from "@cnts/api";
+import { useDonneur, useCheckEligibilite, useDons, useUpdateDonneur, useDeleteDonneur, useRegions, useCreateCarteDonneur } from "@cnts/api";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -23,6 +23,9 @@ export default function DonneurDetailPage() {
 
   const { mutate: updateDonneur, status: updateStatus } = useUpdateDonneur(apiClient);
   const { mutate: deleteDonneur, status: deleteStatus } = useDeleteDonneur(apiClient);
+  const { mutate: createCarte, status: createCarteStatus } = useCreateCarteDonneur(apiClient);
+  const [showCarteForm, setShowCarteForm] = useState(false);
+  const [numeroCarte, setNumeroCarte] = useState("");
 
   const handleDelete = async () => {
     if (!confirm("Êtes-vous sûr de vouloir supprimer ce donneur ? Cette action est irréversible.")) {
@@ -62,6 +65,19 @@ export default function DonneurDetailPage() {
       refetchDonneur();
     } catch (err) {
       console.error("Erreur lors de la mise à jour", err);
+    }
+  };
+
+  const handleCreateCarte = async () => {
+    if (!numeroCarte.trim()) return;
+    try {
+      await createCarte({ donneur_id: donneurId, numero_carte: numeroCarte.trim() });
+      setShowCarteForm(false);
+      setNumeroCarte("");
+      refetchDonneur();
+    } catch (err: any) {
+      const detail = err?.body?.detail;
+      alert(detail || "Erreur lors de la création de la carte");
     }
   };
 
@@ -193,6 +209,19 @@ export default function DonneurDetailPage() {
                   </select>
                 </div>
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">N° Carte Donneur</label>
+                  <div className="w-full px-3 py-2 border rounded-md bg-gray-50 text-gray-700 text-sm">
+                    {donneur.numero_carte ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        {donneur.numero_carte}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 italic">Non attribuée</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Géré via Fidélisation &gt; Cartes donneur</p>
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">CNI (nouveau)</label>
                   <input name="cni" placeholder="Laisser vide pour conserver" className="w-full px-3 py-2 border rounded-md text-gray-900" />
                   <p className="text-xs text-gray-500 mt-1">Le CNI n&apos;est pas stocké pour des raisons de confidentialité</p>
@@ -264,30 +293,52 @@ export default function DonneurDetailPage() {
               </div>
             </div>
             <dl className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <dt className="text-sm font-medium text-gray-500">N° Carte Donneur</dt>
+                <dd className="mt-1 text-sm text-gray-900">
+                  {donneur.numero_carte ? (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      {donneur.numero_carte}
+                    </span>
+                  ) : showCarteForm ? (
+                    <div className="flex items-center gap-2 mt-1">
+                      <input
+                        type="text"
+                        value={numeroCarte}
+                        onChange={(e) => setNumeroCarte(e.target.value)}
+                        placeholder="Ex: CNTS-2026-00001"
+                        className="px-3 py-1.5 border border-gray-300 rounded-md text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-64"
+                      />
+                      <button
+                        onClick={handleCreateCarte}
+                        disabled={!numeroCarte.trim() || createCarteStatus === "loading"}
+                        className="px-3 py-1.5 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 disabled:opacity-50"
+                      >
+                        {createCarteStatus === "loading" ? "..." : "Valider"}
+                      </button>
+                      <button
+                        onClick={() => { setShowCarteForm(false); setNumeroCarte(""); }}
+                        className="px-3 py-1.5 text-gray-600 text-sm hover:text-gray-900"
+                      >
+                        Annuler
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setShowCarteForm(true)}
+                      className="mt-1 inline-flex items-center px-3 py-1.5 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 transition"
+                    >
+                      + Attribuer une carte
+                    </button>
+                  )}
+                </dd>
+              </div>
               <div>
                 <dt className="text-sm font-medium text-gray-500">ID</dt>
                 <dd className="mt-1 text-sm text-gray-900">
                   <code className="bg-gray-100 px-2 py-1 rounded text-xs">
                     {donneur.id}
                   </code>
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">
-                  CNI (Hash)
-                </dt>
-                <dd className="mt-1 text-sm text-gray-900">
-                  <code className="bg-gray-100 px-2 py-1 rounded text-xs" title={donneur.cni_hash}>
-                    {donneur.cni_hash.substring(0, 16)}...
-                  </code>
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">
-                  Numéro CNI
-                </dt>
-                <dd className="mt-1 text-sm text-gray-500 italic">
-                  Protégé (RGPD)
                 </dd>
               </div>
               <div>
@@ -351,7 +402,7 @@ export default function DonneurDetailPage() {
                   Créé le
                 </dt>
                 <dd className="mt-1 text-sm text-gray-900">
-                  {new Date(donneur.created_at).toLocaleDateString("fr-FR")}
+                  {donneur.created_at ? new Date(donneur.created_at).toLocaleDateString("fr-FR") : "—"}
                 </dd>
               </div>
             </dl>

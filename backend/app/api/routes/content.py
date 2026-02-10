@@ -5,8 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db, get_current_user
+from app.api.deps import get_current_user
 from app.db.models import Article, UserAccount
+from app.db.session import get_db
 from app.schemas.content import ArticleCreate, ArticleResponse, ArticleUpdate
 
 router = APIRouter(prefix="/articles")

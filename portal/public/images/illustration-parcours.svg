@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 500" fill="none">
+  <!-- Background -->
+  <circle cx="300" cy="250" r="220" fill="#fef2f2" />
+
+  <!-- Step 1: Reception desk -->
+  <g transform="translate(60, 100)">
+    <rect x="0" y="60" width="100" height="50" rx="6" fill="#374151"/>
+    <rect x="10" y="40" width="30" height="25" rx="4" fill="#e5e7eb"/>
+    <rect x="50" y="45" width="40" height="20" rx="3" fill="#fef2f2" stroke="#fca5a5" stroke-width="1"/>
+    <!-- Person silhouette -->
+    <circle cx="50" cy="15" r="12" fill="#f59e0b" opacity="0.6"/>
+    <rect x="40" y="28" width="20" height="25" rx="6" fill="#f59e0b" opacity="0.4"/>
+    <text x="50" y="132" text-anchor="middle" fill="#d32f2f" font-size="12" font-weight="bold" font-family="sans-serif">1. Accueil</text>
+  </g>
+
+  <!-- Arrow 1 -->
+  <path d="M175 140 Q200 130 220 140" stroke="#d32f2f" stroke-width="2" fill="none" marker-end="url(#arrowhead)" opacity="0.4"/>
+
+  <!-- Step 2: Medical interview -->
+  <g transform="translate(220, 80)">
+    <!-- Doctor -->
+    <circle cx="40" cy="25" r="14" fill="#3b82f6" opacity="0.5"/>
+    <rect x="28" y="40" width="24" height="30" rx="8" fill="#3b82f6" opacity="0.35"/>
+    <!-- Stethoscope -->
+    <path d="M35 55 Q30 65 35 70 Q40 75 45 70 Q50 65 45 55" stroke="#3b82f6" stroke-width="2" fill="none" opacity="0.6"/>
+    <!-- Clipboard -->
+    <rect x="60" y="35" width="35" height="45" rx="4" fill="#ffffff" stroke="#6b7280" stroke-width="1.5"/>
+    <rect x="70" y="30" width="15" height="8" rx="3" fill="#6b7280"/>
+    <rect x="65" y="45" width="25" height="3" rx="1" fill="#d1d5db"/>
+    <rect x="65" y="52" width="20" height="3" rx="1" fill="#d1d5db"/>
+    <rect x="65" y="59" width="25" height="3" rx="1" fill="#d1d5db"/>
+    <rect x="65" y="66" width="15" height="3" rx="1" fill="#d1d5db"/>
+    <text x="55" y="132" text-anchor="middle" fill="#d32f2f" font-size="12" font-weight="bold" font-family="sans-serif">2. Entretien</text>
+  </g>
+
+  <!-- Arrow 2 -->
+  <path d="M340 140 Q360 130 380 140" stroke="#d32f2f" stroke-width="2" fill="none" opacity="0.4"/>
+
+  <!-- Step 3: Blood collection -->
+  <g transform="translate(380, 90)">
+    <!-- Chair -->
+    <path d="M20 80 L80 80 L85 110 L15 110 Z" fill="#6b7280" opacity="0.3"/>
+    <rect x="25" y="50" width="50" height="35" rx="8" fill="#6b7280" opacity="0.2"/>
+    <!-- Arm on rest -->
+    <path d="M40 65 L80 65 Q90 65 90 75 L90 85 L40 85 Z" fill="#fde68a" opacity="0.4" stroke="#f59e0b" stroke-width="1"/>
+    <!-- Blood bag -->
+    <rect x="0" y="30" width="25" height="40" rx="4" fill="#fef2f2" stroke="#d32f2f" stroke-width="1.5"/>
+    <rect x="0" y="50" width="25" height="20" rx="4" fill="#d32f2f" opacity="0.3"/>
+    <!-- Tube -->
+    <path d="M25 50 Q35 50 40 60 L40 72" stroke="#d32f2f" stroke-width="2" fill="none"/>
+    <text x="50" y="132" text-anchor="middle" fill="#d32f2f" font-size="12" font-weight="bold" font-family="sans-serif">3. Don</text>
+  </g>
+
+  <!-- Step 4: Collation -->
+  <g transform="translate(150, 280)">
+    <!-- Table -->
+    <rect x="10" y="50" width="80" height="8" rx="3" fill="#374151"/>
+    <rect x="18" y="58" width="5" height="30" rx="1" fill="#4b5563"/>
+    <rect x="77" y="58" width="5" height="30" rx="1" fill="#4b5563"/>
+    <!-- Juice glass -->
+    <path d="M30 25 L28 48 L48 48 L46 25 Z" fill="#fef9c3" stroke="#eab308" stroke-width="1.5"/>
+    <path d="M30 35 L28 48 L48 48 L46 35 Z" fill="#f59e0b" opacity="0.4"/>
+    <!-- Cookie -->
+    <ellipse cx="65" cy="44" rx="12" ry="6" fill="#d97706" opacity="0.6"/>
+    <circle cx="62" cy="42" r="1.5" fill="#92400e" opacity="0.5"/>
+    <circle cx="68" cy="44" r="1.5" fill="#92400e" opacity="0.5"/>
+    <!-- Fruit -->
+    <circle cx="25" cy="38" r="8" fill="#f97316" opacity="0.5"/>
+    <path d="M25 30 Q27 26 29 30" stroke="#16a34a" stroke-width="1.5" fill="none"/>
+    <text x="50" y="110" text-anchor="middle" fill="#d32f2f" font-size="12" font-weight="bold" font-family="sans-serif">4. Collation</text>
+  </g>
+
+  <!-- Step 5: Follow-up -->
+  <g transform="translate(350, 280)">
+    <!-- Phone/card -->
+    <rect x="20" y="10" width="60" height="80" rx="8" fill="#374151"/>
+    <rect x="24" y="18" width="52" height="55" rx="4" fill="#dbeafe"/>
+    <!-- Screen content -->
+    <circle cx="50" cy="35" r="10" fill="#16a34a" opacity="0.3"/>
+    <path d="M45 35 L48 38 L55 31" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="30" y="52" width="40" height="3" rx="1" fill="#6b7280" opacity="0.4"/>
+    <rect x="35" y="60" width="30" height="3" rx="1" fill="#6b7280" opacity="0.3"/>
+    <!-- Card -->
+    <rect x="10" y="70" width="50" height="30" rx="4" fill="#fef2f2" stroke="#d32f2f" stroke-width="1.5" transform="rotate(-10 35 85)"/>
+    <text x="50" y="115" text-anchor="middle" fill="#d32f2f" font-size="12" font-weight="bold" font-family="sans-serif">5. Suivi</text>
+  </g>
+
+  <!-- Connecting curved path -->
+  <path d="M160 210 Q200 260 150 300" stroke="#d32f2f" stroke-width="2" fill="none" stroke-dasharray="5,5" opacity="0.3"/>
+  <path d="M485 210 Q440 260 400 280" stroke="#d32f2f" stroke-width="2" fill="none" stroke-dasharray="5,5" opacity="0.3"/>
+
+  <!-- Arrow marker definition -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#d32f2f" opacity="0.4" />
+    </marker>
+  </defs>
+
+  <!-- Decorative heart -->
+  <g transform="translate(300, 430)">
+    <path d="M0-12 C-4-20 -16-20 -16-12 C-16-4 0 8 0 12 C0 8 16-4 16-12 C16-20 4-20 0-12Z" fill="#d32f2f" opacity="0.3"/>
+  </g>
+</svg>

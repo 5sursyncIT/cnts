@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 500" fill="none">
+  <!-- Background -->
+  <circle cx="300" cy="250" r="220" fill="#fef2f2" />
+
+  <!-- Main card -->
+  <g transform="translate(120, 120)">
+    <rect x="0" y="0" width="360" height="220" rx="16" fill="#ffffff" stroke="#d32f2f" stroke-width="2.5">
+      <animate attributeName="stroke-opacity" values="0.7;1;0.7" dur="3s" repeatCount="indefinite"/>
+    </rect>
+    <!-- Red header -->
+    <rect x="0" y="0" width="360" height="70" rx="16" fill="#d32f2f"/>
+    <rect x="0" y="50" width="360" height="20" fill="#d32f2f"/>
+    <!-- Logo area -->
+    <circle cx="45" cy="35" r="20" fill="#ffffff" opacity="0.2"/>
+    <text x="45" y="40" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="bold" font-family="sans-serif">CNTS</text>
+    <!-- Title -->
+    <text x="80" y="30" fill="#ffffff" font-size="16" font-weight="bold" font-family="sans-serif">CARTE DE DONNEUR</text>
+    <text x="80" y="50" fill="#ffffff" font-size="10" font-family="sans-serif" opacity="0.8">Centre National de Transfusion Sanguine</text>
+
+    <!-- Photo placeholder -->
+    <rect x="20" y="85" width="70" height="85" rx="8" fill="#f3f4f6" stroke="#d1d5db" stroke-width="1.5"/>
+    <circle cx="55" cy="110" r="15" fill="#d1d5db"/>
+    <rect x="40" y="128" width="30" height="20" rx="6" fill="#d1d5db"/>
+
+    <!-- Card details -->
+    <text x="110" y="100" fill="#6b7280" font-size="9" font-family="sans-serif">N° CARTE</text>
+    <text x="110" y="115" fill="#374151" font-size="14" font-weight="bold" font-family="monospace">CNTS-2026-00142</text>
+    <text x="110" y="140" fill="#6b7280" font-size="9" font-family="sans-serif">GROUPE SANGUIN</text>
+    <text x="110" y="155" fill="#d32f2f" font-size="18" font-weight="bold" font-family="sans-serif">O+</text>
+    <text x="145" y="155" fill="#6b7280" font-size="10" font-family="sans-serif">Rhésus Positif</text>
+
+    <!-- QR code placeholder -->
+    <rect x="280" y="85" width="60" height="60" rx="4" fill="#374151" opacity="0.1" stroke="#374151" stroke-width="1"/>
+    <g transform="translate(288, 93)">
+      <rect x="0" y="0" width="6" height="6" fill="#374151" opacity="0.7"/>
+      <rect x="8" y="0" width="6" height="6" fill="#374151" opacity="0.7"/>
+      <rect x="16" y="0" width="6" height="6" fill="#374151" opacity="0.7"/>
+      <rect x="32" y="0" width="6" height="6" fill="#374151" opacity="0.7"/>
+      <rect x="38" y="0" width="6" height="6" fill="#374151" opacity="0.7"/>
+      <rect x="0" y="8" width="6" height="6" fill="#374151" opacity="0.7"/>
+      <rect x="16" y="8" width="6" height="6" fill="#374151" opacity="0.7"/>
+      <rect x="24" y="8" width="6" height="6" fill="#374151" opacity="0.7"/>
+      <rect x="38" y="8" width="6" height="6" fill="#374151" opacity="0.7"/>
+      <rect x="0" y="16" width="6" height="6" fill="#374151" opacity="0.7"/>
+      <rect x="8" y="16" width="6" height="6" fill="#374151" opacity="0.7"/>
+      <rect x="16" y="16" width="6" height="6" fill="#374151" opacity="0.7"/>
+      <rect x="32" y="16" width="6" height="6" fill="#374151" opacity="0.7"/>
+      <rect x="38" y="16" width="6" height="6" fill="#374151" opacity="0.7"/>
+      <rect x="24" y="24" width="6" height="6" fill="#374151" opacity="0.7"/>
+      <rect x="32" y="24" width="6" height="6" fill="#374151" opacity="0.7"/>
+      <rect x="0" y="32" width="6" height="6" fill="#374151" opacity="0.7"/>
+      <rect x="8" y="32" width="6" height="6" fill="#374151" opacity="0.7"/>
+      <rect x="16" y="32" width="6" height="6" fill="#374151" opacity="0.7"/>
+      <rect x="32" y="32" width="6" height="6" fill="#374151" opacity="0.7"/>
+      <rect x="38" y="32" width="6" height="6" fill="#374151" opacity="0.7"/>
+    </g>
+
+    <!-- Level badge -->
+    <g transform="translate(280, 155)">
+      <rect x="0" y="0" width="60" height="24" rx="12" fill="#f59e0b" opacity="0.15" stroke="#f59e0b" stroke-width="1.5"/>
+      <text x="30" y="16" text-anchor="middle" fill="#d97706" font-size="10" font-weight="bold" font-family="sans-serif">OR</text>
+    </g>
+
+    <!-- Points -->
+    <text x="110" y="175" fill="#6b7280" font-size="9" font-family="sans-serif">DONS</text>
+    <text x="110" y="195" fill="#374151" font-size="20" font-weight="bold" font-family="sans-serif">12</text>
+    <text x="180" y="175" fill="#6b7680" font-size="9" font-family="sans-serif">POINTS</text>
+    <text x="180" y="195" fill="#374151" font-size="20" font-weight="bold" font-family="sans-serif">560</text>
+  </g>
+
+  <!-- Stars/rewards floating -->
+  <g transform="translate(100, 90)" opacity="0.5">
+    <polygon points="12,0 15,9 24,9 17,14 19,24 12,18 5,24 7,14 0,9 9,9" fill="#fbbf24"/>
+  </g>
+  <g transform="translate(500, 130)" opacity="0.3">
+    <polygon points="10,0 12,7 20,7 14,12 16,20 10,15 4,20 6,12 0,7 8,7" fill="#fbbf24"/>
+  </g>
+  <g transform="translate(480, 350)" opacity="0.4">
+    <polygon points="8,0 10,6 16,6 11,9 13,16 8,12 3,16 5,9 0,6 6,6" fill="#fbbf24"/>
+  </g>
+
+  <!-- Hearts -->
+  <g transform="translate(130, 380)" opacity="0.3">
+    <path d="M10-6 C7-12 0-12 0-6 C0 0 10 10 10 12 C10 10 20 0 20-6 C20-12 13-12 10-6Z" fill="#d32f2f"/>
+  </g>
+  <g transform="translate(450, 90)" opacity="0.25">
+    <path d="M8-5 C6-10 0-10 0-5 C0 0 8 8 8 10 C8 8 16 0 16-5 C16-10 10-10 8-5Z" fill="#d32f2f"/>
+  </g>
+</svg>

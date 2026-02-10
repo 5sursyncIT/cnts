@@ -1,4 +1,4 @@
-import * as SecureStore from "expo-secure-store";
+import * as Storage from "../utils/secure-storage";
 import { API_BASE_URL } from "../constants/api";
 
 const TOKEN_KEY = "cnts_access_token";
@@ -79,18 +79,18 @@ export async function verifyMFA(
 
 /** Stocke le token dans SecureStore. */
 async function storeToken(token: string): Promise<void> {
-  await SecureStore.setItemAsync(TOKEN_KEY, token);
+  await Storage.setItem(TOKEN_KEY, token);
   // Le token CNTS expire après 8h (28800s). On stocke l'expiration.
   const expiresAt = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString();
-  await SecureStore.setItemAsync(TOKEN_EXPIRY_KEY, expiresAt);
+  await Storage.setItem(TOKEN_EXPIRY_KEY, expiresAt);
 }
 
 /** Récupère le token stocké (null si absent ou expiré). */
 export async function getStoredToken(): Promise<string | null> {
-  const token = await SecureStore.getItemAsync(TOKEN_KEY);
+  const token = await Storage.getItem(TOKEN_KEY);
   if (!token) return null;
 
-  const expiry = await SecureStore.getItemAsync(TOKEN_EXPIRY_KEY);
+  const expiry = await Storage.getItem(TOKEN_EXPIRY_KEY);
   if (expiry && new Date(expiry) < new Date()) {
     await clearToken();
     return null;
@@ -101,8 +101,8 @@ export async function getStoredToken(): Promise<string | null> {
 
 /** Supprime le token (logout). */
 export async function clearToken(): Promise<void> {
-  await SecureStore.deleteItemAsync(TOKEN_KEY);
-  await SecureStore.deleteItemAsync(TOKEN_EXPIRY_KEY);
+  await Storage.deleteItem(TOKEN_KEY);
+  await Storage.deleteItem(TOKEN_EXPIRY_KEY);
 }
 
 /** Parse le payload du token CNTS1 pour extraire les infos utilisateur. */

@@ -4,20 +4,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Apercu du Projet
 
-**SGI-CNTS** : Systeme de gestion de la transfusion sanguine pour le Centre National de Transfusion Sanguine (CNTS) de Dakar, Senegal. Assure la tracabilite complete "de la veine du donneur a la veine du receveur" selon les normes ISBT 128.
+**SGI-CNTS** : Systeme de gestion de la transfusion sanguine pour le Centre National de Transfusion Sanguine (CNTS) de Dakar, Senegal. Tracabilite complete "de la veine du donneur a la veine du receveur" selon les normes ISBT 128.
 
-**Architecture** : Monolithe modulaire FastAPI + PostgreSQL, avec un monorepo npm workspaces contenant un Back Office Next.js (interface admin avec MFA/RBAC), un Portail Patient Next.js (site public + espace patient securise), et des packages TypeScript partages (@cnts/api, @cnts/rbac, @cnts/monitoring).
+**Architecture** : Monolithe modulaire FastAPI + PostgreSQL + Celery/Redis, avec un monorepo npm workspaces contenant un Back Office Next.js, un Portail Patient Next.js, une app mobile React Native (Expo), et des packages TypeScript partages (@cnts/api, @cnts/rbac, @cnts/monitoring).
 
 ## Commandes de Developpement
 
 ### Demarrage rapide avec Docker
 ```bash
 cp .env.example .env
-docker compose up --build
+docker compose up --build    # lance: db, api, redis, celery-worker, celery-beat
 curl http://localhost:8000/api/health
 ```
 
-### Backend
+### Backend (sans Docker)
 ```bash
 cd backend
 python3 -m venv .venv && source .venv/bin/activate
@@ -54,20 +54,27 @@ PORTAL_DEMO_PATIENT_PASSWORD=patient
 
 ### Tests et Linting
 ```bash
-# Backend
-cd backend && pytest                        # tous les tests
+# Backend (depuis backend/)
+pytest                                      # tous les tests
 pytest tests/test_liberation.py             # un fichier
 pytest -v -k test_name                      # un test precis
-ruff check . && ruff format .               # lint + formatage
+ruff check . && ruff format .               # lint + formatage (line-length 100, target py311)
 
-# Frontend (depuis la racine du projet)
+# Frontend (depuis la racine)
 npm run test                                # tous les workspaces
 npm -w web run test                         # un workspace specifique
 npm -w @cnts/api run test                   # un package partage
 npm run lint
 ```
 
-### Migrations de Base de Donnees
+### Scripts npm racine
+```bash
+npm run dev:web          # alias npm -w web run dev
+npm run dev:portal       # alias npm -w portal run dev
+npm run test:coverage    # couverture tous workspaces (seuil 80%)
+```
+
+### Migrations
 ```bash
 cd backend
 alembic upgrade head                              # appliquer
@@ -79,41 +86,81 @@ alembic downgrade -1                              # annuler
 
 ```
 .
-├── backend/           # FastAPI + PostgreSQL
+├── backend/           # FastAPI + PostgreSQL + Celery (Python 3.11+)
 │   ├── app/
 │   │   ├── api/
-│   │   │   ├── deps.py        # Dependances auth (get_current_user, require_auth_in_production)
-│   │   │   ├── router.py      # Agregation des routes
-│   │   │   └── routes/        # Modules endpoints par domaine
+│   │   │   ├── deps.py        # Auth deps (get_current_user, require_auth_in_production)
+│   │   │   ├── router.py      # Agregation des 49 modules de routes
+│   │   │   └── routes/        # Endpoints par domaine (49 fichiers)
 │   │   ├── audit/events.py    # log_event() pour la piste d'audit
-│   │   ├── core/              # Logique metier (din.py, security.py, idempotency.py, rate_limit.py)
-│   │   ├── db/models.py       # Modeles SQLAlchemy
-│   │   └── schemas/           # DTOs Pydantic
+│   │   ├── core/              # Logique metier et utilitaires
+│   │   │   ├── config.py      # pydantic-settings, prefixe CNTS_
+│   │   │   ├── celery_app.py  # Celery + Redis pour taches asynchrones
+│   │   │   ├── din.py         # Generation DIN (ISBT 128)
+│   │   │   ├── security.py    # Hachage CNI (HMAC-SHA256)
+│   │   │   ├── passwords.py   # Hachage mots de passe (PBKDF2-SHA256)
+│   │   │   ├── tokens.py      # JWT
+│   │   │   ├── totp.py        # MFA TOTP
+│   │   │   ├── idempotency.py # Idempotence synchro mobile
+│   │   │   ├── rate_limit.py  # Fenetre glissante par IP
+│   │   │   └── isbt128/       # Checksum ISBT 128
+│   │   ├── db/models.py       # 67 modeles SQLAlchemy 2.0 (mapped_column, UUID PKs)
+│   │   ├── schemas/           # DTOs Pydantic v2 ({Entity}Create/Update/Out)
+│   │   └── tasks/             # Taches Celery asynchrones
 │   ├── alembic/               # Migrations
-│   └── tests/
+│   └── tests/                 # pytest + SQLite en memoire
 ├── web/               # Back Office (Next.js 16 + React 19, App Router)
 ├── portal/            # Portail Patient (Next.js 16 + React 19, App Router)
+├── mobile/            # App collecte (React Native / Expo, offline-first)
 └── packages/
     ├── api/           # @cnts/api - Client API type-safe + hooks React
-    ├── rbac/          # @cnts/rbac - Controle d'acces base sur les roles
-    └── monitoring/    # @cnts/monitoring - Metriques et rapport d'erreurs
+    ├── rbac/          # @cnts/rbac - Roles/permissions
+    └── monitoring/    # @cnts/monitoring - Metriques et erreurs
 ```
 
-### Backend : Toutes les routes API sont prefixees par `/api` (configure dans `app/main.py`).
+### Backend
 
-### Frontend : Le Back Office utilise le proxy `/api/backend/*` pour eviter les problemes CORS. Les deux apps utilisent App Router, Server Components par defaut, cookies de session httpOnly, Tailwind CSS 4 et Vitest pour les tests.
+Toutes les routes API prefixees par `/api` (configure dans `app/main.py`).
+
+Middleware stack (ordre important) : CORS → ObservabilityMiddleware → RateLimitMiddleware.
+
+**49 modules de routes** organises par domaine fonctionnel :
+- **Core** : `health`, `auth`, `admin_auth`, `users`, `metrics`, `monitoring`, `parametrage`, `upload`, `sync`, `trace`, `content`
+- **Donneurs/Dons** : `donneurs`, `dons`, `poches`, `etiquetage`, `analyses`, `liberation`, `crossmatch`
+- **Distribution** : `commandes`, `stock`, `receveurs`, `hopitaux`, `hemovigilance`, `analytics`
+- **Phase 1 (Infra)** : `notifications`, `sites`
+- **Phase 2 (Biologie avancee)** : `phenotypage`, `rai`, `nat`, `reactions_donneur`, `culm`, `suivi_transfusion`, `eir`, `apherese`
+- **Phase 3 (Logistique)** : `collectes`, `prevision`, `transport`
+- **Phase 4 (Qualite)** : `qualite`, `equipements`, `formations`
+- **Phase 5 (Interoperabilite)** : `automates`, `fhir`, `dhis2`
+- **Phase 6 (Finance/Fidelisation)** : `facturation`, `consommables`, `fidelisation`
+
+Voir `app/api/routes/patient.py` pour le pattern de route patient (portail).
+
+**Important** : Le hachage des mots de passe est dans `app.core.passwords` (`hash_password`, `verify_password`), distinct du hachage CNI dans `app.core.security` (`hash_cni`).
+
+### Frontend
+
+Le Back Office utilise le proxy `/api/backend/*` → `http://127.0.0.1:8000/api/*` (configure dans `web/next.config.ts`). Le Portail appelle l'API directement (pas de proxy).
+
+Les deux apps : App Router, Server Components par defaut, cookies de session httpOnly (jose JWT), Tailwind CSS 4, Vitest + happy-dom, React Hook Form + Zod.
+
+**Back Office (`web/`)** : Route group `(bo)` pour les pages authentifiees. Sections : dashboard, donneurs, dons, laboratoire, stock, distribution, hemovigilance, analytics, audit, cms, admin, monitoring, parametrage, collectes, facturation, qualite, fidelisation. Auth : `/login`, `/mfa`.
+
+**Portail Patient (`portal/`)** : Pages publiques (actualites, FAQ, services) + espace patient (`/espace-patient`). Route group `(app)` pour les pages patient. Playwright pour les tests e2e.
+
+### Mobile (`mobile/`)
+
+App React Native (Expo) offline-first pour la collecte terrain. Stack : expo-router, expo-sqlite, expo-secure-store, zustand. Fonctionnalites : gestion donneurs/dons, carte donneur digitale avec QR code, systeme de points/fidelite (Bronze/Silver/Gold/Platinum), synchronisation push/pull avec le backend.
 
 ### Pattern Hooks @cnts/api
 
-Les hooks dans [packages/api/src/hooks.ts](packages/api/src/hooks.ts) utilisent un pattern custom `useQuery`/`useMutation` (pas React Query) :
+Les hooks dans `packages/api/src/hooks.ts` utilisent un pattern custom `useQuery`/`useMutation` (pas React Query) :
 
 ```typescript
-// Hook de requete
 export function useMyData(api: ApiClient, params?: Params) {
   return useQuery(["my-key", JSON.stringify(params)], () => api.myModule.list(params));
 }
-
-// Hook de mutation
 export function useCreateMyData(api: ApiClient) {
   return useMutation((data: T.MyDataCreate) => api.myModule.create(data));
 }
@@ -121,32 +168,44 @@ export function useCreateMyData(api: ApiClient) {
 
 **Critique** : Les dependances du `useEffect` doivent utiliser `queryKey.join(",")`, et NON `queryFn` directement (empeche les boucles de re-rendu infinies).
 
+### @cnts/rbac
+
+4 roles : `admin`, `biologiste`, `technicien_labo`, `agent_distribution`. API : `hasPermission(user, permission)`, `rightsByModule(user)`. Actions : `read`, `write`, `delete`, `validate`.
+
 ## Modeles du Domaine
 
-**Donneur** → identifie par `cni_hash` (HMAC-SHA256, le CNI n'est jamais stocke en clair). Eligibilite : hommes 60 jours, femmes 120 jours entre les dons.
+67 modeles SQLAlchemy dans `app/db/models.py`. Les principaux :
 
-**Don** → `din` unique (format ISBT 128 : `{SITE_CODE}{AA}{JJJ}{NNNNNN}`). Machine a etats : `statut_qualification` EN_ATTENTE → LIBERE.
+**Donneur** → identifie par `cni_hash` (HMAC-SHA256). Eligibilite : hommes 60j, femmes 120j entre dons.
 
-**Poche** (Poche de sang) → produits : ST, CGR, PFC, CP. Deux machines a etats paralleles :
+**Don** → `din` unique (ISBT 128). Machine a etats : `statut_qualification` EN_ATTENTE → LIBERE.
+
+**Poche** → produits : ST, CGR, PFC, CP. Deux machines a etats :
 - `statut_stock` : EN_STOCK → FRACTIONNEE
 - `statut_distribution` : NON_DISTRIBUABLE → DISPONIBLE → RESERVE → DISTRIBUE
-- `source_poche_id` trace la chaine de fractionnement. Indexe par `(type_produit, date_peremption)` pour le FEFO.
+- Indexe par `(type_produit, date_peremption)` pour le FEFO.
 
 **Analyse** → 6 tests requis : ABO, RH, VIH, VHB, VHC, SYPHILIS. Resultats : POSITIF/NEGATIF/EN_ATTENTE.
 
-**Commande** → commandes hospitalieres. Machine a etats : BROUILLON → VALIDEE → SERVIE (ou ANNULEE). Allocation FEFO avec reservations a duree limitee (defaut 24h).
+**Commande** → Machine a etats : BROUILLON → VALIDEE → SERVIE (ou ANNULEE). Allocation FEFO.
 
-**ProductRule** → duree de conservation et contraintes de volume par type de produit. **FractionnementRecette** → recettes predefinies pour fractionner le ST en composants.
+**Modeles Phases 1-6** (selection) :
+- `Site`, `TransfertInterSite`, `Notification` (multi-sites, notifications)
+- `Phenotypage`, `RAI`, `TestNAT`, `CULM`, `EIR`, `ProcedureApherese` (biologie)
+- `CampagneCollecte`, `PrevisionStock`, `Livraison` (logistique)
+- `DocumentQualite`, `NonConformite`, `CAPA`, `AuditInterne` (SMQ)
+- `Equipement`, `Formation`, `Habilitation` (maintenance/RH)
+- `InterfaceAutomate`, `MessageAutomate`, `DHIS2Export` (interop)
+- `Tarif`, `Facture`, `LigneFacture`, `Paiement` (facturation FCFA)
+- `Consommable`, `LotConsommable`, `MouvementConsommable` (stock consommables)
+- `CarteDonneur`, `PointsHistorique`, `CampagneRecrutement` (fidelisation)
 
 ## Architecture de Securite
 
 ### Authentification (`app/api/deps.py`)
-- **`get_current_user`** : Auth stricte via token OAuth2 Bearer. Retourne `UserAccount` ou leve 401.
-- **`require_auth_in_production`** : Utilise sur tous les endpoints d'ecriture. Exige l'auth en prod/staging, autorise l'acces anonyme en dev. A ajouter sur les nouveaux endpoints d'ecriture :
+- **`get_current_user`** : Auth via OAuth2 Bearer ou `X-API-Key`. Retourne `UserAccount` ou 401.
+- **`require_auth_in_production`** : Sur tous les endpoints d'ecriture. Auth obligatoire en prod/staging, anonyme en dev :
   ```python
-  from app.api.deps import require_auth_in_production
-  from app.db.models import UserAccount
-
   @router.post("/resource")
   def create_resource(
       payload: ResourceCreate,
@@ -155,34 +214,27 @@ export function useCreateMyData(api: ApiClient) {
   ) -> Resource:
   ```
 
-### Rate Limiting (`app/core/rate_limit.py`)
+### Rate Limiting
 Fenetre glissante par IP, desactive en dev. Limites : auth 10/min, admin 30/min, ecriture 60/min, lecture 100/min.
 
-### CORS (`app/main.py`)
-Methodes et en-tetes restreints (pas `*`). En-tetes de securite ajoutes via middleware : `X-Content-Type-Options`, `X-Frame-Options`, `X-XSS-Protection`, `Referrer-Policy`.
+### Hachage CNI (`app/core/security.py`)
+CNI normalise (alphanumerique majuscule) puis hache HMAC. Jamais stocke en clair.
 
-### Hachage du CNI (`app/core/security.py`)
-Le CNI du donneur est hache par HMAC, normalise (alphanumerique majuscule) avant hachage. Le CNI original n'est jamais stocke.
-
-### Validation des secrets en production (`app/core/config.py`)
-`@model_validator` leve `ValueError` si des secrets par defaut non securises sont utilises en prod/staging.
+### Secrets en production (`app/core/config.py`)
+`@model_validator` leve `ValueError` si secrets par defaut utilises en prod/staging.
 
 ## Regles Metier Critiques
 
-1. **Porte de liberation biologique** : Une `Poche` NE DOIT PAS devenir `DISPONIBLE` sauf si les 6 resultats d'`Analyse` sont `NEGATIF` et `Don.statut_qualification` est `LIBERE`.
-
-2. **Eligibilite du donneur** : Hommes ≥ 60 jours depuis le dernier don, Femmes ≥ 120 jours.
-
-3. **Anonymisation** : Les etiquettes de poches contiennent UNIQUEMENT : DIN, groupe sanguin, type de produit, date de peremption. Jamais le nom ou le CNI du donneur.
-
-4. **Fractionnement** : Seul le ST → composants. La source doit etre EN_STOCK. Volume total ≤ source + surcote max (defaut 250ml). Peremption = date_don + product_rule.shelf_life_days.
-
-5. **Piste d'audit** : Toutes les operations modifiant l'etat DOIVENT appeler `log_event()` pour la conformite reglementaire.
+1. **Liberation biologique** : `Poche` ne devient `DISPONIBLE` que si les 6 `Analyse` sont `NEGATIF` et `Don.statut_qualification` est `LIBERE`.
+2. **Eligibilite donneur** : Hommes >= 60j, Femmes >= 120j depuis dernier don.
+3. **Anonymisation** : Etiquettes de poches : DIN, groupe sanguin, type produit, date peremption. Jamais nom/CNI.
+4. **Fractionnement** : ST uniquement → composants. Source EN_STOCK. Volume <= source + surcote max (250ml).
+5. **Piste d'audit** : Tout changement d'etat DOIT appeler `log_event()`.
 
 ## Patterns de Developpement
 
 ### Gestion des erreurs
-Utiliser `HTTPException` avec : 404 (non trouve), 409 (violation regle metier), 422 (donnees invalides). Messages d'erreur en francais.
+`HTTPException` : 404 (non trouve), 409 (violation regle metier), 422 (donnees invalides). Messages en francais.
 
 ### Journalisation d'audit
 ```python
@@ -192,31 +244,44 @@ log_event(db, aggregate_type="poche", aggregate_id=poche.id,
 ```
 
 ### Idempotence
-Les endpoints d'ecriture supportant la synchro mobile acceptent `idempotency_key` dans le body. Utilise dans : `/dons`, `/stock/fractionnements`.
+Endpoints synchro mobile : `idempotency_key` dans le body. Fonctions : `get_idempotent_response()`, `store_idempotent_response()`.
 
 ### Pagination
-Tous les endpoints de liste DOIVENT supporter les parametres `offset`/`limit`.
+Tous les endpoints de liste DOIVENT supporter `offset`/`limit`.
 
 ### Tests
-Le backend utilise pytest avec SQLite en memoire. Fichiers de tests dans `backend/tests/`. Le frontend utilise Vitest + happy-dom.
+Backend : pytest + SQLite en memoire. Fixtures dans `tests/conftest.py` : `client` (TestClient), `db_session` (ORM), `donneur_id`, `don_id`, `don_libere`. Fixtures creent les entites via endpoints API (tests d'integration). Frontend : Vitest + happy-dom (seuil couverture 80%).
 
-### RBAC (Back Office)
-4 roles : admin, biologiste, technicien_labo, agent_distribution. Utiliser `@cnts/rbac` pour les verifications de permissions. Sessions via cookies httpOnly + MFA (TOTP via otplib).
+### Conventions de nommage
+- Python : snake_case (fichiers, fonctions, variables)
+- TypeScript : camelCase (variables, fonctions), PascalCase (types, composants)
+- Schemas Pydantic : `{Entity}Create`, `{Entity}Update`, `{Entity}Out`
+- Routes API : minuscules avec tirets (`/cold-chain/storages`)
+- Base de donnees : snake_case, UUIDs pour les PKs (sauf ProductRule : string PK)
+- JSONB columns avec fallback JSON pour compatibilite SQLite en test
+
+### Observabilite
+Request ID (`X-Request-ID`), W3C Trace Context, metriques Prometheus via `app/core/metrics.py`. Routes : `/observability/metrics`, `/observability/trace/events`.
 
 ## Configuration
 
 Variables d'environnement backend (prefixees `CNTS_`) :
-- `CNTS_DATABASE_URL` : Connexion PostgreSQL (`postgresql+psycopg://...`)
-- `CNTS_CNI_HASH_KEY` : Secret HMAC pour le hachage des CNI
-- `CNTS_DIN_SITE_CODE` : Identifiant du site pour la generation DIN (defaut : "CNTS")
-- `CNTS_FRACTIONNEMENT_MAX_OVERAGE_ML` : Surcote de volume max (defaut : 250ml)
+- `CNTS_DATABASE_URL` : PostgreSQL (`postgresql+psycopg://...`)
 - `CNTS_ENV` : dev/staging/prod
-- `CNTS_LOG_LEVEL` : INFO/DEBUG/WARNING/ERROR
-
-Voir [.env.example](.env.example) pour la liste complete.
+- `CNTS_CNI_HASH_KEY` : Secret HMAC hachage CNI
+- `CNTS_AUTH_TOKEN_SECRET` : Secret JWT
+- `CNTS_RECOVERY_CODES_SECRET` : Secret codes MFA
+- `CNTS_ADMIN_TOKEN` : Token auth admin
+- `CNTS_DIN_SITE_CODE` : Code site pour DIN (defaut "CNTS")
+- `CNTS_REDIS_URL` : URL Redis pour Celery (defaut `redis://localhost:6379/0`)
+- `CNTS_SMTP_HOST/PORT/USER/PASSWORD` : Email notifications
+- `CNTS_SMS_API_KEY/URL` : SMS notifications
+- `CNTS_WHATSAPP_API_TOKEN/PHONE_ID` : WhatsApp notifications
+- `CNTS_CORS_ORIGINS` : Origines CORS autorisees
+- `CNTS_RATE_LIMIT_ENABLED` : Activer le rate limiting
 
 ## Problemes Connus
 
-- `stock.py` a des definitions de routes en double pour `GET /regles` et `PUT /regles/{type_produit}` (lignes ~146-200 et ~258-294). Le second jeu utilise des schemas Pydantic, le premier utilise un `dict` brut.
-- `tests/api/routes/test_patient.py` a un import casse (`get_password_hash` depuis `app.core.security`).
-- Certains echecs de tests sont dus a des problemes preexistants de configuration des routes (404 sur les routes prefixees `/api/` dans le client de test).
+- `tests/api/routes/test_patient.py` : import casse (`get_password_hash` au lieu de `passwords.hash_password`) et utilise fixture `db` au lieu de `db_session`.
+- 8 tests echouent (pre-existant) : 404 sur routes `/api/` dans le client de test (prefix mismatch).
+- 18 erreurs de tests (pre-existant) : problemes de fixtures et imports.

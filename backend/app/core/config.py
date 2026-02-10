@@ -35,6 +35,19 @@ class Settings(BaseSettings):
 
     cors_origins: list[str] = ["http://localhost:3000", "http://localhost:3001"]
 
+    # Redis / Celery
+    redis_url: str = "redis://localhost:6379/0"
+
+    # Notifications
+    smtp_host: str = "localhost"
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    sms_api_key: str = ""
+    sms_api_url: str = ""
+    whatsapp_api_token: str = ""
+    whatsapp_phone_id: str = ""
+
     # Rate limiting configuration
     rate_limit_enabled: bool = True
     rate_limit_in_dev: bool = False  # Set to True to enable rate limiting in dev

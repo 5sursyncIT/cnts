@@ -64,6 +64,8 @@ export interface Donneur {
   profession: string | null;
   groupe_sanguin: string | null;
   dernier_don: string | null; // ISO date
+  numero_carte: string | null; // Donor card number (unique identifier)
+  created_at?: string; // ISO datetime
 }
 
 export interface EligibiliteResponse {
@@ -71,6 +73,29 @@ export interface EligibiliteResponse {
   eligible_le: string | null; // ISO date
   raison: string | null;
   delai_jours: number | null;
+}
+
+// ============================================================================
+// FIDELISATION - CARTES DONNEUR
+// ============================================================================
+
+export interface CarteDonneurCreate {
+  donneur_id: UUID;
+  numero_carte: string;
+}
+
+export interface CarteDonneur {
+  id: UUID;
+  donneur_id: UUID;
+  numero_carte: string;
+  qr_code_data: string | null;
+  niveau: string;
+  points: number;
+  total_dons: number;
+  date_premier_don: string | null;
+  date_dernier_don: string | null;
+  is_active: boolean;
+  created_at: string;
 }
 
 // ============================================================================

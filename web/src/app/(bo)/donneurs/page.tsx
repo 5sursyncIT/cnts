@@ -63,7 +63,7 @@ export default function DonneursPage() {
                 setSearchQuery(e.target.value);
                 setPage(1);
               }}
-              placeholder="Nom, prénom..."
+              placeholder="N° carte, nom, prénom, téléphone..."
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             />
           </div>
@@ -184,10 +184,13 @@ export default function DonneursPage() {
                     Région
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Dernier Don
+                    N° Carte
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    CNI Hash
+                    Téléphone
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Dernier Don
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Actions
@@ -221,17 +224,24 @@ export default function DonneursPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                       {donneur.region || "-"}
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      {donneur.numero_carte ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          {donneur.numero_carte}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 text-xs italic">Non attribuée</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                      {donneur.telephone || "-"}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                       {donneur.dernier_don
                         ? new Date(donneur.dernier_don).toLocaleDateString(
                           "fr-FR"
                         )
                         : "Jamais"}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <code className="text-xs text-gray-800 bg-gray-100 px-2 py-1 rounded">
-                        {donneur.cni_hash.substring(0, 16)}...
-                      </code>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <Link

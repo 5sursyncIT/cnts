@@ -48,6 +48,14 @@ export default function MainLayout() {
         }}
       />
       <Tabs.Screen
+        name="carte"
+        options={{
+          title: "Ma Carte",
+          headerShown: false,
+          tabBarIcon: ({ focused }) => <TabIcon label="📇" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
         name="sync"
         options={{
           title: "Sync",

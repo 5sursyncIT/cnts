@@ -134,6 +134,7 @@ export function createApiClient(options: ApiClientOptions) {
     donneurs: {
       list: (params?: {
         q?: string;
+        numero_carte?: string;
         sexe?: "H" | "F";
         groupe_sanguin?: string;
         region?: string;
@@ -148,10 +149,21 @@ export function createApiClient(options: ApiClientOptions) {
 
       get: (id: T.UUID) => get<T.Donneur>(`/donneurs/${id}`),
 
-      delete: (id: T.UUID) => del<{ deleted: boolean }>(`/donneurs/${id}`),
+      delete: (id: T.UUID) => del<void>(`/donneurs/${id}`),
 
       checkEligibilite: (id: T.UUID) =>
         get<T.EligibiliteResponse>(`/donneurs/${id}/eligibilite`),
+    },
+
+    // ========================================================================
+    // FIDELISATION - CARTES DONNEUR
+    // ========================================================================
+    fidelisation: {
+      createCarte: (data: T.CarteDonneurCreate) =>
+        post<T.CarteDonneur>("/fidelisation/cartes", data),
+
+      getCarteByDonneur: (donneurId: T.UUID) =>
+        get<T.CarteDonneur>(`/fidelisation/cartes/donneur/${donneurId}`),
     },
 
     // ========================================================================
@@ -214,7 +226,7 @@ export function createApiClient(options: ApiClientOptions) {
       getAlertesPeremption: (jours: number = 7) =>
         get<T.Poche[]>("/poches/alertes/peremption", { jours }),
 
-      delete: (id: T.UUID) => del<{ deleted: boolean }>(`/poches/${id}`),
+      delete: (id: T.UUID) => del<void>(`/poches/${id}`),
     },
 
     // ========================================================================
@@ -258,7 +270,7 @@ export function createApiClient(options: ApiClientOptions) {
         put<T.RecetteFractionnement>(`/stock/recettes/${code}`, data),
 
       deleteRecette: (code: string) =>
-        del<{ deleted: boolean }>(`/stock/recettes/${code}`),
+        del<{ code: string; actif: boolean }>(`/stock/recettes/${code}`),
 
       // Liste des poches en stock
       listPochesStock: (params?: {
@@ -355,7 +367,7 @@ export function createApiClient(options: ApiClientOptions) {
 
       get: (id: T.UUID) => get<T.Receveur>(`/receveurs/${id}`),
 
-      delete: (id: T.UUID) => del<{ deleted: boolean }>(`/receveurs/${id}`),
+      delete: (id: T.UUID) => del<void>(`/receveurs/${id}`),
     },
 
     // ========================================================================

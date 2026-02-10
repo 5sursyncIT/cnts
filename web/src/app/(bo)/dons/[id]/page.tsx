@@ -16,7 +16,7 @@ export default function DonDetailPage() {
   const donId = params.id as string;
 
   const { data: don, status: donStatus, error: donError, refetch: refetchDon } = useDon(apiClient, donId);
-  const { data: donneur } = useDonneur(apiClient, don?.donneur_id || null);
+  const { data: donneur } = useDonneur(apiClient, don?.donneur_id || "");
   const { data: analyses, refetch: refetchAnalyses } = useAnalyses(apiClient, {
     don_id: donId,
   });

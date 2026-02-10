@@ -87,7 +87,7 @@ export default function LabelingPage() {
           text: data.din,
           scale: 2,
           height: 10,
-          incluetext: true,
+          includetext: true,
           textxalign: 'center',
         });
       }
@@ -99,7 +99,7 @@ export default function LabelingPage() {
           text: data.productCode,
           scale: 2,
           height: 10,
-          incluetext: true,
+          includetext: true,
           textxalign: 'center',
         });
       }
@@ -111,7 +111,7 @@ export default function LabelingPage() {
           text: data.aboRh,
           scale: 2,
           height: 10,
-          incluetext: true,
+          includetext: true,
           textxalign: 'center',
         });
       }
@@ -123,7 +123,7 @@ export default function LabelingPage() {
           text: data.expiration,
           scale: 2,
           height: 10,
-          incluetext: true,
+          includetext: true,
           textxalign: 'center',
         });
       }

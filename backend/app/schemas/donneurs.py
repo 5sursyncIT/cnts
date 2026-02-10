@@ -50,6 +50,7 @@ class DonneurOut(BaseModel):
     email: str | None = None
     profession: str | None = None
     dernier_don: dt.date | None
+    numero_carte: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -57,3 +58,5 @@ class DonneurOut(BaseModel):
 class EligibiliteOut(BaseModel):
     eligible: bool
     eligible_le: dt.date | None
+    raison: str | None = None
+    delai_jours: int | None = None

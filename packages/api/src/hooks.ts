@@ -139,6 +139,22 @@ export function useDeleteDonneur(api: ApiClient) {
   return useMutation((id: T.UUID) => api.donneurs.delete(id));
 }
 
+export function useSearchDonneurs(api: ApiClient, search: string) {
+  return useQuery(
+    ["donneurs-search", search],
+    () => api.donneurs.list({ q: search, limit: 20 }),
+    { enabled: search.length >= 2 },
+  );
+}
+
+// ============================================================================
+// FIDELISATION - CARTES DONNEUR HOOKS
+// ============================================================================
+
+export function useCreateCarteDonneur(api: ApiClient) {
+  return useMutation((data: T.CarteDonneurCreate) => api.fidelisation.createCarte(data));
+}
+
 export function useCheckEligibilite(api: ApiClient, id: T.UUID) {
   return useQuery(["eligibilite", id], () => api.donneurs.checkEligibilite(id), { enabled: !!id });
 }

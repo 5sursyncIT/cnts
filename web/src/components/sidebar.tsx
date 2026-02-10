@@ -11,7 +11,10 @@ import {
   FileText,
   Settings,
   ShieldAlert,
-  Menu
+  CheckSquare,
+  CreditCard,
+  CalendarDays,
+  MapPin,
 } from "lucide-react";
 import { hasPermission, perm, type User } from "@cnts/rbac";
 import { NavLink } from "./nav-link";
@@ -33,15 +36,50 @@ export function Sidebar({ user }: SidebarProps) {
   const canReadAudit = hasPermission({ user, permission: perm("audit", "read") });
   const canReadAdmin = hasPermission({ user, permission: perm("administration", "read") });
   const canReadParametrage = hasPermission({ user, permission: perm("parametrage", "read") });
+  const canReadQualite = hasPermission({ user, permission: perm("qualite", "read") });
+  const canReadFacturation = hasPermission({ user, permission: perm("facturation", "read") });
+  const canReadCollectes = hasPermission({ user, permission: perm("collectes", "read") });
+  const canReadSites = hasPermission({ user, permission: perm("sites", "read") });
 
   const navItems = [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, enabled: true },
-    { label: "Donneurs", href: "/donneurs", icon: Users, enabled: canReadDonneurs },
+    {
+      label: "Donneurs",
+      href: "/donneurs",
+      icon: Users,
+      enabled: canReadDonneurs,
+      subItems: [
+        { label: "Liste", href: "/donneurs" },
+        { label: "Fidélisation", href: "/donneurs/fidelisation" },
+      ]
+    },
     { label: "Dons", href: "/dons", icon: Heart, enabled: canReadDons },
+    { label: "Collectes", href: "/collectes", icon: CalendarDays, enabled: canReadCollectes },
     { label: "Laboratoire", href: "/laboratoire", icon: FlaskConical, enabled: canReadLabo },
-    { label: "Stock", href: "/stock", icon: Package, enabled: canReadStock },
+    {
+      label: "Stock",
+      href: "/stock",
+      icon: Package,
+      enabled: canReadStock,
+      subItems: [
+        { label: "Poches", href: "/stock" },
+        { label: "Fractionnement", href: "/stock/fractionnement" },
+        { label: "Transferts", href: "/stock/transferts" },
+      ]
+    },
     { label: "Distribution", href: "/distribution", icon: Truck, enabled: canReadDistribution },
     { label: "Hémovigilance", href: "/hemovigilance", icon: Activity, enabled: canReadHemovigilance },
+    { label: "Facturation", href: "/facturation", icon: CreditCard, enabled: canReadFacturation },
+    {
+      label: "Qualité",
+      href: "/qualite",
+      icon: CheckSquare,
+      enabled: canReadQualite,
+      subItems: [
+        { label: "Tableau de bord", href: "/qualite" },
+        { label: "Équipements", href: "/qualite/equipements" },
+      ]
+    },
     {
       label: "Analyses",
       href: "/analytics",
@@ -60,6 +98,7 @@ export function Sidebar({ user }: SidebarProps) {
       enabled: canReadParametrage,
       subItems: [
         { label: "Utilisateurs", href: "/parametrage/utilisateurs" },
+        { label: "Sites", href: "/parametrage/sites" },
         { label: "Règles Produits", href: "/parametrage/regles-produits" },
         { label: "Péremption", href: "/parametrage/peremption" },
         { label: "Recettes", href: "/parametrage/recettes" },

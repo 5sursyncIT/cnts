@@ -89,13 +89,13 @@ export default function MonitoringPage() {
     const debounceTimer = setTimeout(() => {
       fetchMetrics({ force: true });
     }, 400);
-    let intervalId: ReturnType<typeof setInterval> | null = null;
+    let intervalId: number | null = null;
     if (autoRefreshEnabled) {
-      intervalId = setInterval(() => fetchMetrics(), 30000);
+      intervalId = window.setInterval(() => fetchMetrics(), 30000) as unknown as number;
     }
     return () => {
       clearTimeout(debounceTimer);
-      if (intervalId) clearInterval(intervalId);
+      if (intervalId !== null) window.clearInterval(intervalId);
     };
   }, [fetchMetrics, autoRefreshEnabled, timeRange]);
 

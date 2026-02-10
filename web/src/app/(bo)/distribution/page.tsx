@@ -69,14 +69,14 @@ export default function DistributionPage() {
   }, [refetch]);
 
   useEffect(() => {
-    let intervalId: ReturnType<typeof setInterval> | null = null;
+    let intervalId: number | null = null;
     if (autoRefreshEnabled) {
       intervalId = window.setInterval(() => {
         refreshData();
-      }, 15000);
+      }, 15000) as unknown as number;
     }
     return () => {
-      if (intervalId) window.clearInterval(intervalId);
+      if (intervalId !== null) window.clearInterval(intervalId);
     };
   }, [autoRefreshEnabled, refreshData]);
 

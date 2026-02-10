@@ -16,7 +16,7 @@ export default function EditArticlePage({ params }: { params: Promise<{ slug: st
   const { data: article, status: loadStatus } = useArticle(apiClient, resolvedParams.slug);
   const { mutate: updateArticle, status: saveStatus } = useUpdateArticle(apiClient);
   const { mutate: deleteArticle, status: deleteStatus } = useDeleteArticle(apiClient);
-  const { mutateAsync: uploadFile, status: uploadStatus } = useUpload(apiClient);
+  const { mutate: uploadFile, status: uploadStatus } = useUpload(apiClient);
 
   if (loadStatus === "loading") {
     return (
@@ -72,7 +72,7 @@ export default function EditArticlePage({ params }: { params: Promise<{ slug: st
       <div className="rounded-lg border bg-white p-6 shadow-sm">
         <ArticleForm
           key={article.id}
-          initialData={article}
+          initialData={article as any}
           onSubmit={handleSubmit}
           onUpload={uploadFile}
           uploadStatus={uploadStatus}

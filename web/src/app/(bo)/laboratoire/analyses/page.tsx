@@ -44,7 +44,7 @@ export default function AnalysesPage() {
   // Charger le don sélectionné
   const { data: don, refetch: refetchDon } = useDon(
     apiClient,
-    selectedDonId || null
+    selectedDonId || ""
   );
 
   // Charger les analyses existantes

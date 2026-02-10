@@ -12,7 +12,7 @@ import { ArticleForm } from "@/components/cms/article-form";
 export default function NewArticlePage() {
   const router = useRouter();
   const { mutate: createArticle, status } = useCreateArticle(apiClient);
-  const { mutateAsync: uploadFile, status: uploadStatus } = useUpload(apiClient);
+  const { mutate: uploadFile, status: uploadStatus } = useUpload(apiClient);
 
   const handleSubmit = async (data: any) => {
     try {

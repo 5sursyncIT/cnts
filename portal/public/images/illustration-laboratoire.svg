@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 500" fill="none">
+  <!-- Background -->
+  <circle cx="300" cy="250" r="220" fill="#eff6ff" />
+  <circle cx="300" cy="250" r="180" fill="#dbeafe" opacity="0.5" />
+
+  <!-- Microscope -->
+  <g transform="translate(200, 100)">
+    <!-- Base -->
+    <rect x="20" y="300" width="160" height="16" rx="8" fill="#374151"/>
+    <!-- Pillar -->
+    <rect x="90" y="120" width="20" height="180" rx="4" fill="#4b5563"/>
+    <!-- Arm -->
+    <rect x="40" y="110" width="120" height="16" rx="4" fill="#374151"/>
+    <!-- Eyepiece -->
+    <rect x="45" y="80" width="30" height="35" rx="6" fill="#6b7280"/>
+    <ellipse cx="60" cy="78" rx="14" ry="6" fill="#9ca3af"/>
+    <!-- Objective -->
+    <rect x="55" y="126" width="14" height="30" rx="3" fill="#6b7280"/>
+    <rect x="50" y="156" width="24" height="8" rx="3" fill="#4b5563"/>
+    <!-- Stage -->
+    <rect x="40" y="180" width="100" height="10" rx="3" fill="#374151"/>
+    <!-- Stage clips -->
+    <rect x="50" y="175" width="8" height="18" rx="2" fill="#9ca3af"/>
+    <rect x="122" y="175" width="8" height="18" rx="2" fill="#9ca3af"/>
+    <!-- Slide on stage -->
+    <rect x="65" y="170" width="50" height="12" rx="2" fill="#bfdbfe" stroke="#93c5fd" stroke-width="1"/>
+    <!-- Red dot (sample) -->
+    <circle cx="90" cy="176" r="4" fill="#d32f2f" opacity="0.7"/>
+    <!-- Focus knob -->
+    <circle cx="110" cy="230" r="12" fill="#6b7280" stroke="#4b5563" stroke-width="2"/>
+    <circle cx="110" cy="270" r="8" fill="#6b7280" stroke="#4b5563" stroke-width="1.5"/>
+    <!-- Light -->
+    <rect x="75" y="200" width="30" height="20" rx="4" fill="#fef3c7"/>
+    <circle cx="90" cy="210" r="6" fill="#fbbf24" opacity="0.8"/>
+  </g>
+
+  <!-- Test tubes -->
+  <g transform="translate(400, 150)">
+    <!-- Tube rack -->
+    <rect x="0" y="140" width="120" height="12" rx="3" fill="#6b7280"/>
+    <rect x="5" y="148" width="10" height="40" rx="2" fill="#9ca3af"/>
+    <rect x="105" y="148" width="10" height="40" rx="2" fill="#9ca3af"/>
+
+    <!-- Tube 1 (red - blood) -->
+    <rect x="15" y="40" width="18" height="105" rx="9" fill="#fef2f2" stroke="#d32f2f" stroke-width="1.5"/>
+    <rect x="15" y="90" width="18" height="55" rx="9" fill="#d32f2f" opacity="0.6"/>
+    <rect x="12" y="36" width="24" height="8" rx="3" fill="#ef4444"/>
+
+    <!-- Tube 2 (yellow - serum) -->
+    <rect x="40" y="50" width="18" height="95" rx="9" fill="#fefce8" stroke="#eab308" stroke-width="1.5"/>
+    <rect x="40" y="100" width="18" height="45" rx="9" fill="#fbbf24" opacity="0.5"/>
+    <rect x="37" y="46" width="24" height="8" rx="3" fill="#eab308"/>
+
+    <!-- Tube 3 (purple - EDTA) -->
+    <rect x="65" y="35" width="18" height="110" rx="9" fill="#f5f3ff" stroke="#8b5cf6" stroke-width="1.5"/>
+    <rect x="65" y="85" width="18" height="60" rx="9" fill="#8b5cf6" opacity="0.4"/>
+    <rect x="62" y="31" width="24" height="8" rx="3" fill="#7c3aed"/>
+
+    <!-- Tube 4 (blue) -->
+    <rect x="90" y="45" width="18" height="100" rx="9" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.5"/>
+    <rect x="90" y="95" width="18" height="50" rx="9" fill="#3b82f6" opacity="0.4"/>
+    <rect x="87" y="41" width="24" height="8" rx="3" fill="#2563eb"/>
+  </g>
+
+  <!-- DNA helix -->
+  <g transform="translate(130, 200)" opacity="0.4">
+    <path d="M0 0 Q15 20 0 40 Q-15 60 0 80 Q15 100 0 120" stroke="#d32f2f" stroke-width="2.5" fill="none"/>
+    <path d="M20 0 Q5 20 20 40 Q35 60 20 80 Q5 100 20 120" stroke="#3b82f6" stroke-width="2.5" fill="none"/>
+    <line x1="3" y1="20" x2="17" y2="20" stroke="#6b7280" stroke-width="1.5"/>
+    <line x1="-2" y1="40" x2="22" y2="40" stroke="#6b7280" stroke-width="1.5"/>
+    <line x1="3" y1="60" x2="17" y2="60" stroke="#6b7280" stroke-width="1.5"/>
+    <line x1="-2" y1="80" x2="22" y2="80" stroke="#6b7280" stroke-width="1.5"/>
+    <line x1="3" y1="100" x2="17" y2="100" stroke="#6b7280" stroke-width="1.5"/>
+  </g>
+
+  <!-- Molecule dots -->
+  <circle cx="500" cy="100" r="5" fill="#3b82f6" opacity="0.4"/>
+  <circle cx="520" cy="120" r="3" fill="#d32f2f" opacity="0.3"/>
+  <circle cx="510" cy="80" r="4" fill="#8b5cf6" opacity="0.3"/>
+  <line x1="500" y1="100" x2="520" y2="120" stroke="#6b7280" stroke-width="1" opacity="0.3"/>
+  <line x1="500" y1="100" x2="510" y2="80" stroke="#6b7280" stroke-width="1" opacity="0.3"/>
+
+  <!-- Medical cross -->
+  <g transform="translate(100, 100)" opacity="0.3">
+    <rect x="-10" y="-3" width="20" height="6" rx="2" fill="#d32f2f"/>
+    <rect x="-3" y="-10" width="6" height="20" rx="2" fill="#d32f2f"/>
+  </g>
+</svg>

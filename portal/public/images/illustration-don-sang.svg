@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 500" fill="none">
+  <!-- Background decorative circles -->
+  <circle cx="300" cy="250" r="220" fill="#fef2f2" />
+  <circle cx="300" cy="250" r="180" fill="#fee2e2" opacity="0.6" />
+
+  <!-- Blood bag -->
+  <rect x="220" y="100" width="160" height="220" rx="16" fill="#ffffff" stroke="#d32f2f" stroke-width="3"/>
+  <rect x="265" y="80" width="70" height="30" rx="6" fill="#d32f2f"/>
+  <rect x="280" y="65" width="40" height="20" rx="4" fill="#ef4444"/>
+  <!-- Tube from bag -->
+  <path d="M300 320 L300 360 Q300 380 320 380 L360 380" stroke="#d32f2f" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <!-- Blood level in bag -->
+  <rect x="223" y="200" width="154" height="117" rx="14" fill="#d32f2f" opacity="0.15"/>
+  <rect x="223" y="240" width="154" height="77" rx="14" fill="#d32f2f" opacity="0.3"/>
+  <!-- Label on bag -->
+  <rect x="250" y="140" width="100" height="40" rx="6" fill="#fef2f2" stroke="#fca5a5" stroke-width="1.5"/>
+  <text x="300" y="157" text-anchor="middle" fill="#d32f2f" font-size="11" font-weight="bold" font-family="sans-serif">SANG TOTAL</text>
+  <text x="300" y="172" text-anchor="middle" fill="#ef4444" font-size="9" font-family="sans-serif">450 ml</text>
+
+  <!-- Heart icon -->
+  <g transform="translate(300, 210)">
+    <path d="M0-15 C-5-25 -20-25 -20-15 C-20-5 0 10 0 15 C0 10 20-5 20-15 C20-25 5-25 0-15Z" fill="#d32f2f" opacity="0.8"/>
+  </g>
+
+  <!-- Arm silhouette -->
+  <path d="M400 150 Q440 150 460 180 Q480 210 480 260 Q480 300 460 320 L400 320 Q420 300 420 260 Q420 210 400 180 Z" fill="#fde68a" opacity="0.4" stroke="#f59e0b" stroke-width="1.5"/>
+
+  <!-- Needle/tube going to arm -->
+  <circle cx="420" cy="240" r="6" fill="#d32f2f" opacity="0.6"/>
+  <line x1="380" y1="240" x2="414" y2="240" stroke="#d32f2f" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- Droplets -->
+  <g fill="#d32f2f">
+    <path d="M150 180 Q150 165 157 172 Q164 180 157 188 Q150 195 150 180Z" opacity="0.6"/>
+    <path d="M170 220 Q170 205 177 212 Q184 220 177 228 Q170 235 170 220Z" opacity="0.4"/>
+    <path d="M130 250 Q130 235 137 242 Q144 250 137 258 Q130 265 130 250Z" opacity="0.3"/>
+  </g>
+
+  <!-- Medical cross -->
+  <g transform="translate(480, 130)">
+    <rect x="-12" y="-4" width="24" height="8" rx="2" fill="#d32f2f" opacity="0.5"/>
+    <rect x="-4" y="-12" width="8" height="24" rx="2" fill="#d32f2f" opacity="0.5"/>
+  </g>
+
+  <!-- Pulse line -->
+  <path d="M100 400 L180 400 L200 370 L220 430 L240 380 L260 420 L280 400 L500 400" stroke="#d32f2f" stroke-width="2.5" fill="none" opacity="0.4" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Stars/sparkles -->
+  <circle cx="460" cy="100" r="4" fill="#fbbf24" opacity="0.6"/>
+  <circle cx="140" cy="140" r="3" fill="#d32f2f" opacity="0.4"/>
+  <circle cx="500" cy="300" r="3.5" fill="#f97316" opacity="0.5"/>
+  <circle cx="100" cy="320" r="2.5" fill="#d32f2f" opacity="0.3"/>
+</svg>

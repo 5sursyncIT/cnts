@@ -15,14 +15,16 @@ export function SiteHeader() {
 
   const navLinks = [
     { href: "/", label: "Accueil" },
-    { href: "/qui-sommes-nous", label: "Qui sommes-nous" },
-    { href: "/services", label: "Nos Services" },
-    { href: "/equipe", label: "Équipe Médicale" },
+    { href: "/qui-sommes-nous", label: "Le CNTS" },
+    { href: "/donner-sang", label: "Don de sang" },
+    { href: "/services", label: "Services" },
+    { href: "/recherche", label: "Recherche" },
+    { href: "/collectes", label: "Collectes" },
     { href: "/actualites", label: "Actualités" },
     { href: "/contact", label: "Contact" },
   ];
 
-  const isActive = (path: string) => pathname === path;
+  const isActive = (path: string) => pathname === path || pathname.startsWith(path + "/");
 
   return (
     <header className="flex flex-col w-full">

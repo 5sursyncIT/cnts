@@ -18,8 +18,9 @@ services:
       CNTS_LOG_LEVEL: ${CNTS_LOG_LEVEL:-INFO}
       CNTS_DATABASE_URL: ${CNTS_DATABASE_URL:-postgresql+psycopg://cnts:cnts@db:5432/cnts}
       CNTS_CNI_HASH_KEY: ${CNTS_CNI_HASH_KEY:-change-me}
-      CNTS_DIN_SITE_CODE: ${CNTS_DIN_SITE_CODE:-CNTS}
+      CNTS_DIN_SITE_CODE: ${CNTS_DIN_SITE_CODE:-CNTS0}
       CNTS_FRACTIONNEMENT_MAX_OVERAGE_ML: ${CNTS_FRACTIONNEMENT_MAX_OVERAGE_ML:-250}
+      CNTS_REDIS_URL: redis://redis:6379/0
     ports:
       - "8000:8000"
     volumes:
@@ -29,6 +30,34 @@ services:
       - ./backend/tests:/app/tests
     depends_on:
       - db
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  celery-worker:
+    build:
+      context: ./backend
+    command: celery -A app.core.celery_app worker --loglevel=info
+    environment:
+      CNTS_ENV: ${CNTS_ENV:-dev}
+      CNTS_LOG_LEVEL: ${CNTS_LOG_LEVEL:-INFO}
+      CNTS_DATABASE_URL: ${CNTS_DATABASE_URL:-postgresql+psycopg://cnts:cnts@db:5432/cnts}
+      CNTS_CNI_HASH_KEY: ${CNTS_CNI_HASH_KEY:-change-me}
+      CNTS_REDIS_URL: redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+
+  celery-beat:
+    build:
+      context: ./backend
+    command: celery -A app.core.celery_app beat --loglevel=info
+    environment:
+      CNTS_REDIS_URL: redis://redis:6379/0
+    depends_on:
+      - redis
 
 volumes:
   postgres_data:
