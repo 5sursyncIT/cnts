@@ -65,7 +65,7 @@ export default function MonitoringPage() {
     setRefreshError(null);
     lastFetchAtRef.current = now;
     try {
-      const res = await fetch('/api/backend/observability/dashboard');
+      const res = await fetch('/api/observability/dashboard');
       if (!res.ok) {
         throw new Error(`Erreur ${res.status}`);
       }

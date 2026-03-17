@@ -73,7 +73,9 @@ def list_notifications(
     if statut:
         stmt = stmt.where(Notification.statut == statut)
     return list(
-        db.execute(stmt.order_by(Notification.created_at.desc()).offset(offset).limit(limit)).scalars()
+        db.execute(
+            stmt.order_by(Notification.created_at.desc()).offset(offset).limit(limit)
+        ).scalars()
     )
 
 
@@ -96,7 +98,9 @@ def retry_notification(
         raise HTTPException(status_code=404, detail="notification introuvable")
 
     if notif.statut != "ECHEC":
-        raise HTTPException(status_code=409, detail="seules les notifications en echec peuvent etre relancees")
+        raise HTTPException(
+            status_code=409, detail="seules les notifications en echec peuvent etre relancees"
+        )
 
     notif.statut = "EN_ATTENTE"
     notif.erreur = None

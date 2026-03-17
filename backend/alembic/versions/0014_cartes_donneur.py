@@ -22,7 +22,13 @@ def upgrade() -> None:
     op.create_table(
         "cartes_donneur",
         sa.Column("id", UUID(as_uuid=True), primary_key=True),
-        sa.Column("donneur_id", UUID(as_uuid=True), sa.ForeignKey("donneurs.id"), unique=True, nullable=False),
+        sa.Column(
+            "donneur_id",
+            UUID(as_uuid=True),
+            sa.ForeignKey("donneurs.id"),
+            unique=True,
+            nullable=False,
+        ),
         sa.Column("numero_carte", sa.String(32), unique=True, nullable=False),
         sa.Column("qr_code_data", sa.String(500), nullable=True),
         sa.Column("niveau", sa.String(16), nullable=False, server_default="BRONZE"),
@@ -34,14 +40,18 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
     op.create_index("ix_cartes_donneur_donneur_id", "cartes_donneur", ["donneur_id"])
-    op.create_index("ix_cartes_donneur_numero_carte", "cartes_donneur", ["numero_carte"], unique=True)
+    op.create_index(
+        "ix_cartes_donneur_numero_carte", "cartes_donneur", ["numero_carte"], unique=True
+    )
     op.create_index("ix_cartes_donneur_niveau", "cartes_donneur", ["niveau"])
     op.create_index("ix_cartes_donneur_is_active", "cartes_donneur", ["is_active"])
 
     op.create_table(
         "points_historique",
         sa.Column("id", UUID(as_uuid=True), primary_key=True),
-        sa.Column("carte_id", UUID(as_uuid=True), sa.ForeignKey("cartes_donneur.id"), nullable=False),
+        sa.Column(
+            "carte_id", UUID(as_uuid=True), sa.ForeignKey("cartes_donneur.id"), nullable=False
+        ),
         sa.Column("type_operation", sa.String(32), nullable=False),
         sa.Column("points", sa.Integer, nullable=False),
         sa.Column("description", sa.String(255), nullable=True),

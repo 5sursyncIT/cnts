@@ -10,7 +10,15 @@ from app.api.deps import require_auth_in_production
 from app.audit.events import log_event
 from app.core.config import settings
 from app.core.idempotency import get_idempotent_response, store_idempotent_response
-from app.db.models import ColdChainReading, ColdChainStorage, Don, FractionnementRecette, Poche, ProductRule, UserAccount
+from app.db.models import (
+    ColdChainReading,
+    ColdChainStorage,
+    Don,
+    FractionnementRecette,
+    Poche,
+    ProductRule,
+    UserAccount,
+)
 from app.db.session import get_db
 from app.schemas.stock import (
     ColdChainAlertOut,
@@ -38,10 +46,30 @@ def _get_product_rule(db: Session, type_produit: str) -> ProductRule:
     rule = db.get(ProductRule, type_produit)
     if rule is None:
         defaults: dict[str, dict] = {
-            "ST": {"shelf_life_days": 35, "default_volume_ml": 450, "min_volume_ml": 350, "max_volume_ml": 550},
-            "CGR": {"shelf_life_days": 42, "default_volume_ml": 280, "min_volume_ml": 200, "max_volume_ml": 400},
-            "PFC": {"shelf_life_days": 365, "default_volume_ml": 200, "min_volume_ml": 120, "max_volume_ml": 400},
-            "CP": {"shelf_life_days": 5, "default_volume_ml": 60, "min_volume_ml": 40, "max_volume_ml": 120},
+            "ST": {
+                "shelf_life_days": 35,
+                "default_volume_ml": 450,
+                "min_volume_ml": 350,
+                "max_volume_ml": 550,
+            },
+            "CGR": {
+                "shelf_life_days": 42,
+                "default_volume_ml": 280,
+                "min_volume_ml": 200,
+                "max_volume_ml": 400,
+            },
+            "PFC": {
+                "shelf_life_days": 365,
+                "default_volume_ml": 200,
+                "min_volume_ml": 120,
+                "max_volume_ml": 400,
+            },
+            "CP": {
+                "shelf_life_days": 5,
+                "default_volume_ml": 60,
+                "min_volume_ml": 40,
+                "max_volume_ml": 120,
+            },
         }
         seed = defaults.get(type_produit)
         if seed is None:
@@ -75,11 +103,17 @@ def _do_fractionnement(
         rule = _get_product_rule(db, comp.type_produit)
         volume = comp.volume_ml if comp.volume_ml is not None else rule.default_volume_ml
         if volume is None:
-            raise HTTPException(status_code=400, detail=f"volume_ml requis pour {comp.type_produit}")
+            raise HTTPException(
+                status_code=400, detail=f"volume_ml requis pour {comp.type_produit}"
+            )
         if rule.min_volume_ml is not None and volume < rule.min_volume_ml:
-            raise HTTPException(status_code=400, detail=f"volume_ml trop bas pour {comp.type_produit}")
+            raise HTTPException(
+                status_code=400, detail=f"volume_ml trop bas pour {comp.type_produit}"
+            )
         if rule.max_volume_ml is not None and volume > rule.max_volume_ml:
-            raise HTTPException(status_code=400, detail=f"volume_ml trop haut pour {comp.type_produit}")
+            raise HTTPException(
+                status_code=400, detail=f"volume_ml trop haut pour {comp.type_produit}"
+            )
         total_volume += volume
         p = Poche(
             don_id=source.don_id,
@@ -87,10 +121,14 @@ def _do_fractionnement(
             type_produit=comp.type_produit,
             groupe_sanguin=source.groupe_sanguin,
             volume_ml=volume,
-            date_peremption=_peremption_produit(db, type_produit=comp.type_produit, date_don=don.date_don),
+            date_peremption=_peremption_produit(
+                db, type_produit=comp.type_produit, date_don=don.date_don
+            ),
             emplacement_stock="STOCK",
             statut_stock="EN_STOCK",
-            statut_distribution="DISPONIBLE" if don.statut_qualification == "LIBERE" else "NON_DISTRIBUABLE",
+            statut_distribution="DISPONIBLE"
+            if don.statut_qualification == "LIBERE"
+            else "NON_DISTRIBUABLE",
         )
         db.add(p)
         created.append(p)
@@ -98,7 +136,9 @@ def _do_fractionnement(
     perte_ml: int | None = None
     if source.volume_ml is not None:
         if total_volume > (source.volume_ml + settings.fractionnement_max_overage_ml):
-            raise HTTPException(status_code=409, detail="volume composants incohérent vs volume source")
+            raise HTTPException(
+                status_code=409, detail="volume composants incohérent vs volume source"
+            )
         perte_ml = int(source.volume_ml - total_volume)
 
     source.statut_stock = "FRACTIONNEE"
@@ -149,7 +189,6 @@ def _expand_recette_composants(recette: FractionnementRecette) -> list[Fractionn
     return expanded
 
 
-
 @router.get("/poches", response_model=list[PocheOut])
 def list_poches(
     type_produit: str | None = Query(default=None),
@@ -192,7 +231,9 @@ def fractionner(
     if don is None:
         raise HTTPException(status_code=409, detail="don introuvable")
 
-    response = _do_fractionnement(db, source=source, don=don, composants=payload.composants, recipe_code=None)
+    response = _do_fractionnement(
+        db, source=source, don=don, composants=payload.composants, recipe_code=None
+    )
 
     if payload.idempotency_key:
         store_idempotent_response(
@@ -215,7 +256,7 @@ def list_product_rules(db: Session = Depends(get_db)) -> list[ProductRule]:
     defaults = ["ST", "CGR", "PFC", "CP"]
     for type_produit in defaults:
         _get_product_rule(db, type_produit)
-    
+
     stmt = select(ProductRule).order_by(ProductRule.type_produit)
     return list(db.execute(stmt).scalars())
 
@@ -233,10 +274,10 @@ def update_product_rule(
     rule.min_volume_ml = payload.min_volume_ml
     rule.max_volume_ml = payload.max_volume_ml
     rule.isbt_product_code = payload.isbt_product_code
-    
+
     db.commit()
     db.refresh(rule)
-    
+
     log_event(
         db,
         aggregate_type="system",
@@ -245,7 +286,7 @@ def update_product_rule(
         payload={"type_produit": type_produit, "changes": payload.model_dump()},
     )
     db.commit()
-    
+
     return rule
 
 
@@ -355,7 +396,9 @@ def fractionner_depuis_recette(
         raise HTTPException(status_code=409, detail="don introuvable")
 
     composants = _expand_recette_composants(recette)
-    response = _do_fractionnement(db, source=source, don=don, composants=composants, recipe_code=recette.code)
+    response = _do_fractionnement(
+        db, source=source, don=don, composants=composants, recipe_code=recette.code
+    )
 
     if payload.idempotency_key:
         store_idempotent_response(
@@ -512,8 +555,7 @@ def list_cold_chain_alerts(db: Session = Depends(get_db)) -> list[ColdChainAlert
         .subquery()
     )
     latest_readings = db.execute(
-        select(ColdChainReading)
-        .join(
+        select(ColdChainReading).join(
             latest_subq,
             (ColdChainReading.storage_id == latest_subq.c.storage_id)
             & (ColdChainReading.recorded_at == latest_subq.c.latest_at),
@@ -537,7 +579,9 @@ def list_cold_chain_alerts(db: Session = Depends(get_db)) -> list[ColdChainAlert
                 )
             )
             continue
-        out_of_range = reading.temperature_c < storage.min_temp or reading.temperature_c > storage.max_temp
+        out_of_range = (
+            reading.temperature_c < storage.min_temp or reading.temperature_c > storage.max_temp
+        )
         alerts.append(
             ColdChainAlertOut(
                 storage_id=storage.id,

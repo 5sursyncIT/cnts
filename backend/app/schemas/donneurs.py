@@ -36,6 +36,7 @@ class DonneurUpdate(BaseModel):
 
 class DonneurOut(BaseModel):
     """Output schema for Donneur - CNI is NOT exposed for privacy/GDPR compliance."""
+
     id: uuid.UUID
     cni_hash: str  # Only the hash is exposed, never the original CNI
     nom: str

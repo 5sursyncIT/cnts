@@ -1,6 +1,18 @@
 import uuid
 
-from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint, func
+from sqlalchemy import (
+    Boolean,
+    Date,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    JSON,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -26,9 +38,11 @@ class Donneur(Base):
     email: Mapped[str | None] = mapped_column(String(120), nullable=True)
     profession: Mapped[str | None] = mapped_column(String(120), nullable=True)
     dernier_don: Mapped[Date | None] = mapped_column(Date, nullable=True)
-    
+
     # Link to UserAccount for patient access
-    user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("user_accounts.id"), nullable=True, index=True)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("user_accounts.id"), nullable=True, index=True
+    )
 
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[DateTime] = mapped_column(
@@ -41,7 +55,9 @@ class Donneur(Base):
     user: Mapped["UserAccount"] = relationship(back_populates="donneur")
     rendez_vous: Mapped[list["RendezVous"]] = relationship(back_populates="donneur")
     documents: Mapped[list["DocumentMedical"]] = relationship(back_populates="donneur")
-    carte_donneur: Mapped["CarteDonneur | None"] = relationship(back_populates="donneur", uselist=False)
+    carte_donneur: Mapped["CarteDonneur | None"] = relationship(
+        back_populates="donneur", uselist=False
+    )
 
     @property
     def numero_carte(self) -> str | None:
@@ -65,7 +81,7 @@ class ExpirationRule(Base):
     shelf_life_unit: Mapped[str] = mapped_column(String(16))  # HOURS, DAYS, MONTHS, YEARS
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     version: Mapped[int] = mapped_column(Integer, default=1)
-    
+
     modified_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[DateTime] = mapped_column(
@@ -111,7 +127,9 @@ class Poche(Base):
     date_peremption: Mapped[Date] = mapped_column(Date, index=True)
     emplacement_stock: Mapped[str] = mapped_column(String(64), index=True)
     statut_stock: Mapped[str] = mapped_column(String(32), index=True, default="EN_STOCK")
-    statut_distribution: Mapped[str] = mapped_column(String(32), index=True, default="NON_DISTRIBUABLE")
+    statut_distribution: Mapped[str] = mapped_column(
+        String(32), index=True, default="NON_DISTRIBUABLE"
+    )
 
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -175,7 +193,9 @@ class Commande(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hopital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hopitaux.id"), index=True)
     statut: Mapped[str] = mapped_column(String(16), index=True, default="BROUILLON")
-    date_demande: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    date_demande: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
     date_livraison_prevue: Mapped[Date | None] = mapped_column(Date, nullable=True)
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[DateTime] = mapped_column(
@@ -215,8 +235,12 @@ class Reservation(Base):
         nullable=True,
         index=True,
     )
-    date_reservation: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    expires_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    date_reservation: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    expires_at: Mapped[DateTime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
     released_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
@@ -230,7 +254,9 @@ class Receveur(Base):
     date_naissance: Mapped[Date | None] = mapped_column(Date, nullable=True)
     adresse: Mapped[str | None] = mapped_column(Text, nullable=True)
     telephone: Mapped[str | None] = mapped_column(String(32), nullable=True)
-    hopital_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("hopitaux.id"), index=True, nullable=True)
+    hopital_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("hopitaux.id"), index=True, nullable=True
+    )
     groupe_sanguin: Mapped[str | None] = mapped_column(String(8), index=True, nullable=True)
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -253,9 +279,15 @@ class ActeTransfusionnel(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     poche_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("poches.id"), unique=True, index=True)
-    commande_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("commandes.id"), nullable=True, index=True)
-    hopital_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("hopitaux.id"), nullable=True, index=True)
-    receveur_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("receveurs.id"), nullable=True, index=True)
+    commande_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("commandes.id"), nullable=True, index=True
+    )
+    hopital_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("hopitaux.id"), nullable=True, index=True
+    )
+    receveur_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("receveurs.id"), nullable=True, index=True
+    )
     date_transfusion: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -301,13 +333,17 @@ class SyncDevice(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     device_id: Mapped[str] = mapped_column(String(128), unique=True, index=True)
     label: Mapped[str | None] = mapped_column(String(200), nullable=True)
-    last_seen_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+    last_seen_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class SyncIngestedEvent(Base):
     __tablename__ = "sync_ingested_events"
-    __table_args__ = (UniqueConstraint("sync_device_id", "client_event_id", name="uq_sync_device_event"),)
+    __table_args__ = (
+        UniqueConstraint("sync_device_id", "client_event_id", name="uq_sync_device_event"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     sync_device_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("sync_devices.id"), index=True)
@@ -317,8 +353,12 @@ class SyncIngestedEvent(Base):
     status: Mapped[str] = mapped_column(String(16), index=True)
     error_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
-    response_json: Mapped[dict | None] = mapped_column(JSON().with_variant(JSONB(), "postgresql"), nullable=True)
-    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+    response_json: Mapped[dict | None] = mapped_column(
+        JSON().with_variant(JSONB(), "postgresql"), nullable=True
+    )
+    created_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
 
 
 class UserAccount(Base):
@@ -328,7 +368,9 @@ class UserAccount(Base):
     email: Mapped[str] = mapped_column(String(320), unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(Text)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
-    role: Mapped[str] = mapped_column(String(32), default="PATIENT", index=True)  # PATIENT, MEDECIN, ADMIN
+    role: Mapped[str] = mapped_column(
+        String(32), default="PATIENT", index=True
+    )  # PATIENT, MEDECIN, ADMIN
 
     mfa_enabled: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     mfa_secret: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -352,7 +394,9 @@ class UserRecoveryCode(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("user_accounts.id"), index=True)
     code_hash: Mapped[str] = mapped_column(Text, index=True)
-    used_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    used_at: Mapped[DateTime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     user: Mapped["UserAccount"] = relationship(back_populates="recovery_codes")
@@ -365,10 +409,12 @@ class RendezVous(Base):
     donneur_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("donneurs.id"), index=True)
     date_prevue: Mapped[DateTime] = mapped_column(DateTime(timezone=True), index=True)
     type_rdv: Mapped[str] = mapped_column(String(32), default="DON_SANG")  # DON_SANG, CONSULTATION
-    statut: Mapped[str] = mapped_column(String(16), default="CONFIRME")  # CONFIRME, ANNULE, EFFECTUE, MANQUE
+    statut: Mapped[str] = mapped_column(
+        String(16), default="CONFIRME"
+    )  # CONFIRME, ANNULE, EFFECTUE, MANQUE
     lieu: Mapped[str | None] = mapped_column(String(120), nullable=True)
     commentaire: Mapped[str | None] = mapped_column(Text, nullable=True)
-    
+
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True),
@@ -389,7 +435,7 @@ class DocumentMedical(Base):
     fichier_url: Mapped[str] = mapped_column(String(500))
     date_document: Mapped[Date] = mapped_column(Date)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    
+
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     donneur: Mapped["Donneur"] = relationship(back_populates="documents")
@@ -405,9 +451,13 @@ class Article(Base):
     content: Mapped[str] = mapped_column(Text)
     category: Mapped[str] = mapped_column(String(64), index=True)
     image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    published_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    is_published: Mapped[bool] = mapped_column(Boolean, default=True, index=True)  # Deprecated in favor of status
-    
+    published_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    is_published: Mapped[bool] = mapped_column(
+        Boolean, default=True, index=True
+    )  # Deprecated in favor of status
+
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True),
@@ -466,6 +516,7 @@ class ColdChainReading(Base):
 # Phase 1.1 : Background Tasks
 # ──────────────────────────────────────────────
 
+
 class TaskResult(Base):
     __tablename__ = "task_results"
 
@@ -473,7 +524,9 @@ class TaskResult(Base):
     task_id: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     task_name: Mapped[str] = mapped_column(String(128), index=True)
     status: Mapped[str] = mapped_column(String(16), index=True, default="PENDING")
-    result_json: Mapped[dict | None] = mapped_column(JSON().with_variant(JSONB(), "postgresql"), nullable=True)
+    result_json: Mapped[dict | None] = mapped_column(
+        JSON().with_variant(JSONB(), "postgresql"), nullable=True
+    )
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     completed_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -482,6 +535,7 @@ class TaskResult(Base):
 # ──────────────────────────────────────────────
 # Phase 1.2 : Notifications
 # ──────────────────────────────────────────────
+
 
 class Notification(Base):
     __tablename__ = "notifications"
@@ -503,7 +557,9 @@ class NotificationPreference(Base):
     __tablename__ = "notification_preferences"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("user_accounts.id"), unique=True, index=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("user_accounts.id"), unique=True, index=True
+    )
     email_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     sms_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     whatsapp_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -512,6 +568,7 @@ class NotificationPreference(Base):
 # ──────────────────────────────────────────────
 # Phase 1.3 : Multi-Sites
 # ──────────────────────────────────────────────
+
 
 class Site(Base):
     __tablename__ = "sites"
@@ -556,7 +613,9 @@ class LigneTransfert(Base):
     __tablename__ = "ligne_transferts"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    transfert_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("transferts_inter_sites.id"), index=True)
+    transfert_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("transferts_inter_sites.id"), index=True
+    )
     poche_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("poches.id"), index=True)
     statut_reception: Mapped[str | None] = mapped_column(String(16), nullable=True)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -568,14 +627,21 @@ class LigneTransfert(Base):
 # Phase 2.1 : Phenotypage etendu + Groupes Rares
 # ──────────────────────────────────────────────
 
+
 class Phenotypage(Base):
     __tablename__ = "phenotypages"
-    __table_args__ = (UniqueConstraint("donneur_id", "systeme", name="uq_phenotypage_donneur_systeme"),)
+    __table_args__ = (
+        UniqueConstraint("donneur_id", "systeme", name="uq_phenotypage_donneur_systeme"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     donneur_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("donneurs.id"), index=True)
-    don_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("dons.id"), nullable=True, index=True)
-    systeme: Mapped[str] = mapped_column(String(16), index=True)  # KELL, DUFFY, KIDD, MNS, LEWIS, P, LUTHERAN
+    don_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("dons.id"), nullable=True, index=True
+    )
+    systeme: Mapped[str] = mapped_column(
+        String(16), index=True
+    )  # KELL, DUFFY, KIDD, MNS, LEWIS, P, LUTHERAN
     antigenes: Mapped[dict] = mapped_column(JSON().with_variant(JSONB(), "postgresql"))
     phenotype_complet: Mapped[str | None] = mapped_column(String(120), nullable=True)
     methode: Mapped[str | None] = mapped_column(String(64), nullable=True)
@@ -588,7 +654,9 @@ class RegistreGroupeRare(Base):
     __tablename__ = "registre_groupes_rares"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    donneur_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("donneurs.id"), unique=True, index=True)
+    donneur_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("donneurs.id"), unique=True, index=True
+    )
     phenotype_resume: Mapped[str] = mapped_column(String(255))
     rarete: Mapped[str] = mapped_column(String(16), index=True)  # RARE, TRES_RARE, EXCEPTIONNEL
     note_clinique: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -606,15 +674,22 @@ class RegistreGroupeRare(Base):
 # Phase 2.2 : RAI
 # ──────────────────────────────────────────────
 
+
 class RAI(Base):
     __tablename__ = "rai_tests"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     receveur_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("receveurs.id"), index=True)
-    commande_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("commandes.id"), nullable=True, index=True)
+    commande_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("commandes.id"), nullable=True, index=True
+    )
     date_prelevement: Mapped[DateTime] = mapped_column(DateTime(timezone=True))
-    resultat: Mapped[str] = mapped_column(String(16), index=True, default="EN_ATTENTE")  # POSITIF, NEGATIF, EN_ATTENTE
-    anticorps_identifies: Mapped[dict | None] = mapped_column(JSON().with_variant(JSONB(), "postgresql"), nullable=True)
+    resultat: Mapped[str] = mapped_column(
+        String(16), index=True, default="EN_ATTENTE"
+    )  # POSITIF, NEGATIF, EN_ATTENTE
+    anticorps_identifies: Mapped[dict | None] = mapped_column(
+        JSON().with_variant(JSONB(), "postgresql"), nullable=True
+    )
     validite_heures: Mapped[int] = mapped_column(Integer, default=72)
     validateur_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -625,13 +700,16 @@ class RAI(Base):
 # Phase 2.3 : Tests NAT (PCR)
 # ──────────────────────────────────────────────
 
+
 class TestNAT(Base):
     __tablename__ = "tests_nat"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     don_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("dons.id"), index=True)
     type_test: Mapped[str] = mapped_column(String(16), index=True)  # VIH_NAT, VHB_NAT, VHC_NAT
-    resultat_qualitatif: Mapped[str] = mapped_column(String(16), index=True, default="EN_ATTENTE")  # DETECTE, NON_DETECTE, INDETERMINE
+    resultat_qualitatif: Mapped[str] = mapped_column(
+        String(16), index=True, default="EN_ATTENTE"
+    )  # DETECTE, NON_DETECTE, INDETERMINE
     charge_virale: Mapped[float | None] = mapped_column(Float, nullable=True)
     unite: Mapped[str | None] = mapped_column(String(32), nullable=True)
     seuil_detection: Mapped[float | None] = mapped_column(Float, nullable=True)
@@ -645,18 +723,23 @@ class TestNAT(Base):
 # Phase 2.4 : Reactions Adverses Donneur
 # ──────────────────────────────────────────────
 
+
 class ReactionAdverseDonneur(Base):
     __tablename__ = "reactions_adverses_donneurs"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     don_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("dons.id"), index=True)
     donneur_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("donneurs.id"), index=True)
-    type_reaction: Mapped[str] = mapped_column(String(32), index=True)  # VASOVAGALE, HEMATOME, MALAISE, LESION_NERVEUSE, ALLERGIE, AUTRE
+    type_reaction: Mapped[str] = mapped_column(
+        String(32), index=True
+    )  # VASOVAGALE, HEMATOME, MALAISE, LESION_NERVEUSE, ALLERGIE, AUTRE
     gravite: Mapped[str] = mapped_column(String(16), index=True)  # MINEURE, MODEREE, GRAVE
     moment: Mapped[str] = mapped_column(String(16))  # PENDANT, APRES_IMMEDIAT, RETARDE
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     prise_en_charge: Mapped[str | None] = mapped_column(Text, nullable=True)
-    evolution: Mapped[str] = mapped_column(String(16), index=True, default="EN_COURS")  # RESOLUE, EN_COURS, SEQUELLE
+    evolution: Mapped[str] = mapped_column(
+        String(16), index=True, default="EN_COURS"
+    )  # RESOLUE, EN_COURS, SEQUELLE
     declarant_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -665,13 +748,16 @@ class ReactionAdverseDonneur(Base):
 # Phase 2.5 : CULM (Controle Ultime Lit du Malade)
 # ──────────────────────────────────────────────
 
+
 class CULM(Base):
     __tablename__ = "culm"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     poche_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("poches.id"), index=True)
     receveur_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("receveurs.id"), index=True)
-    commande_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("commandes.id"), nullable=True, index=True)
+    commande_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("commandes.id"), nullable=True, index=True
+    )
     identite_patient_verifiee: Mapped[bool] = mapped_column(Boolean)
     groupe_patient_controle: Mapped[str | None] = mapped_column(String(8), nullable=True)
     groupe_poche_controle: Mapped[str | None] = mapped_column(String(8), nullable=True)
@@ -693,11 +779,14 @@ class CULM(Base):
 # Phase 2.6 : Suivi Per-Transfusionnel
 # ──────────────────────────────────────────────
 
+
 class SuiviPerTransfusionnel(Base):
     __tablename__ = "suivis_per_transfusionnels"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    acte_transfusionnel_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("actes_transfusionnels.id"), index=True)
+    acte_transfusionnel_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("actes_transfusionnels.id"), index=True
+    )
     moment: Mapped[str] = mapped_column(String(16))  # T0, T15, T30, T60, FIN, POST_1H
     temperature: Mapped[float | None] = mapped_column(Float, nullable=True)
     tension_systolique: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -716,23 +805,38 @@ class SuiviPerTransfusionnel(Base):
 # Phase 2.7 : EIR (Effets Indesirables Receveur)
 # ──────────────────────────────────────────────
 
+
 class EIR(Base):
     __tablename__ = "eir"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    acte_transfusionnel_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("actes_transfusionnels.id"), index=True)
+    acte_transfusionnel_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("actes_transfusionnels.id"), index=True
+    )
     receveur_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("receveurs.id"), index=True)
     poche_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("poches.id"), index=True)
-    type_eir: Mapped[str] = mapped_column(String(32), index=True)  # REACTION_FEBRILE, ALLERGIQUE, HEMOLYTIQUE_AIGUE, TACO, TRALI, INFECTION_BACTERIENNE, INCOMPATIBILITE_ABO, AUTRE
-    gravite: Mapped[str] = mapped_column(String(16), index=True)  # GRADE_1, GRADE_2, GRADE_3, GRADE_4
-    imputabilite: Mapped[str] = mapped_column(String(16), index=True)  # CERTAINE, PROBABLE, POSSIBLE, DOUTEUSE, EXCLUE
+    type_eir: Mapped[str] = mapped_column(
+        String(32), index=True
+    )  # REACTION_FEBRILE, ALLERGIQUE, HEMOLYTIQUE_AIGUE, TACO, TRALI, INFECTION_BACTERIENNE, INCOMPATIBILITE_ABO, AUTRE
+    gravite: Mapped[str] = mapped_column(
+        String(16), index=True
+    )  # GRADE_1, GRADE_2, GRADE_3, GRADE_4
+    imputabilite: Mapped[str] = mapped_column(
+        String(16), index=True
+    )  # CERTAINE, PROBABLE, POSSIBLE, DOUTEUSE, EXCLUE
     delai_apparition_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     symptomes: Mapped[str | None] = mapped_column(Text, nullable=True)
     conduite_tenue: Mapped[str | None] = mapped_column(Text, nullable=True)
-    evolution: Mapped[str] = mapped_column(String(32), index=True, default="EN_COURS")  # GUERISON_SANS_SEQUELLE, SEQUELLE, DECES, EN_COURS
+    evolution: Mapped[str] = mapped_column(
+        String(32), index=True, default="EN_COURS"
+    )  # GUERISON_SANS_SEQUELLE, SEQUELLE, DECES, EN_COURS
     declarant_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
-    date_declaration: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    statut_investigation: Mapped[str] = mapped_column(String(16), index=True, default="OUVERTE")  # OUVERTE, EN_COURS, CLOTUREE
+    date_declaration: Mapped[DateTime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    statut_investigation: Mapped[str] = mapped_column(
+        String(16), index=True, default="OUVERTE"
+    )  # OUVERTE, EN_COURS, CLOTUREE
     conclusion: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -741,13 +845,16 @@ class EIR(Base):
 # Phase 2.8 : Apherese
 # ──────────────────────────────────────────────
 
+
 class ProcedureApherese(Base):
     __tablename__ = "procedures_apherese"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     don_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("dons.id"), unique=True, index=True)
     donneur_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("donneurs.id"), index=True)
-    type_apherese: Mapped[str] = mapped_column(String(32), index=True)  # PLAQUETTAPHERESE, PLASMAPHERESE, CYTAPHERESE
+    type_apherese: Mapped[str] = mapped_column(
+        String(32), index=True
+    )  # PLAQUETTAPHERESE, PLASMAPHERESE, CYTAPHERESE
     automate: Mapped[str | None] = mapped_column(String(120), nullable=True)
     duree_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     volume_preleve_ml: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -755,7 +862,9 @@ class ProcedureApherese(Base):
     anticoagulant: Mapped[str | None] = mapped_column(String(64), nullable=True)
     nb_cycles: Mapped[int | None] = mapped_column(Integer, nullable=True)
     operateur_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
-    statut: Mapped[str] = mapped_column(String(16), index=True, default="EN_COURS")  # EN_COURS, TERMINE, INTERROMPU
+    statut: Mapped[str] = mapped_column(
+        String(16), index=True, default="EN_COURS"
+    )  # EN_COURS, TERMINE, INTERROMPU
     motif_interruption: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -764,14 +873,19 @@ class ProcedureApherese(Base):
 # Phase 3.1 : Collectes Mobiles
 # ──────────────────────────────────────────────
 
+
 class CampagneCollecte(Base):
     __tablename__ = "campagnes_collecte"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     code: Mapped[str] = mapped_column(String(32), unique=True, index=True)
     nom: Mapped[str] = mapped_column(String(200))
-    site_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("sites.id"), nullable=True, index=True)
-    type_campagne: Mapped[str] = mapped_column(String(32), index=True)  # FIXE, MOBILE, ENTREPRISE, UNIVERSITE
+    site_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("sites.id"), nullable=True, index=True
+    )
+    type_campagne: Mapped[str] = mapped_column(
+        String(32), index=True
+    )  # FIXE, MOBILE, ENTREPRISE, UNIVERSITE
     lieu: Mapped[str | None] = mapped_column(String(200), nullable=True)
     adresse: Mapped[str | None] = mapped_column(Text, nullable=True)
     latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
@@ -779,7 +893,9 @@ class CampagneCollecte(Base):
     date_debut: Mapped[DateTime] = mapped_column(DateTime(timezone=True))
     date_fin: Mapped[DateTime] = mapped_column(DateTime(timezone=True))
     objectif_dons: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    statut: Mapped[str] = mapped_column(String(16), index=True, default="PLANIFIEE")  # PLANIFIEE, EN_COURS, TERMINEE, ANNULEE
+    statut: Mapped[str] = mapped_column(
+        String(16), index=True, default="PLANIFIEE"
+    )  # PLANIFIEE, EN_COURS, TERMINEE, ANNULEE
     responsable_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     materiel_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -797,11 +913,15 @@ class InscriptionCollecte(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     campagne_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("campagnes_collecte.id"), index=True)
-    donneur_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("donneurs.id"), nullable=True, index=True)
+    donneur_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("donneurs.id"), nullable=True, index=True
+    )
     nom: Mapped[str | None] = mapped_column(String(200), nullable=True)
     telephone: Mapped[str | None] = mapped_column(String(32), nullable=True)
     creneau: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    statut: Mapped[str] = mapped_column(String(16), index=True, default="INSCRIT")  # INSCRIT, PRESENT, PRELEVE, ABSENT
+    statut: Mapped[str] = mapped_column(
+        String(16), index=True, default="INSCRIT"
+    )  # INSCRIT, PRESENT, PRELEVE, ABSENT
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     campagne: Mapped["CampagneCollecte"] = relationship(back_populates="inscriptions")
@@ -811,17 +931,22 @@ class InscriptionCollecte(Base):
 # Phase 3.2 : Prevision de Stock
 # ──────────────────────────────────────────────
 
+
 class PrevisionStock(Base):
     __tablename__ = "previsions_stock"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     type_produit: Mapped[str] = mapped_column(String(16), index=True)
     groupe_sanguin: Mapped[str | None] = mapped_column(String(8), nullable=True, index=True)
-    site_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("sites.id"), nullable=True, index=True)
+    site_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("sites.id"), nullable=True, index=True
+    )
     date_prevision: Mapped[Date] = mapped_column(Date, index=True)
     quantite_prevue: Mapped[int] = mapped_column(Integer)
     quantite_reelle: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    methode: Mapped[str] = mapped_column(String(32))  # MOYENNE_MOBILE, TENDANCE_LINEAIRE, SAISONNIER
+    methode: Mapped[str] = mapped_column(
+        String(32)
+    )  # MOYENNE_MOBILE, TENDANCE_LINEAIRE, SAISONNIER
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -831,7 +956,9 @@ class SeuilAlerte(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     type_produit: Mapped[str] = mapped_column(String(16), index=True)
     groupe_sanguin: Mapped[str | None] = mapped_column(String(8), nullable=True, index=True)
-    site_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("sites.id"), nullable=True, index=True)
+    site_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("sites.id"), nullable=True, index=True
+    )
     seuil_critique: Mapped[int] = mapped_column(Integer)
     seuil_alerte: Mapped[int] = mapped_column(Integer)
     seuil_confort: Mapped[int] = mapped_column(Integer)
@@ -843,14 +970,23 @@ class SeuilAlerte(Base):
 # Phase 3.3 : Transport et Logistique
 # ──────────────────────────────────────────────
 
+
 class Livraison(Base):
     __tablename__ = "livraisons"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    commande_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("commandes.id"), nullable=True, index=True)
-    transfert_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("transferts_inter_sites.id"), nullable=True, index=True)
-    hopital_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("hopitaux.id"), nullable=True, index=True)
-    statut: Mapped[str] = mapped_column(String(16), index=True, default="PREPAREE")  # PREPAREE, EN_TRANSIT, LIVREE, REFUSEE
+    commande_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("commandes.id"), nullable=True, index=True
+    )
+    transfert_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("transferts_inter_sites.id"), nullable=True, index=True
+    )
+    hopital_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("hopitaux.id"), nullable=True, index=True
+    )
+    statut: Mapped[str] = mapped_column(
+        String(16), index=True, default="PREPAREE"
+    )  # PREPAREE, EN_TRANSIT, LIVREE, REFUSEE
     transporteur_nom: Mapped[str | None] = mapped_column(String(200), nullable=True)
     vehicule: Mapped[str | None] = mapped_column(String(64), nullable=True)
     temperature_depart: Mapped[float | None] = mapped_column(Float, nullable=True)
@@ -861,7 +997,9 @@ class Livraison(Base):
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    releves_temperature: Mapped[list["ReleveTemperatureTransport"]] = relationship(back_populates="livraison")
+    releves_temperature: Mapped[list["ReleveTemperatureTransport"]] = relationship(
+        back_populates="livraison"
+    )
 
 
 class ReleveTemperatureTransport(Base):
@@ -882,15 +1020,20 @@ class ReleveTemperatureTransport(Base):
 # Phase 4.1 : SMQ (Systeme Management Qualite)
 # ──────────────────────────────────────────────
 
+
 class DocumentQualite(Base):
     __tablename__ = "documents_qualite"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     code: Mapped[str] = mapped_column(String(32), unique=True, index=True)
     titre: Mapped[str] = mapped_column(String(200))
-    type_document: Mapped[str] = mapped_column(String(32), index=True)  # PROCEDURE, MODE_OPERATOIRE, FORMULAIRE, ENREGISTREMENT, POLITIQUE
+    type_document: Mapped[str] = mapped_column(
+        String(32), index=True
+    )  # PROCEDURE, MODE_OPERATOIRE, FORMULAIRE, ENREGISTREMENT, POLITIQUE
     version: Mapped[str] = mapped_column(String(16), default="1.0")
-    statut: Mapped[str] = mapped_column(String(16), index=True, default="BROUILLON")  # BROUILLON, EN_REVUE, APPROUVE, OBSOLETE
+    statut: Mapped[str] = mapped_column(
+        String(16), index=True, default="BROUILLON"
+    )  # BROUILLON, EN_REVUE, APPROUVE, OBSOLETE
     fichier_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     redacteur_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     verificateur_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
@@ -912,9 +1055,13 @@ class NonConformite(Base):
     code: Mapped[str] = mapped_column(String(32), unique=True, index=True)
     titre: Mapped[str] = mapped_column(String(200))
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    type_nc: Mapped[str] = mapped_column(String(16), index=True)  # PRODUIT, PROCESSUS, EQUIPEMENT, DOCUMENT, PERSONNEL, AUTRE
+    type_nc: Mapped[str] = mapped_column(
+        String(16), index=True
+    )  # PRODUIT, PROCESSUS, EQUIPEMENT, DOCUMENT, PERSONNEL, AUTRE
     gravite: Mapped[str] = mapped_column(String(16), index=True)  # MINEURE, MAJEURE, CRITIQUE
-    statut: Mapped[str] = mapped_column(String(32), index=True, default="OUVERTE")  # OUVERTE, EN_INVESTIGATION, ACTION_CORRECTIVE, VERIFIEE, CLOTUREE
+    statut: Mapped[str] = mapped_column(
+        String(32), index=True, default="OUVERTE"
+    )  # OUVERTE, EN_INVESTIGATION, ACTION_CORRECTIVE, VERIFIEE, CLOTUREE
     detecteur_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     responsable_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     cause_racine: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -929,12 +1076,16 @@ class CAPA(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     code: Mapped[str] = mapped_column(String(32), unique=True, index=True)
-    non_conformite_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("non_conformites.id"), nullable=True, index=True)
+    non_conformite_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("non_conformites.id"), nullable=True, index=True
+    )
     type_action: Mapped[str] = mapped_column(String(16), index=True)  # CORRECTIVE, PREVENTIVE
     description: Mapped[str] = mapped_column(Text)
     responsable_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     date_echeance: Mapped[Date | None] = mapped_column(Date, nullable=True)
-    statut: Mapped[str] = mapped_column(String(16), index=True, default="PLANIFIEE")  # PLANIFIEE, EN_COURS, REALISEE, VERIFIEE, EFFICACE, INEFFICACE
+    statut: Mapped[str] = mapped_column(
+        String(16), index=True, default="PLANIFIEE"
+    )  # PLANIFIEE, EN_COURS, REALISEE, VERIFIEE, EFFICACE, INEFFICACE
     verification: Mapped[str | None] = mapped_column(Text, nullable=True)
     efficacite: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -949,8 +1100,12 @@ class AuditInterne(Base):
     processus_audite: Mapped[str | None] = mapped_column(String(120), nullable=True)
     date_audit: Mapped[Date | None] = mapped_column(Date, nullable=True)
     auditeur_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
-    statut: Mapped[str] = mapped_column(String(16), index=True, default="PLANIFIE")  # PLANIFIE, EN_COURS, RAPPORT_REDIGE, CLOTURE
-    constats: Mapped[dict | None] = mapped_column(JSON().with_variant(JSONB(), "postgresql"), nullable=True)
+    statut: Mapped[str] = mapped_column(
+        String(16), index=True, default="PLANIFIE"
+    )  # PLANIFIE, EN_COURS, RAPPORT_REDIGE, CLOTURE
+    constats: Mapped[dict | None] = mapped_column(
+        JSON().with_variant(JSONB(), "postgresql"), nullable=True
+    )
     conclusion: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -959,25 +1114,34 @@ class AuditInterne(Base):
 # Phase 4.2 : Qualification Equipements
 # ──────────────────────────────────────────────
 
+
 class Equipement(Base):
     __tablename__ = "equipements"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     code_inventaire: Mapped[str] = mapped_column(String(32), unique=True, index=True)
     nom: Mapped[str] = mapped_column(String(200))
-    categorie: Mapped[str] = mapped_column(String(32), index=True)  # AUTOMATE_ANALYSE, CENTRIFUGEUSE, REFRIGERATEUR, CONGELATEUR, AGITATEUR, BALANCE, THERMOMETRE
+    categorie: Mapped[str] = mapped_column(
+        String(32), index=True
+    )  # AUTOMATE_ANALYSE, CENTRIFUGEUSE, REFRIGERATEUR, CONGELATEUR, AGITATEUR, BALANCE, THERMOMETRE
     marque: Mapped[str | None] = mapped_column(String(120), nullable=True)
     modele: Mapped[str | None] = mapped_column(String(120), nullable=True)
     numero_serie: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    site_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("sites.id"), nullable=True, index=True)
+    site_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("sites.id"), nullable=True, index=True
+    )
     localisation: Mapped[str | None] = mapped_column(String(120), nullable=True)
     date_mise_service: Mapped[Date | None] = mapped_column(Date, nullable=True)
     date_prochaine_maintenance: Mapped[Date | None] = mapped_column(Date, nullable=True, index=True)
     date_prochaine_calibration: Mapped[Date | None] = mapped_column(Date, nullable=True, index=True)
-    statut: Mapped[str] = mapped_column(String(16), index=True, default="EN_SERVICE")  # EN_SERVICE, EN_PANNE, EN_MAINTENANCE, HORS_SERVICE, REFORME
+    statut: Mapped[str] = mapped_column(
+        String(16), index=True, default="EN_SERVICE"
+    )  # EN_SERVICE, EN_PANNE, EN_MAINTENANCE, HORS_SERVICE, REFORME
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    interventions: Mapped[list["InterventionEquipement"]] = relationship(back_populates="equipement")
+    interventions: Mapped[list["InterventionEquipement"]] = relationship(
+        back_populates="equipement"
+    )
 
 
 class InterventionEquipement(Base):
@@ -985,7 +1149,9 @@ class InterventionEquipement(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     equipement_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("equipements.id"), index=True)
-    type_intervention: Mapped[str] = mapped_column(String(32), index=True)  # MAINTENANCE_PREVENTIVE, MAINTENANCE_CORRECTIVE, CALIBRATION, QUALIFICATION
+    type_intervention: Mapped[str] = mapped_column(
+        String(32), index=True
+    )  # MAINTENANCE_PREVENTIVE, MAINTENANCE_CORRECTIVE, CALIBRATION, QUALIFICATION
     date_intervention: Mapped[Date] = mapped_column(Date)
     technicien: Mapped[str | None] = mapped_column(String(200), nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -999,6 +1165,7 @@ class InterventionEquipement(Base):
 # ──────────────────────────────────────────────
 # Phase 4.3 : Formations et Habilitations
 # ──────────────────────────────────────────────
+
 
 class Formation(Base):
     __tablename__ = "formations"
@@ -1022,7 +1189,9 @@ class Habilitation(Base):
     formation_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("formations.id"), index=True)
     date_obtention: Mapped[Date] = mapped_column(Date)
     date_expiration: Mapped[Date | None] = mapped_column(Date, nullable=True, index=True)
-    statut: Mapped[str] = mapped_column(String(16), index=True, default="VALIDE")  # VALIDE, EXPIREE, RETIREE
+    statut: Mapped[str] = mapped_column(
+        String(16), index=True, default="VALIDE"
+    )  # VALIDE, EXPIREE, RETIREE
     formateur: Mapped[str | None] = mapped_column(String(200), nullable=True)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -1031,6 +1200,7 @@ class Habilitation(Base):
 # ──────────────────────────────────────────────
 # Phase 5.1 : Interfacage Automates (ASTM/LIS2-A2)
 # ──────────────────────────────────────────────
+
 
 class InterfaceAutomate(Base):
     __tablename__ = "interfaces_automates"
@@ -1042,9 +1212,13 @@ class InterfaceAutomate(Base):
     protocole: Mapped[str] = mapped_column(String(16), index=True)  # ASTM, HL7, FICHIER
     host: Mapped[str | None] = mapped_column(String(200), nullable=True)
     port: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    mapping_config: Mapped[dict | None] = mapped_column(JSON().with_variant(JSONB(), "postgresql"), nullable=True)
+    mapping_config: Mapped[dict | None] = mapped_column(
+        JSON().with_variant(JSONB(), "postgresql"), nullable=True
+    )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
-    last_communication: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_communication: Mapped[DateTime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -1052,18 +1226,25 @@ class MessageAutomate(Base):
     __tablename__ = "messages_automates"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    interface_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("interfaces_automates.id"), index=True)
+    interface_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("interfaces_automates.id"), index=True
+    )
     direction: Mapped[str] = mapped_column(String(16), index=True)  # ENTRANT, SORTANT
     contenu_brut: Mapped[str | None] = mapped_column(Text, nullable=True)
-    statut: Mapped[str] = mapped_column(String(16), index=True, default="RECU")  # RECU, TRAITE, ERREUR, IGNORE
+    statut: Mapped[str] = mapped_column(
+        String(16), index=True, default="RECU"
+    )  # RECU, TRAITE, ERREUR, IGNORE
     erreur: Mapped[str | None] = mapped_column(Text, nullable=True)
-    analyse_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("analyses.id"), nullable=True, index=True)
+    analyse_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("analyses.id"), nullable=True, index=True
+    )
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 # ──────────────────────────────────────────────
 # Phase 5.3 : DHIS2
 # ──────────────────────────────────────────────
+
 
 class DHIS2Export(Base):
     __tablename__ = "dhis2_exports"
@@ -1073,7 +1254,9 @@ class DHIS2Export(Base):
     org_unit: Mapped[str] = mapped_column(String(64))
     data_set: Mapped[str | None] = mapped_column(String(64), nullable=True)
     payload: Mapped[dict] = mapped_column(JSON().with_variant(JSONB(), "postgresql"))
-    statut: Mapped[str] = mapped_column(String(16), index=True, default="EN_ATTENTE")  # EN_ATTENTE, ENVOYE, ECHEC
+    statut: Mapped[str] = mapped_column(
+        String(16), index=True, default="EN_ATTENTE"
+    )  # EN_ATTENTE, ENVOYE, ECHEC
     response_code: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -1081,6 +1264,7 @@ class DHIS2Export(Base):
 # ──────────────────────────────────────────────
 # Phase 6.1 : Facturation
 # ──────────────────────────────────────────────
+
 
 class Tarif(Base):
     __tablename__ = "tarifs"
@@ -1099,12 +1283,16 @@ class Facture(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     numero: Mapped[str] = mapped_column(String(32), unique=True, index=True)
-    commande_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("commandes.id"), nullable=True, index=True)
+    commande_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("commandes.id"), nullable=True, index=True
+    )
     hopital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hopitaux.id"), index=True)
     date_facture: Mapped[Date] = mapped_column(Date)
     montant_ht_fcfa: Mapped[int] = mapped_column(Integer)
     montant_ttc_fcfa: Mapped[int] = mapped_column(Integer)
-    statut: Mapped[str] = mapped_column(String(32), index=True, default="EMISE")  # EMISE, ENVOYEE, PAYEE_PARTIELLEMENT, PAYEE, ANNULEE
+    statut: Mapped[str] = mapped_column(
+        String(32), index=True, default="EMISE"
+    )  # EMISE, ENVOYEE, PAYEE_PARTIELLEMENT, PAYEE, ANNULEE
     date_echeance: Mapped[Date | None] = mapped_column(Date, nullable=True)
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -1131,7 +1319,9 @@ class Paiement(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     facture_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("factures.id"), index=True)
     montant_fcfa: Mapped[int] = mapped_column(Integer)
-    mode_paiement: Mapped[str] = mapped_column(String(16))  # VIREMENT, CHEQUE, ESPECES, MOBILE_MONEY
+    mode_paiement: Mapped[str] = mapped_column(
+        String(16)
+    )  # VIREMENT, CHEQUE, ESPECES, MOBILE_MONEY
     reference: Mapped[str | None] = mapped_column(String(64), nullable=True)
     date_paiement: Mapped[Date] = mapped_column(Date)
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -1143,13 +1333,16 @@ class Paiement(Base):
 # Phase 6.2 : Gestion des Consommables
 # ──────────────────────────────────────────────
 
+
 class Consommable(Base):
     __tablename__ = "consommables"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     code: Mapped[str] = mapped_column(String(32), unique=True, index=True)
     designation: Mapped[str] = mapped_column(String(200))
-    categorie: Mapped[str] = mapped_column(String(32), index=True)  # REACTIF, POCHE_VIDE, KIT_PRELEVEMENT, EPI, TUBE, AUTRE
+    categorie: Mapped[str] = mapped_column(
+        String(32), index=True
+    )  # REACTIF, POCHE_VIDE, KIT_PRELEVEMENT, EPI, TUBE, AUTRE
     unite: Mapped[str] = mapped_column(String(16))  # UNITE, FLACON, BOITE, LOT
     seuil_alerte: Mapped[int | None] = mapped_column(Integer, nullable=True)
     seuil_critique: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -1169,7 +1362,9 @@ class LotConsommable(Base):
     quantite_restante: Mapped[int] = mapped_column(Integer)
     fournisseur: Mapped[str | None] = mapped_column(String(200), nullable=True)
     certificat_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    site_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("sites.id"), nullable=True, index=True)
+    site_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("sites.id"), nullable=True, index=True
+    )
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -1178,7 +1373,9 @@ class MouvementConsommable(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     lot_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("lots_consommable.id"), index=True)
-    type_mouvement: Mapped[str] = mapped_column(String(16), index=True)  # ENTREE, SORTIE, AJUSTEMENT, PERTE
+    type_mouvement: Mapped[str] = mapped_column(
+        String(16), index=True
+    )  # ENTREE, SORTIE, AJUSTEMENT, PERTE
     quantite: Mapped[int] = mapped_column(Integer)
     motif: Mapped[str | None] = mapped_column(String(200), nullable=True)
     operateur_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
@@ -1189,14 +1386,19 @@ class MouvementConsommable(Base):
 # Phase 6.3 : Programme de Fidelisation Donneurs
 # ──────────────────────────────────────────────
 
+
 class CarteDonneur(Base):
     __tablename__ = "cartes_donneur"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    donneur_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("donneurs.id"), unique=True, index=True)
+    donneur_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("donneurs.id"), unique=True, index=True
+    )
     numero_carte: Mapped[str] = mapped_column(String(32), unique=True, index=True)
     qr_code_data: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    niveau: Mapped[str] = mapped_column(String(16), index=True, default="BRONZE")  # BRONZE, ARGENT, OR, PLATINE
+    niveau: Mapped[str] = mapped_column(
+        String(16), index=True, default="BRONZE"
+    )  # BRONZE, ARGENT, OR, PLATINE
     points: Mapped[int] = mapped_column(Integer, default=0)
     total_dons: Mapped[int] = mapped_column(Integer, default=0)
     date_premier_don: Mapped[Date | None] = mapped_column(Date, nullable=True)
@@ -1212,7 +1414,9 @@ class PointsHistorique(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     carte_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("cartes_donneur.id"), index=True)
-    type_operation: Mapped[str] = mapped_column(String(32), index=True)  # DON, PARRAINAGE, BONUS_ANNIVERSAIRE, UTILISATION
+    type_operation: Mapped[str] = mapped_column(
+        String(32), index=True
+    )  # DON, PARRAINAGE, BONUS_ANNIVERSAIRE, UTILISATION
     points: Mapped[int] = mapped_column(Integer)
     description: Mapped[str | None] = mapped_column(String(200), nullable=True)
     reference_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
@@ -1230,7 +1434,9 @@ class CampagneRecrutement(Base):
     cible: Mapped[str | None] = mapped_column(String(200), nullable=True)
     canal: Mapped[str] = mapped_column(String(16))  # SMS, EMAIL, WHATSAPP, MIXTE
     message_template: Mapped[str | None] = mapped_column(Text, nullable=True)
-    statut: Mapped[str] = mapped_column(String(16), index=True, default="PLANIFIEE")  # PLANIFIEE, EN_COURS, TERMINEE
+    statut: Mapped[str] = mapped_column(
+        String(16), index=True, default="PLANIFIEE"
+    )  # PLANIFIEE, EN_COURS, TERMINEE
     nb_contactes: Mapped[int] = mapped_column(Integer, default=0)
     nb_convertis: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())

@@ -6,12 +6,38 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cnts}
       POSTGRES_DB: ${POSTGRES_DB:-cnts}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
+    restart: always
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  portal:
+    build:
+      context: .
+      dockerfile: ./portal/Dockerfile
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_APP_URL: https://cnts.5sursync.com
+      BACKEND_URL: http://api:8000
+    ports:
+      - "127.0.0.1:3000:3000"
+    restart: always
+
+  web:
+    build:
+      context: .
+      dockerfile: ./web/Dockerfile
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_APP_URL: https://cnts.5sursync.com
+      BACKEND_API_URL: http://api:8000
+    ports:
+      - "127.0.0.1:3001:3000"
+    restart: always
+
   api:
     build:
+
       context: ./backend
     environment:
       CNTS_ENV: ${CNTS_ENV:-dev}
@@ -22,19 +48,22 @@ services:
       CNTS_FRACTIONNEMENT_MAX_OVERAGE_ML: ${CNTS_FRACTIONNEMENT_MAX_OVERAGE_ML:-250}
       CNTS_REDIS_URL: redis://redis:6379/0
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - ./backend/app:/app/app
       - ./backend/alembic:/app/alembic
       - ./backend/alembic.ini:/app/alembic.ini
       - ./backend/tests:/app/tests
+      - ./backend/static:/app/static
     depends_on:
       - db
+    restart: always
 
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
+    restart: always
 
   celery-worker:
     build:
@@ -49,6 +78,7 @@ services:
     depends_on:
       - db
       - redis
+    restart: always
 
   celery-beat:
     build:
@@ -58,6 +88,7 @@ services:
       CNTS_REDIS_URL: redis://redis:6379/0
     depends_on:
       - redis
+    restart: always
 
 volumes:
   postgres_data:

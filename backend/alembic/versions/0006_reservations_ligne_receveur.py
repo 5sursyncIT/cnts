@@ -19,8 +19,12 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column("reservations", sa.Column("ligne_commande_id", postgresql.UUID(as_uuid=True), nullable=True))
-    op.add_column("reservations", sa.Column("receveur_id", postgresql.UUID(as_uuid=True), nullable=True))
+    op.add_column(
+        "reservations", sa.Column("ligne_commande_id", postgresql.UUID(as_uuid=True), nullable=True)
+    )
+    op.add_column(
+        "reservations", sa.Column("receveur_id", postgresql.UUID(as_uuid=True), nullable=True)
+    )
 
     op.create_index("ix_reservations_ligne_commande_id", "reservations", ["ligne_commande_id"])
     op.create_index("ix_reservations_receveur_id", "reservations", ["receveur_id"])

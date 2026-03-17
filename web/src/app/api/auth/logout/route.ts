@@ -14,6 +14,9 @@ export async function POST(request: Request) {
   cookieStore.delete(preAuthCookieName);
 
   logAuditEvent({ actorEmail: session?.email, action: "auth.logout" });
-  return NextResponse.redirect(new URL("/login", request.url));
+  // Use the public APP_URL for redirect to avoid localhost issues
+  const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://cnts.5sursync.com";
+  // The web app is mounted at /admin via Nginx, so we redirect to /admin/login
+  return NextResponse.redirect(new URL(`${APP_URL}/admin/login`));
 }
 

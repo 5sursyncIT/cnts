@@ -6,14 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **SGI-CNTS** : Systeme de gestion de la transfusion sanguine pour le Centre National de Transfusion Sanguine (CNTS) de Dakar, Senegal. Tracabilite complete "de la veine du donneur a la veine du receveur" selon les normes ISBT 128.
 
-**Architecture** : Monolithe modulaire FastAPI + PostgreSQL + Celery/Redis, avec un monorepo npm workspaces contenant un Back Office Next.js, un Portail Patient Next.js, une app mobile React Native (Expo), et des packages TypeScript partages (@cnts/api, @cnts/rbac, @cnts/monitoring).
+**Architecture** : Monolithe modulaire FastAPI + PostgreSQL + Celery/Redis, avec un monorepo npm workspaces (Node >= 20) contenant un Back Office Next.js 16, un Portail Patient Next.js 16, une app mobile React Native (Expo), et des packages TypeScript partages (@cnts/api, @cnts/rbac, @cnts/monitoring).
 
 ## Commandes de Developpement
 
 ### Demarrage rapide avec Docker
 ```bash
 cp .env.example .env
-docker compose up --build    # lance: db, api, redis, celery-worker, celery-beat
+docker compose up --build    # lance: db, api, redis, celery-worker, celery-beat, portal, web
 curl http://localhost:8000/api/health
 ```
 
@@ -30,8 +30,8 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ### Frontend
 ```bash
 npm install --workspaces --include-workspace-root
-npm -w web run dev       # Back Office → http://localhost:3000
-npm -w portal run dev    # Portail Patient → http://localhost:3001
+npm -w web run dev       # Back Office → http://localhost:3000 (dev) / :3001 (Docker)
+npm -w portal run dev    # Portail Patient → http://localhost:3001 (dev) / :3000 (Docker)
 ```
 
 Creer `web/.env.local` :
@@ -72,6 +72,7 @@ npm run lint
 npm run dev:web          # alias npm -w web run dev
 npm run dev:portal       # alias npm -w portal run dev
 npm run test:coverage    # couverture tous workspaces (seuil 80%)
+npm run mfa:backoffice   # generer un code TOTP pour le back office
 ```
 
 ### Migrations
@@ -89,9 +90,9 @@ alembic downgrade -1                              # annuler
 ├── backend/           # FastAPI + PostgreSQL + Celery (Python 3.11+)
 │   ├── app/
 │   │   ├── api/
-│   │   │   ├── deps.py        # Auth deps (get_current_user, require_auth_in_production)
-│   │   │   ├── router.py      # Agregation des 49 modules de routes
-│   │   │   └── routes/        # Endpoints par domaine (49 fichiers)
+│   │   │   ├── deps.py        # Auth deps (get_current_user, get_current_user_optional, require_auth_in_production)
+│   │   │   ├── router.py      # Agregation des 47 modules de routes
+│   │   │   └── routes/        # Endpoints par domaine (47 fichiers)
 │   │   ├── audit/events.py    # log_event() pour la piste d'audit
 │   │   ├── core/              # Logique metier et utilitaires
 │   │   │   ├── config.py      # pydantic-settings, prefixe CNTS_
@@ -104,7 +105,10 @@ alembic downgrade -1                              # annuler
 │   │   │   ├── idempotency.py # Idempotence synchro mobile
 │   │   │   ├── rate_limit.py  # Fenetre glissante par IP
 │   │   │   └── isbt128/       # Checksum ISBT 128
-│   │   ├── db/models.py       # 67 modeles SQLAlchemy 2.0 (mapped_column, UUID PKs)
+│   │   ├── db/
+│   │   │   ├── base.py        # Base SQLAlchemy declarative
+│   │   │   ├── session.py     # get_db() dependency + engine
+│   │   │   └── models.py      # 67 modeles SQLAlchemy 2.0 (mapped_column, UUID PKs)
 │   │   ├── schemas/           # DTOs Pydantic v2 ({Entity}Create/Update/Out)
 │   │   └── tasks/             # Taches Celery asynchrones
 │   ├── alembic/               # Migrations
@@ -124,8 +128,8 @@ Toutes les routes API prefixees par `/api` (configure dans `app/main.py`).
 
 Middleware stack (ordre important) : CORS → ObservabilityMiddleware → RateLimitMiddleware.
 
-**49 modules de routes** organises par domaine fonctionnel :
-- **Core** : `health`, `auth`, `admin_auth`, `users`, `metrics`, `monitoring`, `parametrage`, `upload`, `sync`, `trace`, `content`
+**47 modules de routes** organises par domaine fonctionnel :
+- **Core** : `health`, `auth`, `admin_auth`, `users`, `metrics`, `monitoring`, `parametrage`, `upload`, `sync`, `trace`, `content`, `patient`
 - **Donneurs/Dons** : `donneurs`, `dons`, `poches`, `etiquetage`, `analyses`, `liberation`, `crossmatch`
 - **Distribution** : `commandes`, `stock`, `receveurs`, `hopitaux`, `hemovigilance`, `analytics`
 - **Phase 1 (Infra)** : `notifications`, `sites`
@@ -141,11 +145,11 @@ Voir `app/api/routes/patient.py` pour le pattern de route patient (portail).
 
 ### Frontend
 
-Le Back Office utilise le proxy `/api/backend/*` → `http://127.0.0.1:8000/api/*` (configure dans `web/next.config.ts`). Le Portail appelle l'API directement (pas de proxy).
+Le Back Office utilise le proxy `/api/backend/*` → `http://127.0.0.1:8000/api/*` (configure dans `web/next.config.ts`). Le Back Office a un `basePath: "/admin"`, donc toutes ses pages sont servies sous `/admin/*`. Le Portail appelle l'API directement (pas de proxy, pas de basePath).
 
 Les deux apps : App Router, Server Components par defaut, cookies de session httpOnly (jose JWT), Tailwind CSS 4, Vitest + happy-dom, React Hook Form + Zod.
 
-**Back Office (`web/`)** : Route group `(bo)` pour les pages authentifiees. Sections : dashboard, donneurs, dons, laboratoire, stock, distribution, hemovigilance, analytics, audit, cms, admin, monitoring, parametrage, collectes, facturation, qualite, fidelisation. Auth : `/login`, `/mfa`.
+**Back Office (`web/`)** : Route group `(bo)` pour les pages authentifiees. Sections : dashboard, donneurs, dons, laboratoire, stock, distribution, hemovigilance, analytics, audit, cms, admin, monitoring, parametrage, collectes, facturation, qualite, production. Auth : `/login`, `/mfa`.
 
 **Portail Patient (`portal/`)** : Pages publiques (actualites, FAQ, services) + espace patient (`/espace-patient`). Route group `(app)` pour les pages patient. Playwright pour les tests e2e.
 
@@ -170,7 +174,7 @@ export function useCreateMyData(api: ApiClient) {
 
 ### @cnts/rbac
 
-4 roles : `admin`, `biologiste`, `technicien_labo`, `agent_distribution`. API : `hasPermission(user, permission)`, `rightsByModule(user)`. Actions : `read`, `write`, `delete`, `validate`.
+4 roles : `admin`, `biologiste`, `agentStock`, `lectureSeule`. API : `hasPermission(user, permission)`, `rightsByModule(user)`. Actions : `read`, `write`, `delete`, `validate`.
 
 ## Modeles du Domaine
 
@@ -203,8 +207,9 @@ export function useCreateMyData(api: ApiClient) {
 ## Architecture de Securite
 
 ### Authentification (`app/api/deps.py`)
-- **`get_current_user`** : Auth via OAuth2 Bearer ou `X-API-Key`. Retourne `UserAccount` ou 401.
-- **`require_auth_in_production`** : Sur tous les endpoints d'ecriture. Auth obligatoire en prod/staging, anonyme en dev :
+- **`get_current_user`** : OAuth2 Bearer uniquement. Retourne `UserAccount` ou 401.
+- **`get_current_user_optional`** : OAuth2 Bearer uniquement. Retourne `UserAccount | None` (pas de 401).
+- **`require_auth_in_production`** : Bearer token + `X-API-Key`. Auth obligatoire en prod/staging, anonyme en dev. A utiliser sur tous les endpoints d'ecriture :
   ```python
   @router.post("/resource")
   def create_resource(
@@ -272,7 +277,7 @@ Variables d'environnement backend (prefixees `CNTS_`) :
 - `CNTS_AUTH_TOKEN_SECRET` : Secret JWT
 - `CNTS_RECOVERY_CODES_SECRET` : Secret codes MFA
 - `CNTS_ADMIN_TOKEN` : Token auth admin
-- `CNTS_DIN_SITE_CODE` : Code site pour DIN (defaut "CNTS")
+- `CNTS_DIN_SITE_CODE` : Code site pour DIN (defaut "A0001")
 - `CNTS_REDIS_URL` : URL Redis pour Celery (defaut `redis://localhost:6379/0`)
 - `CNTS_SMTP_HOST/PORT/USER/PASSWORD` : Email notifications
 - `CNTS_SMS_API_KEY/URL` : SMS notifications
@@ -282,6 +287,5 @@ Variables d'environnement backend (prefixees `CNTS_`) :
 
 ## Problemes Connus
 
-- `tests/api/routes/test_patient.py` : import casse (`get_password_hash` au lieu de `passwords.hash_password`) et utilise fixture `db` au lieu de `db_session`.
-- 8 tests echouent (pre-existant) : 404 sur routes `/api/` dans le client de test (prefix mismatch).
-- 18 erreurs de tests (pre-existant) : problemes de fixtures et imports.
+- 2 tests `test_patient.py` dependent d'un modele `Donneur` avec relation `user` (back_populates) qui peut ne pas exister selon les migrations appliquees.
+- Les tests e2e (`test_distribution_e2e.py`, `test_sync_e2e.py`) sont skipped par defaut (definir `CNTS_RUN_E2E=1` pour les activer, necessite un serveur en cours d'execution).

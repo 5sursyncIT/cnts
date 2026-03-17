@@ -1,7 +1,6 @@
 import uuid
-from typing import Generator
 
-from fastapi import Depends, HTTPException, Header, status
+from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, APIKeyHeader
 from sqlalchemy.orm import Session
 
@@ -100,7 +99,7 @@ def require_auth_in_production(
                 pass
 
     # Try API key
-    if api_key and hasattr(settings, 'api_keys'):
+    if api_key and hasattr(settings, "api_keys"):
         # API key validation could be added here
         pass
 

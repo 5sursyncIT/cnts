@@ -1,7 +1,7 @@
 """init schema
 
 Revision ID: 0001_init
-Revises: 
+Revises:
 Create Date: 2026-02-02
 
 """
@@ -38,7 +38,12 @@ def upgrade() -> None:
     op.create_table(
         "dons",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, nullable=False),
-        sa.Column("donneur_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("donneurs.id"), nullable=False),
+        sa.Column(
+            "donneur_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("donneurs.id"),
+            nullable=False,
+        ),
         sa.Column("din", sa.String(length=32), nullable=False),
         sa.Column("date_don", sa.Date(), nullable=False),
         sa.Column("type_don", sa.String(length=32), nullable=False),
@@ -53,7 +58,9 @@ def upgrade() -> None:
     op.create_table(
         "poches",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, nullable=False),
-        sa.Column("don_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("dons.id"), nullable=False),
+        sa.Column(
+            "don_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("dons.id"), nullable=False
+        ),
         sa.Column("type_produit", sa.String(length=16), nullable=False),
         sa.Column("date_peremption", sa.Date(), nullable=False),
         sa.Column("emplacement_stock", sa.String(length=64), nullable=False),
@@ -69,7 +76,9 @@ def upgrade() -> None:
     op.create_table(
         "analyses",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, nullable=False),
-        sa.Column("don_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("dons.id"), nullable=False),
+        sa.Column(
+            "don_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("dons.id"), nullable=False
+        ),
         sa.Column("type_test", sa.String(length=32), nullable=False),
         sa.Column("resultat", sa.String(length=32), nullable=False),
         sa.Column("note", sa.Text(), nullable=True),

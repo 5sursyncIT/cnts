@@ -107,4 +107,6 @@ def test_sync_push_pull_idempotent() -> None:
         pull = client.get("/sync/events", params={"cursor": cursor0, "limit": 200})
         pull.raise_for_status()
         pulled = pull.json()["events"]
-        assert any(e["event_type"] == "don.created" and e["payload"].get("din") == din for e in pulled)
+        assert any(
+            e["event_type"] == "don.created" and e["payload"].get("din") == din for e in pulled
+        )

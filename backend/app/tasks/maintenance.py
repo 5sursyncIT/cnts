@@ -62,7 +62,7 @@ def check_expiration_alerts() -> dict:
     """Check for bags nearing expiration and log alerts."""
     import datetime as dt
 
-    from sqlalchemy import func, select
+    from sqlalchemy import select
 
     from app.audit.events import log_event
     from app.db.models import Poche

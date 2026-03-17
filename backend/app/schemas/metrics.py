@@ -1,10 +1,12 @@
 from pydantic import BaseModel
 
+
 class MetricPoint(BaseModel):
     time: str
     requests: int
     errors: int
     latency: int
+
 
 class ServiceStatus(BaseModel):
     name: str
@@ -12,9 +14,11 @@ class ServiceStatus(BaseModel):
     uptime: str
     version: str
 
+
 class ErrorDistribution(BaseModel):
     name: str
     count: int
+
 
 class MonitoringDashboard(BaseModel):
     metrics: list[MetricPoint]

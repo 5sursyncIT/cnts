@@ -1,5 +1,4 @@
 import datetime as dt
-import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import and_, or_, select
@@ -11,7 +10,13 @@ from app.core.security import hash_cni
 from app.core.sync_cursor import decode_cursor, encode_cursor
 from app.db.models import Don, Donneur, Poche, SyncDevice, SyncIngestedEvent
 from app.db.session import get_db
-from app.schemas.sync import SyncPullEventOut, SyncPullOut, SyncPushEventResult, SyncPushIn, SyncPushOut
+from app.schemas.sync import (
+    SyncPullEventOut,
+    SyncPullOut,
+    SyncPushEventResult,
+    SyncPushIn,
+    SyncPushOut,
+)
 
 router = APIRouter(prefix="/sync")
 
@@ -22,7 +27,9 @@ def pull_events(
     limit: int = Query(default=200, ge=1, le=1000),
     db: Session = Depends(get_db),
 ) -> SyncPullOut:
-    stmt = select(TraceEvent).order_by(TraceEvent.created_at.asc(), TraceEvent.id.asc()).limit(limit)
+    stmt = (
+        select(TraceEvent).order_by(TraceEvent.created_at.asc(), TraceEvent.id.asc()).limit(limit)
+    )
     if cursor:
         created_at, event_id = decode_cursor(cursor)
         stmt = stmt.where(
@@ -33,13 +40,19 @@ def pull_events(
         )
 
     rows = list(db.execute(stmt).scalars())
-    next_cursor = encode_cursor(created_at=rows[-1].created_at, event_id=rows[-1].id) if rows else None
-    return SyncPullOut(events=[SyncPullEventOut.model_validate(r) for r in rows], next_cursor=next_cursor)
+    next_cursor = (
+        encode_cursor(created_at=rows[-1].created_at, event_id=rows[-1].id) if rows else None
+    )
+    return SyncPullOut(
+        events=[SyncPullEventOut.model_validate(r) for r in rows], next_cursor=next_cursor
+    )
 
 
 @router.post("/events", response_model=SyncPushOut)
 def push_events(payload: SyncPushIn, db: Session = Depends(get_db)) -> SyncPushOut:
-    device = db.execute(select(SyncDevice).where(SyncDevice.device_id == payload.device_id)).scalar_one_or_none()
+    device = db.execute(
+        select(SyncDevice).where(SyncDevice.device_id == payload.device_id)
+    ).scalar_one_or_none()
     if device is None:
         device = SyncDevice(device_id=payload.device_id)
         db.add(device)
@@ -70,7 +83,9 @@ def push_events(payload: SyncPushIn, db: Session = Depends(get_db)) -> SyncPushO
             continue
 
         try:
-            response_json = _apply_mobile_event(db, device_id=payload.device_id, event_type=ev.type, payload=ev.payload)
+            response_json = _apply_mobile_event(
+                db, device_id=payload.device_id, event_type=ev.type, payload=ev.payload
+            )
             row = SyncIngestedEvent(
                 sync_device_id=device.id,
                 client_event_id=ev.client_event_id,
@@ -146,7 +161,9 @@ def _apply_mobile_event(db: Session, *, device_id: str, event_type: str, payload
         cni_h = hash_cni(str(cni))
         existing = db.execute(select(Donneur).where(Donneur.cni_hash == cni_h)).scalar_one_or_none()
         if existing is None:
-            existing = Donneur(cni_hash=cni_h, nom=str(nom), prenom=str(prenom), sexe=str(sexe), dernier_don=None)
+            existing = Donneur(
+                cni_hash=cni_h, nom=str(nom), prenom=str(prenom), sexe=str(sexe), dernier_don=None
+            )
             db.add(existing)
             db.commit()
             db.refresh(existing)
@@ -156,7 +173,11 @@ def _apply_mobile_event(db: Session, *, device_id: str, event_type: str, payload
             aggregate_type="donneur",
             aggregate_id=existing.id,
             event_type="donneur.upserted",
-            payload={"donneur_id": str(existing.id), "cni_hash": existing.cni_hash, "device_id": device_id},
+            payload={
+                "donneur_id": str(existing.id),
+                "cni_hash": existing.cni_hash,
+                "device_id": device_id,
+            },
         )
         db.commit()
         return {"donneur_id": str(existing.id)}
@@ -217,4 +238,3 @@ def _apply_mobile_event(db: Session, *, device_id: str, event_type: str, payload
         return {"don_id": str(don.id), "din": don.din, "poche_st_id": str(poche.id)}
 
     raise HTTPException(status_code=422, detail="event_type inconnu")
-

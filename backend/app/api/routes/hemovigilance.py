@@ -12,7 +12,16 @@ from sqlalchemy.orm import Session
 from app.api.deps import require_auth_in_production
 from app.audit.events import TraceEvent, log_event
 from app.core.sync_cursor import decode_cursor, encode_cursor
-from app.db.models import ActeTransfusionnel, Commande, Don, Poche, RappelAction, RappelLot, Reservation, UserAccount
+from app.db.models import (
+    ActeTransfusionnel,
+    Commande,
+    Don,
+    Poche,
+    RappelAction,
+    RappelLot,
+    Reservation,
+    UserAccount,
+)
 from app.db.session import get_db
 from app.schemas.hemovigilance import (
     ActeTransfusionnelOut,
@@ -263,15 +272,23 @@ def list_rappel_actions(
 
 @router.get("/rapports/autorites", response_model=RapportAutoriteOut)
 def rapport_autorites(db: Session = Depends(get_db)) -> RapportAutoriteOut:
-    rappels_rows = list(db.execute(select(RappelLot.statut, func.count()).group_by(RappelLot.statut)).all())
+    rappels_rows = list(
+        db.execute(select(RappelLot.statut, func.count()).group_by(RappelLot.statut)).all()
+    )
     transfusions_rows = list(
-        db.execute(select(ActeTransfusionnel.hopital_id, func.count()).group_by(ActeTransfusionnel.hopital_id)).all()
+        db.execute(
+            select(ActeTransfusionnel.hopital_id, func.count()).group_by(
+                ActeTransfusionnel.hopital_id
+            )
+        ).all()
     )
     rappels_lot_rows = list(db.execute(select(Poche.lot, func.count()).group_by(Poche.lot)).all())
 
     return RapportAutoriteOut(
         generated_at=_now_utc(),
-        rappels_par_statut=[RappelStatutStat(statut=statut, total=total) for statut, total in rappels_rows],
+        rappels_par_statut=[
+            RappelStatutStat(statut=statut, total=total) for statut, total in rappels_rows
+        ],
         transfusions_par_hopital=[
             TransfusionHopitalStat(hopital_id=hopital_id, total=total)
             for hopital_id, total in transfusions_rows
@@ -316,11 +333,17 @@ def flux_partenaires(
         if dialect == "postgresql":
             stmt = stmt.where(TraceEvent.payload["hopital_id"].astext == hopital_str)  # type: ignore[attr-defined]
         else:
-            stmt = stmt.where(cast(TraceEvent.payload, String).like(f'%\"hopital_id\": \"{hopital_str}\"%'))
+            stmt = stmt.where(
+                cast(TraceEvent.payload, String).like(f'%"hopital_id": "{hopital_str}"%')
+            )
 
     rows = list(db.execute(stmt).scalars())
-    next_cursor = encode_cursor(created_at=rows[-1].created_at, event_id=rows[-1].id) if rows else None
-    return PartenaireFluxOut(events=[PartenaireEventOut.model_validate(r) for r in rows], next_cursor=next_cursor)
+    next_cursor = (
+        encode_cursor(created_at=rows[-1].created_at, event_id=rows[-1].id) if rows else None
+    )
+    return PartenaireFluxOut(
+        events=[PartenaireEventOut.model_validate(r) for r in rows], next_cursor=next_cursor
+    )
 
 
 @router.post("/rappels/{rappel_id}/notifier", response_model=RappelOut)
@@ -339,7 +362,13 @@ def notifier_rappel(
         if row.notified_at is None:
             row.notified_at = _now_utc()
         row.statut = "NOTIFIE"
-        _log_rappel_action(db, rappel=row, action="NOTIFIER", validateur_id=payload.validateur_id, note=payload.note)
+        _log_rappel_action(
+            db,
+            rappel=row,
+            action="NOTIFIER",
+            validateur_id=payload.validateur_id,
+            note=payload.note,
+        )
         db.commit()
         db.refresh(row)
         return row
@@ -362,7 +391,13 @@ def confirmer_rappel(
         if row.confirmed_at is None:
             row.confirmed_at = _now_utc()
         row.statut = "CONFIRME"
-        _log_rappel_action(db, rappel=row, action="CONFIRMER", validateur_id=payload.validateur_id, note=payload.note)
+        _log_rappel_action(
+            db,
+            rappel=row,
+            action="CONFIRMER",
+            validateur_id=payload.validateur_id,
+            note=payload.note,
+        )
         db.commit()
         db.refresh(row)
         return row
@@ -385,7 +420,13 @@ def cloturer_rappel(
         if row.closed_at is None:
             row.closed_at = _now_utc()
         row.statut = "CLOTURE"
-        _log_rappel_action(db, rappel=row, action="CLOTURER", validateur_id=payload.validateur_id, note=payload.note)
+        _log_rappel_action(
+            db,
+            rappel=row,
+            action="CLOTURER",
+            validateur_id=payload.validateur_id,
+            note=payload.note,
+        )
         db.commit()
         db.refresh(row)
         return row
@@ -419,7 +460,13 @@ def export_impacts_hopitaux(
         key = str(it.hopital_id) if it.hopital_id is not None else "NONE"
         row = agg.setdefault(
             key,
-            {"hopital_id": it.hopital_id, "total": 0, "distribuees": 0, "reservees": 0, "autres": 0},
+            {
+                "hopital_id": it.hopital_id,
+                "total": 0,
+                "distribuees": 0,
+                "reservees": 0,
+                "autres": 0,
+            },
         )
         row["total"] += 1
         if it.statut_distribution == "DISTRIBUE":
@@ -436,7 +483,9 @@ def export_impacts_hopitaux(
         return rows
 
     buf = io.StringIO()
-    w = csv.DictWriter(buf, fieldnames=["hopital_id", "total", "distribuees", "reservees", "autres"])
+    w = csv.DictWriter(
+        buf, fieldnames=["hopital_id", "total", "distribuees", "reservees", "autres"]
+    )
     w.writeheader()
     for r in rows:
         w.writerow(
@@ -466,7 +515,13 @@ def export_impacts_receveurs(
         key = str(it.receveur_id) if it.receveur_id is not None else "NONE"
         row = agg.setdefault(
             key,
-            {"receveur_id": it.receveur_id, "total": 0, "distribuees": 0, "reservees": 0, "autres": 0},
+            {
+                "receveur_id": it.receveur_id,
+                "total": 0,
+                "distribuees": 0,
+                "reservees": 0,
+                "autres": 0,
+            },
         )
         row["total"] += 1
         if it.statut_distribution == "DISTRIBUE":
@@ -483,7 +538,9 @@ def export_impacts_receveurs(
         return rows
 
     buf = io.StringIO()
-    w = csv.DictWriter(buf, fieldnames=["receveur_id", "total", "distribuees", "reservees", "autres"])
+    w = csv.DictWriter(
+        buf, fieldnames=["receveur_id", "total", "distribuees", "reservees", "autres"]
+    )
     w.writeheader()
     for r in rows:
         w.writerow(

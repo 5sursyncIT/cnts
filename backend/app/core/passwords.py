@@ -26,7 +26,9 @@ def verify_password(password: str, stored: str) -> bool:
     except Exception:
         return False
 
-    dk = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, iterations, dklen=len(expected))
+    dk = hashlib.pbkdf2_hmac(
+        "sha256", password.encode("utf-8"), salt, iterations, dklen=len(expected)
+    )
     return hmac.compare_digest(dk, expected)
 
 
@@ -34,4 +36,3 @@ def hash_recovery_code(code: str, secret: str) -> str:
     code_norm = code.strip().replace(" ", "").lower()
     digest = hmac.new(secret.encode("utf-8"), code_norm.encode("utf-8"), hashlib.sha256).digest()
     return base64.b64encode(digest).decode("ascii")
-

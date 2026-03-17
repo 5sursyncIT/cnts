@@ -44,7 +44,7 @@ def send_notification(self, notification_id: str) -> dict:
             notif.statut = "ECHEC"
             notif.erreur = str(exc)[:500]
             db.commit()
-            raise self.retry(exc=exc, countdown=60 * (2 ** self.request.retries))
+            raise self.retry(exc=exc, countdown=60 * (2**self.request.retries))
     except Exception:
         db.rollback()
         raise

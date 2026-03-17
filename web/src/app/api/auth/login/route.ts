@@ -11,6 +11,7 @@ export async function POST(request: Request) {
   const password = String(form.get("password") ?? "");
   const next = String(form.get("next") ?? "/dashboard");
   const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
+  const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://cnts.5sursync.com";
 
   try {
     // Call Backend API
@@ -26,7 +27,7 @@ export async function POST(request: Request) {
 
     if (!res.ok) {
       logAuditEvent({ actorEmail: email, action: "auth.login_failed" });
-      return NextResponse.redirect(new URL("/login?error=1", request.url));
+      return NextResponse.redirect(new URL("/admin/login?error=1", APP_URL));
     }
 
     const data = await res.json();
@@ -49,7 +50,7 @@ export async function POST(request: Request) {
       });
 
       logAuditEvent({ actorEmail: email, action: "auth.password_ok_mfa_required" });
-      return NextResponse.redirect(new URL(`/mfa?next=${encodeURIComponent(safeNext)}`, request.url));
+      return NextResponse.redirect(new URL(`/admin/mfa?next=${encodeURIComponent(safeNext)}`, APP_URL));
     }
 
     // Direct Login (No MFA or MFA passed implicitly if disabled)
@@ -73,10 +74,11 @@ export async function POST(request: Request) {
     });
 
     logAuditEvent({ actorEmail: user.email, action: "auth.login_success" });
-    return NextResponse.redirect(new URL(safeNext, request.url));
+    const finalNext = safeNext.startsWith("/admin") ? safeNext : `/admin${safeNext.startsWith("/") ? "" : "/"}${safeNext}`;
+    return NextResponse.redirect(new URL(finalNext, APP_URL));
 
   } catch (error) {
     console.error("Login Error:", error);
-    return NextResponse.redirect(new URL("/login?error=1", request.url));
+    return NextResponse.redirect(new URL("/admin/login?error=1", APP_URL));
   }
 }

@@ -87,15 +87,15 @@ def list_donneurs(
         stmt = stmt.where(Donneur.region == region)
 
     stmt = stmt.options(selectinload(Donneur.carte_donneur))
-    return list(db.execute(stmt.order_by(Donneur.created_at.desc()).offset(offset).limit(limit)).scalars())
+    return list(
+        db.execute(stmt.order_by(Donneur.created_at.desc()).offset(offset).limit(limit)).scalars()
+    )
 
 
 @router.get("/{donneur_id}", response_model=DonneurOut)
 def get_donneur(donneur_id: str, db: Session = Depends(get_db)) -> Donneur:
     row = db.execute(
-        select(Donneur)
-        .where(Donneur.id == donneur_id)
-        .options(selectinload(Donneur.carte_donneur))
+        select(Donneur).where(Donneur.id == donneur_id).options(selectinload(Donneur.carte_donneur))
     ).scalar_one_or_none()
     if row is None:
         raise HTTPException(status_code=404, detail="donneur not found")

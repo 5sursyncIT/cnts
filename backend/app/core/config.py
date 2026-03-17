@@ -1,5 +1,4 @@
 import logging
-import secrets
 
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -7,13 +6,15 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 logger = logging.getLogger(__name__)
 
 # Insecure default values that MUST be changed in production
-_INSECURE_DEFAULTS = frozenset({
-    "dev-only-change-me",
-    "dev-admin-token",
-    "change-me",
-    "secret",
-    "password",
-})
+_INSECURE_DEFAULTS = frozenset(
+    {
+        "dev-only-change-me",
+        "dev-admin-token",
+        "change-me",
+        "secret",
+        "password",
+    }
+)
 
 
 class Settings(BaseSettings):
@@ -65,7 +66,8 @@ class Settings(BaseSettings):
         }
 
         insecure_secrets = [
-            name for name, value in secrets_to_check.items()
+            name
+            for name, value in secrets_to_check.items()
             if value.lower() in _INSECURE_DEFAULTS or len(value) < 32
         ]
 
@@ -74,7 +76,7 @@ class Settings(BaseSettings):
                 raise ValueError(
                     f"CRITICAL: Insecure secrets detected in production environment! "
                     f"The following secrets must be changed: {', '.join(insecure_secrets)}. "
-                    f"Generate secure values with: python -c \"import secrets; print(secrets.token_hex(32))\""
+                    f'Generate secure values with: python -c "import secrets; print(secrets.token_hex(32))"'
                 )
             else:
                 logger.warning(

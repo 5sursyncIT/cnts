@@ -53,7 +53,7 @@ interface Impact {
 
 // ── Helpers ────────────────────────────────────
 
-const API = "/api/backend/hemovigilance";
+const API = "/api/hemovigilance";
 
 function fmtDate(d: string | null | undefined): string {
   if (!d) return "—";

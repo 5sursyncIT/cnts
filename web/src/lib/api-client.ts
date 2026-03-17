@@ -1,15 +1,17 @@
 /**
  * Client API initialisé pour le Back Office
- * Utilise le proxy /api/backend/* pour éviter CORS
+ * Utilise le proxy /api/* pour éviter CORS
  */
 
 import { createApiClient } from "@cnts/api";
 
-// En production, utiliser le proxy Next.js /api/backend
+// En production, utiliser le proxy Next.js /api
 // En développement, pointer directement vers le backend
 const baseUrl =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
-  (typeof window !== "undefined" ? "/api/backend" : "http://localhost:8000");
+  (typeof window !== "undefined"
+    ? "/api"
+    : (process.env.BACKEND_API_URL || "http://api:8000") + "/api");
 
 export const apiClient = createApiClient({
   baseUrl,

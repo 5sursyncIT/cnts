@@ -28,7 +28,9 @@ def verify_token(token: str, secret: str) -> dict[str, Any] | None:
         prefix, msg, sig = token.split(".", 2)
         if prefix != "CNTS1":
             return None
-        expected_sig = hmac.new(secret.encode("utf-8"), msg.encode("ascii"), hashlib.sha256).digest()
+        expected_sig = hmac.new(
+            secret.encode("utf-8"), msg.encode("ascii"), hashlib.sha256
+        ).digest()
         if not hmac.compare_digest(_b64url_encode(expected_sig), sig):
             return None
         payload = json.loads(_b64url_decode(msg).decode("utf-8"))
@@ -37,4 +39,3 @@ def verify_token(token: str, secret: str) -> dict[str, Any] | None:
         return payload
     except Exception:
         return None
-

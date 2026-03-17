@@ -26,7 +26,14 @@ class UserCreate(BaseModel):
     @field_validator("role")
     @classmethod
     def validate_role(cls, v: str) -> str:
-        valid_roles = {"admin", "biologiste", "technicien_labo", "agent_distribution", "agent_accueil", "PATIENT"}
+        valid_roles = {
+            "admin",
+            "biologiste",
+            "technicien_labo",
+            "agent_distribution",
+            "agent_accueil",
+            "PATIENT",
+        }
         if v not in valid_roles:
             raise ValueError(f"Role must be one of: {', '.join(valid_roles)}")
         return v
@@ -55,7 +62,14 @@ class UserUpdate(BaseModel):
     def validate_role(cls, v: str | None) -> str | None:
         if v is None:
             return v
-        valid_roles = {"admin", "biologiste", "technicien_labo", "agent_distribution", "agent_accueil", "PATIENT"}
+        valid_roles = {
+            "admin",
+            "biologiste",
+            "technicien_labo",
+            "agent_distribution",
+            "agent_accueil",
+            "PATIENT",
+        }
         if v not in valid_roles:
             raise ValueError(f"Role must be one of: {', '.join(valid_roles)}")
         return v

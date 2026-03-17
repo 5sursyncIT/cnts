@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc:*)",
+      "Bash(ls:*)",
+      "Bash(pytest:*)",
+      "Bash(curl:*)",
+      "Bash(test:*)",
+      "Bash(python3:*)",
+      "Bash(source:*)",
+      "Bash(pip install:*)",
+      "Bash(apt-get update:*)",
+      "Bash(apt-get install:*)",
+      "Bash(ruff check:*)",
+      "Bash(ruff format:*)",
+      "Bash(npm ls:*)",
+      "Bash(npm run lint:*)",
+      "Bash(npm run test:*)",
+      "Bash(npm -w web run build:*)",
+      "Bash(npm -w portal run build:*)",
+      "Bash(npm -w web run lint:*)",
+      "Bash(sort:*)",
+      "Bash(npm -w portal run lint:*)",
+      "Bash(docker compose up:*)"
+    ]
+  }
+}

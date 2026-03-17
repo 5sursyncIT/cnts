@@ -45,7 +45,9 @@ def upgrade() -> None:
         sa.Column("source", sa.String(length=32), nullable=True),
         sa.Column("note", sa.String(length=200), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()")),
-        sa.ForeignKeyConstraint(["storage_id"], ["cold_chain_storages.id"], name="fk_cold_chain_readings_storage"),
+        sa.ForeignKeyConstraint(
+            ["storage_id"], ["cold_chain_storages.id"], name="fk_cold_chain_readings_storage"
+        ),
     )
     op.create_index("ix_cold_chain_readings_storage_id", "cold_chain_readings", ["storage_id"])
     op.create_index("ix_cold_chain_readings_recorded_at", "cold_chain_readings", ["recorded_at"])

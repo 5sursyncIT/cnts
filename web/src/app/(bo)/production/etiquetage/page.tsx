@@ -37,7 +37,7 @@ export default function LabelingPage() {
 
   useEffect(() => {
     // Fetch next DIN from backend
-    fetch('/api/backend/etiquetage/next-din')
+    fetch('/api/etiquetage/next-din')
       .then(res => res.json())
       .then(d => {
         if(d.din) setData(prev => ({...prev, din: d.din}));
@@ -58,7 +58,7 @@ export default function LabelingPage() {
   const validateData = async () => {
     setValidating(true);
     try {
-        const res = await fetch('/api/backend/etiquetage/validate', {
+        const res = await fetch('/api/etiquetage/validate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

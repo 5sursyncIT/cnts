@@ -37,7 +37,9 @@ def _notify_hopitaux_poche_disponible(db: Session, *, poche: Poche, din: str | N
                 "din": din,
                 "type_produit": poche.type_produit,
                 "groupe_sanguin": poche.groupe_sanguin,
-                "date_peremption": poche.date_peremption.isoformat() if poche.date_peremption else None,
+                "date_peremption": poche.date_peremption.isoformat()
+                if poche.date_peremption
+                else None,
             },
         )
 
@@ -139,7 +141,9 @@ def stock_summary(db: Session = Depends(get_db)) -> list[StockSummary]:
         select(
             Poche.type_produit,
             func.count(Poche.id).label("total"),
-            func.sum(case((Poche.statut_distribution == "DISPONIBLE", 1), else_=0)).label("disponible"),
+            func.sum(case((Poche.statut_distribution == "DISPONIBLE", 1), else_=0)).label(
+                "disponible"
+            ),
             func.sum(case((Poche.statut_distribution == "RESERVE", 1), else_=0)).label("reservee"),
         )
         .where(Poche.statut_distribution.in_(["DISPONIBLE", "RESERVE"]))
@@ -221,26 +225,23 @@ def get_poche(poche_id: uuid.UUID, db: Session = Depends(get_db)) -> Poche:
 
 @router.get("/{poche_id}/etiquette-produit", response_model=EtiquetteProduitOut)
 def etiquette_produit(poche_id: uuid.UUID, db: Session = Depends(get_db)) -> EtiquetteProduitOut:
-    row = (
-        db.execute(
-            select(Poche, Don.din, Don.date_don)
-            .join(Don, Don.id == Poche.don_id)
-            .where(Poche.id == poche_id)
-        )
-        .first()
-    )
+    row = db.execute(
+        select(Poche, Don.din, Don.date_don)
+        .join(Don, Don.id == Poche.don_id)
+        .where(Poche.id == poche_id)
+    ).first()
     if row is None:
         raise HTTPException(status_code=404, detail="poche not found")
 
     poche, din, date_don = row
-    
+
     # Génération du contenu DataMatrix ISBT 128
     datamatrix_content = generate_datamatrix_content(
         din=din,
         product_code=poche.code_produit_isbt or "",
         expiration_date=poche.date_peremption,
         blood_group=poche.groupe_sanguin,
-        collection_date=date_don
+        collection_date=date_don,
     )
 
     payload = {
@@ -254,7 +255,7 @@ def etiquette_produit(poche_id: uuid.UUID, db: Session = Depends(get_db)) -> Eti
         "type_produit": poche.type_produit,
         "statut_stock": poche.statut_stock,
         "statut_distribution": poche.statut_distribution,
-        "datamatrix_content": datamatrix_content
+        "datamatrix_content": datamatrix_content,
     }
 
     return EtiquetteProduitOut(

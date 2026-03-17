@@ -12,7 +12,7 @@ import {
   User,
 } from "lucide-react";
 
-const API = "/api/backend";
+const API = "/api";
 
 interface Site {
   id: string;

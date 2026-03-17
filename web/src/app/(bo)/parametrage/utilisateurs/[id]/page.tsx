@@ -3,7 +3,7 @@
 import { useUser, useUpdateUser, useResetUserPassword, useDeleteUser } from "@cnts/api";
 import type { UserRole } from "@cnts/api";
 import { useParams, useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { apiClient } from "@/lib/api-client";
 
 export default function EditUtilisateurPage() {
@@ -26,15 +26,15 @@ export default function EditUtilisateurPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
 
-    useEffect(() => {
-        if (user) {
-            setFormData({
-                email: user.email,
-                role: user.role as UserRole,
-                is_active: user.is_active,
-            });
-        }
-    }, [user]);
+    const [prevUser, setPrevUser] = useState(user);
+    if (user && user !== prevUser) {
+        setPrevUser(user);
+        setFormData({
+            email: user.email,
+            role: user.role as UserRole,
+            is_active: user.is_active,
+        });
+    }
 
     const generatePassword = () => {
         const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";

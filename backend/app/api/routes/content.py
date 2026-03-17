@@ -26,15 +26,15 @@ def get_articles(
     Retrieve articles.
     """
     query = select(Article)
-    
+
     if published_only:
         query = query.where(Article.is_published.is_(True))
     elif status:
         query = query.where(Article.is_published.is_(status == "PUBLISHED"))
-        
+
     if category:
         query = query.where(Article.category == category)
-        
+
     query = query.order_by(Article.published_at.desc()).offset(skip).limit(limit)
     articles = db.execute(query).scalars().all()
     return articles
@@ -87,7 +87,7 @@ def update_article(
     article = db.get(Article, id)
     if not article:
         raise HTTPException(status_code=404, detail="Article not found")
-        
+
     update_data = article_in.model_dump(exclude_unset=True)
     status = update_data.pop("status", None)
     update_data.pop("tags", None)
@@ -95,7 +95,7 @@ def update_article(
         update_data["is_published"] = status == "PUBLISHED"
     for field, value in update_data.items():
         setattr(article, field, value)
-        
+
     db.add(article)
     db.commit()
     db.refresh(article)
@@ -115,7 +115,7 @@ def delete_article(
     article = db.get(Article, id)
     if not article:
         raise HTTPException(status_code=404, detail="Article not found")
-        
+
     db.delete(article)
     db.commit()
     return {"ok": True}

@@ -69,17 +69,19 @@ def update_hopital(
     if payload.nom is not None:
         # Check uniqueness if name changes
         if payload.nom != row.nom:
-            existing = db.execute(select(Hopital).where(Hopital.nom == payload.nom)).scalar_one_or_none()
+            existing = db.execute(
+                select(Hopital).where(Hopital.nom == payload.nom)
+            ).scalar_one_or_none()
             if existing is not None:
                 raise HTTPException(status_code=409, detail="nom d'hôpital déjà utilisé")
         row.nom = payload.nom
-    
+
     if payload.adresse is not None:
         row.adresse = payload.adresse
-    
+
     if payload.contact is not None:
         row.contact = payload.contact
-        
+
     if payload.convention_actif is not None:
         row.convention_actif = payload.convention_actif
 

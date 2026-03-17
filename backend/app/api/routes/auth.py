@@ -20,7 +20,11 @@ router = APIRouter(prefix="/auth")
 def login(payload: LoginIn, db: Session = Depends(get_db)) -> LoginOut:
     stmt = select(UserAccount).where(func.lower(UserAccount.email) == payload.email.lower())
     user = db.execute(stmt).scalar_one_or_none()
-    if user is None or not user.is_active or not verify_password(payload.password, user.password_hash):
+    if (
+        user is None
+        or not user.is_active
+        or not verify_password(payload.password, user.password_hash)
+    ):
         raise HTTPException(status_code=401, detail="identifiants invalides")
 
     if user.mfa_enabled and user.mfa_secret:
@@ -82,4 +86,3 @@ def mfa_verify(payload: MfaVerifyIn, db: Session = Depends(get_db)) -> MfaVerify
     )
     db.commit()
     return MfaVerifyOut(access_token=access)
-

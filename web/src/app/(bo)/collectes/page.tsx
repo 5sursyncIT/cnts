@@ -14,7 +14,7 @@ import {
   Loader2,
 } from "lucide-react";
 
-const API = "/api/backend";
+const API = "/api";
 
 // ---------- Types ----------
 

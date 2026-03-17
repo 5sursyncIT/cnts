@@ -73,7 +73,7 @@ interface AuditInterne {
 // Constants
 // ---------------------------------------------------------------------------
 
-const API = "/api/backend";
+const API = "/api";
 
 type TabKey = "documents" | "nc" | "capa" | "audits";
 

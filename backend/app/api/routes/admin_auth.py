@@ -26,7 +26,9 @@ def require_admin(
     return x_admin_email
 
 
-def _disable_user_2fa(db: Session, *, user: UserAccount, admin_email: str, reason: str | None) -> int:
+def _disable_user_2fa(
+    db: Session, *, user: UserAccount, admin_email: str, reason: str | None
+) -> int:
     stmt_count = select(UserRecoveryCode).where(UserRecoveryCode.user_id == user.id)
     recovery_codes = list(db.execute(stmt_count).scalars())
     revoked_count = len(recovery_codes)
@@ -67,7 +69,9 @@ def disable_2fa_for_user(
     revoked = _disable_user_2fa(db, user=user, admin_email=admin_email, reason=body.reason)
     disabled_at = user.mfa_disabled_at or dt.datetime.now(dt.timezone.utc)
     db.commit()
-    return AdminDisable2faOut(user_id=user.id, disabled_at=disabled_at, recovery_codes_revoked=revoked)
+    return AdminDisable2faOut(
+        user_id=user.id, disabled_at=disabled_at, recovery_codes_revoked=revoked
+    )
 
 
 @router.post("/2fa/disable-all", response_model=AdminDisable2faAllOut)
@@ -76,13 +80,17 @@ def disable_2fa_for_all_users(
     admin_email: str = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> AdminDisable2faAllOut:
-    stmt = select(UserAccount).where((UserAccount.mfa_enabled.is_(True)) | (UserAccount.mfa_secret.is_not(None)))
+    stmt = select(UserAccount).where(
+        (UserAccount.mfa_enabled.is_(True)) | (UserAccount.mfa_secret.is_not(None))
+    )
     users = list(db.execute(stmt).scalars())
 
     disabled_ids: list[uuid.UUID] = []
     total_revoked = 0
     for user in users:
-        total_revoked += _disable_user_2fa(db, user=user, admin_email=admin_email, reason=body.reason)
+        total_revoked += _disable_user_2fa(
+            db, user=user, admin_email=admin_email, reason=body.reason
+        )
         disabled_ids.append(user.id)
 
     log_event(
@@ -99,4 +107,3 @@ def disable_2fa_for_all_users(
     )
     db.commit()
     return AdminDisable2faAllOut(disabled_count=len(disabled_ids), disabled_user_ids=disabled_ids)
-

@@ -13,7 +13,7 @@ import {
   Ban,
 } from "lucide-react";
 
-const API = "/api/backend";
+const API = "/api";
 
 interface TransfertInterSite {
   id: string;

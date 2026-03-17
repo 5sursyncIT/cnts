@@ -7,9 +7,6 @@ Vérifie:
 - Détection des alertes (OUT_OF_RANGE)
 """
 
-import datetime as dt
-import uuid
-
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -36,6 +33,7 @@ def override_get_db():
         yield db
     finally:
         db.close()
+
 
 client = TestClient(app)
 

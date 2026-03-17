@@ -22,20 +22,40 @@ def upgrade() -> None:
     op.create_table(
         "actes_transfusionnels",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, nullable=False),
-        sa.Column("poche_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("poches.id"), nullable=False),
-        sa.Column("commande_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("commandes.id"), nullable=True),
-        sa.Column("hopital_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("hopitaux.id"), nullable=True),
-        sa.Column("receveur_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("receveurs.id"), nullable=True),
+        sa.Column(
+            "poche_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("poches.id"), nullable=False
+        ),
+        sa.Column(
+            "commande_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("commandes.id"),
+            nullable=True,
+        ),
+        sa.Column(
+            "hopital_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("hopitaux.id"), nullable=True
+        ),
+        sa.Column(
+            "receveur_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("receveurs.id"),
+            nullable=True,
+        ),
         sa.Column("date_transfusion", sa.DateTime(timezone=True), server_default=sa.text("now()")),
         sa.Column("validateur_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()")),
         sa.UniqueConstraint("poche_id", name="uq_actes_transfusionnels_poche_id"),
     )
     op.create_index("ix_actes_transfusionnels_poche_id", "actes_transfusionnels", ["poche_id"])
-    op.create_index("ix_actes_transfusionnels_commande_id", "actes_transfusionnels", ["commande_id"])
+    op.create_index(
+        "ix_actes_transfusionnels_commande_id", "actes_transfusionnels", ["commande_id"]
+    )
     op.create_index("ix_actes_transfusionnels_hopital_id", "actes_transfusionnels", ["hopital_id"])
-    op.create_index("ix_actes_transfusionnels_receveur_id", "actes_transfusionnels", ["receveur_id"])
-    op.create_index("ix_actes_transfusionnels_date_transfusion", "actes_transfusionnels", ["date_transfusion"])
+    op.create_index(
+        "ix_actes_transfusionnels_receveur_id", "actes_transfusionnels", ["receveur_id"]
+    )
+    op.create_index(
+        "ix_actes_transfusionnels_date_transfusion", "actes_transfusionnels", ["date_transfusion"]
+    )
 
     op.create_table(
         "rappels",

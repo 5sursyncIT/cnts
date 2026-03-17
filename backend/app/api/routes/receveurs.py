@@ -46,7 +46,7 @@ def delete_receveur(
     row = db.get(Receveur, receveur_id)
     if row is None:
         raise HTTPException(status_code=404, detail="receveur introuvable")
-    
+
     db.delete(row)
     db.commit()
 
@@ -86,25 +86,25 @@ def update_receveur(
 
     if payload.nom is not None:
         row.nom = payload.nom
-    
+
     if payload.prenom is not None:
         row.prenom = payload.prenom
-        
+
     if payload.sexe is not None:
         row.sexe = payload.sexe
-        
+
     if payload.date_naissance is not None:
         row.date_naissance = payload.date_naissance
-        
+
     if payload.adresse is not None:
         row.adresse = payload.adresse
-        
+
     if payload.telephone is not None:
         row.telephone = payload.telephone
-    
+
     if payload.hopital_id is not None:
         row.hopital_id = payload.hopital_id
-    
+
     if payload.groupe_sanguin is not None:
         row.groupe_sanguin = normalize_groupe_sanguin(payload.groupe_sanguin)
 

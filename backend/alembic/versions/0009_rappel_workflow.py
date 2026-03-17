@@ -37,7 +37,9 @@ def upgrade() -> None:
     op.create_table(
         "rappel_actions",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, nullable=False),
-        sa.Column("rappel_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("rappels.id"), nullable=False),
+        sa.Column(
+            "rappel_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("rappels.id"), nullable=False
+        ),
         sa.Column("action", sa.String(length=16), nullable=False),
         sa.Column("validateur_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("note", sa.Text(), nullable=True),

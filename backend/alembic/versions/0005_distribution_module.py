@@ -38,7 +38,12 @@ def upgrade() -> None:
     op.create_table(
         "commandes",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, nullable=False),
-        sa.Column("hopital_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("hopitaux.id"), nullable=False),
+        sa.Column(
+            "hopital_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("hopitaux.id"),
+            nullable=False,
+        ),
         sa.Column("statut", sa.String(length=16), nullable=False),
         sa.Column("date_demande", sa.DateTime(timezone=True), server_default=sa.text("now()")),
         sa.Column("date_livraison_prevue", sa.Date(), nullable=True),
@@ -55,7 +60,12 @@ def upgrade() -> None:
     op.create_table(
         "ligne_commandes",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, nullable=False),
-        sa.Column("commande_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("commandes.id"), nullable=False),
+        sa.Column(
+            "commande_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("commandes.id"),
+            nullable=False,
+        ),
         sa.Column("type_produit", sa.String(length=16), nullable=False),
         sa.Column("groupe_sanguin", sa.String(length=8), nullable=True),
         sa.Column("quantite", sa.Integer(), nullable=False),
@@ -67,8 +77,15 @@ def upgrade() -> None:
     op.create_table(
         "reservations",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, nullable=False),
-        sa.Column("poche_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("poches.id"), nullable=False),
-        sa.Column("commande_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("commandes.id"), nullable=False),
+        sa.Column(
+            "poche_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("poches.id"), nullable=False
+        ),
+        sa.Column(
+            "commande_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("commandes.id"),
+            nullable=False,
+        ),
         sa.Column("date_reservation", sa.DateTime(timezone=True), server_default=sa.text("now()")),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("released_at", sa.DateTime(timezone=True), nullable=True),
@@ -89,12 +106,21 @@ def upgrade() -> None:
     op.create_table(
         "cross_matches",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, nullable=False),
-        sa.Column("poche_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("poches.id"), nullable=False),
-        sa.Column("receveur_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("receveurs.id"), nullable=False),
+        sa.Column(
+            "poche_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("poches.id"), nullable=False
+        ),
+        sa.Column(
+            "receveur_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("receveurs.id"),
+            nullable=False,
+        ),
         sa.Column("resultat", sa.String(length=16), nullable=False),
         sa.Column("validateur_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()")),
-        sa.CheckConstraint("resultat IN ('COMPATIBLE','INCOMPATIBLE')", name="ck_cross_matches_resultat"),
+        sa.CheckConstraint(
+            "resultat IN ('COMPATIBLE','INCOMPATIBLE')", name="ck_cross_matches_resultat"
+        ),
         sa.UniqueConstraint("poche_id", "receveur_id", name="uq_cross_matches_poche_receveur"),
     )
     op.create_index("ix_cross_matches_poche_id", "cross_matches", ["poche_id"])

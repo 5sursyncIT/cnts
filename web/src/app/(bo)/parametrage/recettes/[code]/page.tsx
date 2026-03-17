@@ -3,7 +3,7 @@
 import { useRecette, useUpdateRecette, useDeleteRecette } from "@cnts/api";
 import type { ComposantRecette } from "@cnts/api";
 import { useParams, useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { apiClient } from "@/lib/api-client";
 
 export default function EditRecettePage() {
@@ -25,17 +25,17 @@ export default function EditRecettePage() {
     const [composants, setComposants] = useState<ComposantRecette[]>([]);
     const [errors, setErrors] = useState<Record<string, string>>({});
 
-    useEffect(() => {
-        if (recette) {
-            setFormData({
-                libelle: recette.libelle,
-                site_code: recette.site_code || "",
-                type_source: recette.type_source,
-                actif: recette.actif,
-            });
-            setComposants(recette.composants);
-        }
-    }, [recette]);
+    const [prevRecette, setPrevRecette] = useState(recette);
+    if (recette && recette !== prevRecette) {
+        setPrevRecette(recette);
+        setFormData({
+            libelle: recette.libelle,
+            site_code: recette.site_code || "",
+            type_source: recette.type_source,
+            actif: recette.actif,
+        });
+        setComposants(recette.composants);
+    }
 
     const validate = () => {
         const newErrors: Record<string, string> = {};

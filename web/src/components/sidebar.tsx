@@ -138,7 +138,7 @@ export function Sidebar({ user }: SidebarProps) {
             {user.displayName}
           </div>
         </div>
-        <form action="/api/auth/logout" method="post">
+        <form action="/admin/api/auth/logout" method="post">
           <button
             type="submit"
             className="w-full rounded-md bg-gray-700 px-3 py-2 text-sm text-white hover:bg-gray-600 transition-colors"

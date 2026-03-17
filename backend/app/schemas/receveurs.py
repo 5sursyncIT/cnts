@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.hopitaux import HopitalOut
 
+
 class ReceveurCreate(BaseModel):
     nom: str | None = Field(default=None, max_length=200)
     prenom: str | None = Field(default=None, max_length=200)

@@ -147,7 +147,11 @@ def test_distribution_workflow_fefo_crossmatch_cancel() -> None:
         _post(
             client,
             f"/commandes/{cmd_id}/affecter",
-            {"affectations": [{"ligne_commande_id": line_id, "receveur_id": receveur["id"], "quantite": 1}]},
+            {
+                "affectations": [
+                    {"ligne_commande_id": line_id, "receveur_id": receveur["id"], "quantite": 1}
+                ]
+            },
         )
 
         r = client.post(f"/commandes/{cmd_id}/servir", json={})
@@ -156,7 +160,11 @@ def test_distribution_workflow_fefo_crossmatch_cancel() -> None:
         _post(
             client,
             "/cross-match",
-            {"poche_id": reserved_poche_id, "receveur_id": receveur["id"], "resultat": "COMPATIBLE"},
+            {
+                "poche_id": reserved_poche_id,
+                "receveur_id": receveur["id"],
+                "resultat": "COMPATIBLE",
+            },
         )
 
         served = _post(client, f"/commandes/{cmd_id}/servir", {})

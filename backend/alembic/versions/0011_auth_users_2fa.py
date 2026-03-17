@@ -65,4 +65,3 @@ def downgrade() -> None:
     op.drop_index("ix_user_accounts_is_active", table_name="user_accounts")
     op.drop_index("ix_user_accounts_email", table_name="user_accounts")
     op.drop_table("user_accounts")
-

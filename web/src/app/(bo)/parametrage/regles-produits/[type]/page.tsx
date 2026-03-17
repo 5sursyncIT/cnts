@@ -2,7 +2,7 @@
 
 import { useProductRule, useUpsertProductRule } from "@cnts/api";
 import { useParams, useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { apiClient } from "@/lib/api-client";
 
 export default function EditRegleProduitPage() {
@@ -22,16 +22,16 @@ export default function EditRegleProduitPage() {
 
     const [errors, setErrors] = useState<Record<string, string>>({});
 
-    useEffect(() => {
-        if (regle) {
-            setFormData({
-                shelf_life_days: regle.shelf_life_days,
-                default_volume_ml: regle.default_volume_ml ?? 0,
-                min_volume_ml: regle.min_volume_ml ?? 0,
-                max_volume_ml: regle.max_volume_ml ?? 0,
-            });
-        }
-    }, [regle]);
+    const [prevRegle, setPrevRegle] = useState(regle);
+    if (regle && regle !== prevRegle) {
+        setPrevRegle(regle);
+        setFormData({
+            shelf_life_days: regle.shelf_life_days,
+            default_volume_ml: regle.default_volume_ml ?? 0,
+            min_volume_ml: regle.min_volume_ml ?? 0,
+            max_volume_ml: regle.max_volume_ml ?? 0,
+        });
+    }
 
     const validate = () => {
         const newErrors: Record<string, string> = {};

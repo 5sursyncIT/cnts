@@ -16,6 +16,7 @@ router = APIRouter(prefix="/sites")
 
 # ── Sites CRUD ────────────────────────────────
 
+
 @router.post("", response_model=SiteOut, status_code=201)
 def create_site(
     payload: SiteCreate,
@@ -61,6 +62,7 @@ def list_sites(
 # ── Transferts inter-sites ────────────────────
 # NOTE: These literal /transferts routes MUST come before /{site_id} to avoid
 # FastAPI matching "transferts" as a UUID path parameter.
+
 
 @router.post("/transferts", response_model=TransfertOut, status_code=201)
 def create_transfert(
@@ -246,6 +248,7 @@ def annuler_transfert(
 
 
 # ── Site detail (must come AFTER /transferts routes) ──
+
 
 @router.get("/{site_id}", response_model=SiteOut)
 def get_site(site_id: uuid.UUID, db: Session = Depends(get_db)) -> Site:

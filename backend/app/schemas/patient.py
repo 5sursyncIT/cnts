@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr
 
 # --- Patient / Donneur Schemas ---
 
+
 class DonneurBase(BaseModel):
     nom: str
     prenom: str
@@ -42,6 +43,7 @@ class DonneurResponse(DonneurBase):
 
 # --- Rendez-Vous Schemas ---
 
+
 class RendezVousBase(BaseModel):
     date_prevue: datetime
     type_rdv: str = "DON_SANG"
@@ -71,6 +73,7 @@ class RendezVousResponse(RendezVousBase):
 
 
 # --- Document Medical Schemas ---
+
 
 class DocumentMedicalBase(BaseModel):
     titre: str

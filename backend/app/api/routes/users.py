@@ -29,22 +29,22 @@ def list_users(
 ) -> list[UserAccount]:
     """
     List all user accounts with optional filtering by role and active status.
-    
+
     - **role**: Filter by user role (admin, biologiste, etc.)
     - **is_active**: Filter by active status
     - **limit**: Maximum number of results (default 100, max 500)
     - **offset**: Pagination offset
     """
     stmt = select(UserAccount)
-    
+
     if role is not None:
         stmt = stmt.where(UserAccount.role == role)
-    
+
     if is_active is not None:
         stmt = stmt.where(UserAccount.is_active.is_(is_active))
-    
+
     stmt = stmt.order_by(UserAccount.created_at.desc()).limit(limit).offset(offset)
-    
+
     return list(db.execute(stmt).scalars())
 
 
@@ -55,24 +55,24 @@ def create_user(
 ) -> UserAccount:
     """
     Create a new user account.
-    
+
     - **email**: Unique email address
     - **password**: Password (min 12 chars, mixed case, numbers)
     - **role**: User role (admin, biologiste, technicien_labo, agent_distribution)
     - **is_active**: Active status (default true)
-    
+
     Password will be hashed using PBKDF2-SHA256.
     """
     # Check if user with this email already exists
     stmt = select(UserAccount).where(func.lower(UserAccount.email) == payload.email.lower())
     existing_user = db.execute(stmt).scalar_one_or_none()
-    
+
     if existing_user is not None:
         raise HTTPException(status_code=409, detail="Un utilisateur avec cet email existe déjà")
-    
+
     # Hash password
     password_hash = hash_password(payload.password)
-    
+
     # Create user
     user = UserAccount(
         email=payload.email,
@@ -80,11 +80,11 @@ def create_user(
         role=payload.role,
         is_active=payload.is_active,
     )
-    
+
     db.add(user)
     db.commit()
     db.refresh(user)
-    
+
     # Log event
     log_event(
         db,
@@ -94,7 +94,7 @@ def create_user(
         payload={"email": user.email, "role": user.role},
     )
     db.commit()
-    
+
     return user
 
 
@@ -105,10 +105,10 @@ def get_user(
 ) -> UserAccount:
     """Get user details by ID."""
     user = db.get(UserAccount, user_id)
-    
+
     if user is None:
         raise HTTPException(status_code=404, detail="Utilisateur introuvable")
-    
+
     return user
 
 
@@ -120,18 +120,18 @@ def update_user(
 ) -> UserAccount:
     """
     Update user account.
-    
+
     - **email**: New email (must be unique)
     - **role**: New role
     - **is_active**: Active status
     """
     user = db.get(UserAccount, user_id)
-    
+
     if user is None:
         raise HTTPException(status_code=404, detail="Utilisateur introuvable")
-    
+
     changes = {}
-    
+
     if payload.email is not None and payload.email != user.email:
         # Check if new email is already taken
         stmt = select(UserAccount).where(
@@ -141,22 +141,22 @@ def update_user(
         existing = db.execute(stmt).scalar_one_or_none()
         if existing is not None:
             raise HTTPException(status_code=409, detail="Cet email est déjà utilisé")
-        
+
         user.email = payload.email
         changes["email"] = payload.email
-    
+
     if payload.role is not None and payload.role != user.role:
         user.role = payload.role
         changes["role"] = payload.role
-    
+
     if payload.is_active is not None and payload.is_active != user.is_active:
         user.is_active = payload.is_active
         changes["is_active"] = payload.is_active
-    
+
     if changes:
         db.commit()
         db.refresh(user)
-        
+
         # Log event
         log_event(
             db,
@@ -166,7 +166,7 @@ def update_user(
             payload=changes,
         )
         db.commit()
-    
+
     return user
 
 
@@ -177,20 +177,20 @@ def deactivate_user(
 ) -> dict:
     """
     Deactivate a user account (soft delete).
-    
+
     This sets is_active to False rather than deleting the record.
     """
     user = db.get(UserAccount, user_id)
-    
+
     if user is None:
         raise HTTPException(status_code=404, detail="Utilisateur introuvable")
-    
+
     if not user.is_active:
         raise HTTPException(status_code=409, detail="Utilisateur déjà désactivé")
-    
+
     user.is_active = False
     db.commit()
-    
+
     # Log event
     log_event(
         db,
@@ -200,7 +200,7 @@ def deactivate_user(
         payload={"email": user.email},
     )
     db.commit()
-    
+
     return {"user_id": str(user.id), "is_active": user.is_active}
 
 
@@ -212,20 +212,20 @@ def reset_user_password(
 ) -> PasswordResetResult:
     """
     Reset user password (admin action).
-    
+
     - **password**: New password (min 12 chars, mixed case, numbers)
-    
+
     User will need to change this password on next login.
     """
     user = db.get(UserAccount, user_id)
-    
+
     if user is None:
         raise HTTPException(status_code=404, detail="Utilisateur introuvable")
-    
+
     # Hash new password
     user.password_hash = hash_password(payload.password)
     db.commit()
-    
+
     # Log event
     log_event(
         db,
@@ -235,5 +235,5 @@ def reset_user_password(
         payload={"email": user.email, "reset_by": "admin"},
     )
     db.commit()
-    
+
     return PasswordResetResult(user_id=user.id, success=True)

@@ -19,7 +19,7 @@ export default async function LoginPage(props: {
           </div>
         ) : null}
 
-        <form className="mt-6 space-y-4" action="/api/auth/login" method="post">
+        <form className="mt-6 space-y-4" action="/admin/api/auth/login" method="post">
           <input type="hidden" name="next" value={next} />
 
           <div>

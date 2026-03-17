@@ -40,4 +40,3 @@ def verify_totp(
         if hmac.compare_digest(_hotp(secret_b32, now_counter + delta, digits=digits), token_norm):
             return True
     return False
-

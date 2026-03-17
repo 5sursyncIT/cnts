@@ -68,13 +68,9 @@ def _generate_stock_report(db, params: dict) -> dict:
 
     from app.db.models import Poche
 
-    stmt = (
-        select(Poche.type_produit, Poche.statut_distribution, func.count(Poche.id))
-        .group_by(Poche.type_produit, Poche.statut_distribution)
+    stmt = select(Poche.type_produit, Poche.statut_distribution, func.count(Poche.id)).group_by(
+        Poche.type_produit, Poche.statut_distribution
     )
     rows = db.execute(stmt).all()
-    breakdown = [
-        {"type_produit": r[0], "statut": r[1], "count": r[2]}
-        for r in rows
-    ]
+    breakdown = [{"type_produit": r[0], "statut": r[1], "count": r[2]} for r in rows]
     return {"breakdown": breakdown, "params": params}

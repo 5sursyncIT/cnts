@@ -93,16 +93,16 @@ def list_dons(
     donneur_id: uuid.UUID | None = None,
     limit: int = 100,
     offset: int = 0,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ) -> list[Don]:
     stmt = select(Don).options(joinedload(Don.donneur)).order_by(Don.created_at.desc())
-    
+
     if statut:
         stmt = stmt.where(Don.statut_qualification == statut)
-    
+
     if donneur_id:
         stmt = stmt.where(Don.donneur_id == donneur_id)
-        
+
     stmt = stmt.offset(offset).limit(limit)
     return list(db.execute(stmt).scalars())
 

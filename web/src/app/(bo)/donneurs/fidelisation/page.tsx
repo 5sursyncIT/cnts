@@ -15,7 +15,7 @@ import {
   Gift,
 } from "lucide-react";
 
-const API = "/api/backend";
+const API = "/api";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -608,7 +608,7 @@ function StatistiquesTab() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API}/fidelisation/cartes?limit=10000`);
+      const res = await fetch(`${API}/fidelisation/cartes?limit=500`);
       if (!res.ok) throw new Error(`Erreur ${res.status}`);
       const data = await res.json();
       setCartes(data);

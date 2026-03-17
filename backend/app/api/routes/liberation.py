@@ -31,13 +31,17 @@ def _notify_hopitaux_poche_disponible(db: Session, *, poche: Poche, din: str) ->
                 "din": din,
                 "type_produit": poche.type_produit,
                 "groupe_sanguin": poche.groupe_sanguin,
-                "date_peremption": poche.date_peremption.isoformat() if poche.date_peremption else None,
+                "date_peremption": poche.date_peremption.isoformat()
+                if poche.date_peremption
+                else None,
             },
         )
 
 
 @router.get("/{don_id}", response_model=LiberationBiologiqueOut)
-def verifier_liberation(don_id: uuid.UUID, db: Session = Depends(get_db)) -> LiberationBiologiqueOut:
+def verifier_liberation(
+    don_id: uuid.UUID, db: Session = Depends(get_db)
+) -> LiberationBiologiqueOut:
     """
     Vérifier si un don peut être libéré biologiquement.
 

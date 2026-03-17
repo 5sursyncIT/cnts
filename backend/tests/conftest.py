@@ -6,7 +6,6 @@ and common domain fixtures (donneur, don, analyses).
 """
 
 import datetime as dt
-import uuid
 
 import pytest
 from fastapi.testclient import TestClient
@@ -38,6 +37,7 @@ def override_get_db():
 
 
 # ---------- Fixtures ----------
+
 
 @pytest.fixture(autouse=True)
 def setup_database():

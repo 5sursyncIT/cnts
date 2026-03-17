@@ -25,12 +25,16 @@ def upgrade() -> None:
         sa.Column("libelle", sa.String(length=120), nullable=False),
         sa.Column("actif", sa.Boolean(), nullable=False, server_default=sa.text("true")),
         sa.Column("site_code", sa.String(length=32), nullable=True),
-        sa.Column("type_source", sa.String(length=16), nullable=False, server_default=sa.text("'ST'")),
+        sa.Column(
+            "type_source", sa.String(length=16), nullable=False, server_default=sa.text("'ST'")
+        ),
         sa.Column("composants", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()")),
     )
     op.create_index("ix_fractionnement_recettes_actif", "fractionnement_recettes", ["actif"])
-    op.create_index("ix_fractionnement_recettes_site_code", "fractionnement_recettes", ["site_code"])
+    op.create_index(
+        "ix_fractionnement_recettes_site_code", "fractionnement_recettes", ["site_code"]
+    )
 
     conn = op.get_bind()
     conn.exec_driver_sql(

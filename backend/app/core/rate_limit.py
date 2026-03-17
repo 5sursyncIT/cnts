@@ -2,6 +2,7 @@
 Simple in-memory rate limiting middleware.
 For production, consider using Redis-based rate limiting.
 """
+
 import time
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -17,6 +18,7 @@ from app.core.config import settings
 @dataclass
 class RateLimitConfig:
     """Configuration for rate limiting."""
+
     # Default limits (requests per minute)
     default_rpm: int = 100
     # Auth endpoints (login, etc.) - stricter limits
@@ -30,6 +32,7 @@ class RateLimitConfig:
 @dataclass
 class RequestCounter:
     """Track request counts with sliding window."""
+
     counts: dict = field(default_factory=lambda: defaultdict(list))
 
     def is_rate_limited(self, key: str, limit: int, window_seconds: int = 60) -> bool:
@@ -132,7 +135,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         global _last_cleanup
 
         # Skip rate limiting in development if configured
-        if settings.env == "dev" and not getattr(settings, 'rate_limit_in_dev', False):
+        if settings.env == "dev" and not getattr(settings, "rate_limit_in_dev", False):
             return await call_next(request)
 
         # Skip health checks

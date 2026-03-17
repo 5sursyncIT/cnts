@@ -49,7 +49,11 @@ def _release_expired_reservations(db: Session) -> int:
     now = _now_utc()
     stmt = (
         select(Reservation)
-        .where(Reservation.released_at.is_(None), Reservation.expires_at.is_not(None), Reservation.expires_at < now)
+        .where(
+            Reservation.released_at.is_(None),
+            Reservation.expires_at.is_not(None),
+            Reservation.expires_at < now,
+        )
         .limit(500)
     )
     rows = list(db.execute(stmt).scalars())
@@ -60,7 +64,11 @@ def _release_expired_reservations(db: Session) -> int:
     pockets = list(db.execute(select(Poche).where(Poche.id.in_(pocket_ids))).scalars())
     pockets_by_id = {p.id: p for p in pockets}
     din_by_poche_id = dict(
-        db.execute(select(Poche.id, Don.din).join(Don, Don.id == Poche.don_id).where(Poche.id.in_(pocket_ids))).all()
+        db.execute(
+            select(Poche.id, Don.din)
+            .join(Don, Don.id == Poche.don_id)
+            .where(Poche.id.in_(pocket_ids))
+        ).all()
     )
 
     for r in rows:
@@ -160,19 +168,23 @@ def create_commande(
     db.add(row)
     db.flush()
 
-    for l in payload.lignes:
+    for ligne in payload.lignes:
         db.add(
             LigneCommande(
                 commande_id=row.id,
-                type_produit=l.type_produit,
-                groupe_sanguin=normalize_groupe_sanguin(l.groupe_sanguin) if l.groupe_sanguin else None,
-                quantite=l.quantite,
+                type_produit=ligne.type_produit,
+                groupe_sanguin=normalize_groupe_sanguin(ligne.groupe_sanguin)
+                if ligne.groupe_sanguin
+                else None,
+                quantite=ligne.quantite,
             )
         )
 
     db.commit()
     db.refresh(row)
-    row = db.execute(select(Commande).where(Commande.id == row.id).options(selectinload(Commande.lignes))).scalar_one()
+    row = db.execute(
+        select(Commande).where(Commande.id == row.id).options(selectinload(Commande.lignes))
+    ).scalar_one()
     log_event(
         db,
         aggregate_type="commande",
@@ -183,11 +195,11 @@ def create_commande(
             "hopital_id": str(row.hopital_id),
             "lignes": [
                 {
-                    "type_produit": l.type_produit,
-                    "groupe_sanguin": l.groupe_sanguin,
-                    "quantite": l.quantite,
+                    "type_produit": ligne.type_produit,
+                    "groupe_sanguin": ligne.groupe_sanguin,
+                    "quantite": ligne.quantite,
                 }
-                for l in row.lignes
+                for ligne in row.lignes
             ],
         },
     )
@@ -366,7 +378,7 @@ def affecter_receveurs(
     if commande.statut not in {"VALIDEE"}:
         raise HTTPException(status_code=409, detail="commande non affectable")
 
-    lignes_by_id = {l.id: l for l in commande.lignes}
+    lignes_by_id = {ligne.id: ligne for ligne in commande.lignes}
     for a in payload.affectations:
         if a.ligne_commande_id not in lignes_by_id:
             raise HTTPException(status_code=404, detail="ligne commande introuvable")
@@ -403,7 +415,9 @@ def affecter_receveurs(
     for a in payload.affectations:
         bucket = by_line.get(a.ligne_commande_id, [])
         if len(bucket) < a.quantite:
-            raise HTTPException(status_code=409, detail="poches réservées insuffisantes pour affectation")
+            raise HTTPException(
+                status_code=409, detail="poches réservées insuffisantes pour affectation"
+            )
         for _ in range(a.quantite):
             r = bucket.pop(0)
             r.receveur_id = a.receveur_id
@@ -470,14 +484,20 @@ def annuler_commande(
     now = _now_utc()
     rows = list(
         db.execute(
-            select(Reservation).where(Reservation.commande_id == commande.id, Reservation.released_at.is_(None))
+            select(Reservation).where(
+                Reservation.commande_id == commande.id, Reservation.released_at.is_(None)
+            )
         ).scalars()
     )
     pocket_ids = [r.poche_id for r in rows]
     pockets = list(db.execute(select(Poche).where(Poche.id.in_(pocket_ids))).scalars())
     pockets_by_id = {p.id: p for p in pockets}
     din_by_poche_id = dict(
-        db.execute(select(Poche.id, Don.din).join(Don, Don.id == Poche.don_id).where(Poche.id.in_(pocket_ids))).all()
+        db.execute(
+            select(Poche.id, Don.din)
+            .join(Don, Don.id == Poche.don_id)
+            .where(Poche.id.in_(pocket_ids))
+        ).all()
     )
 
     for r in rows:
@@ -524,7 +544,9 @@ def servir_commande(
 
     reservations = list(
         db.execute(
-            select(Reservation).where(Reservation.commande_id == commande.id, Reservation.released_at.is_(None))
+            select(Reservation).where(
+                Reservation.commande_id == commande.id, Reservation.released_at.is_(None)
+            )
         ).scalars()
     )
     if not reservations:
@@ -535,7 +557,9 @@ def servir_commande(
     poches_by_id = {p.id: p for p in poches}
 
     receveur_ids = {r.receveur_id for r in reservations if r.receveur_id is not None}
-    receveurs = list(db.execute(select(Receveur).where(Receveur.id.in_(list(receveur_ids)))).scalars())
+    receveurs = list(
+        db.execute(select(Receveur).where(Receveur.id.in_(list(receveur_ids)))).scalars()
+    )
     receveurs_by_id = {r.id: r for r in receveurs}
 
     for r in reservations:
@@ -552,7 +576,9 @@ def servir_commande(
             raise HTTPException(status_code=409, detail="receveur manquant pour une poche réservée")
         receveur = receveurs_by_id.get(r.receveur_id)
         if receveur is None:
-            raise HTTPException(status_code=409, detail="receveur introuvable pour une poche réservée")
+            raise HTTPException(
+                status_code=409, detail="receveur introuvable pour une poche réservée"
+            )
 
         if requires_abo_compatibility(type_produit=p.type_produit):
             if p.groupe_sanguin is None or receveur.groupe_sanguin is None:
@@ -560,8 +586,12 @@ def servir_commande(
             if p.type_produit == "CGR":
                 pass
             else:
-                if not is_compatible_plasma(receveur=receveur.groupe_sanguin, donneur=p.groupe_sanguin):
-                    raise HTTPException(status_code=409, detail="incompatibilité ABO produit ↔ receveur")
+                if not is_compatible_plasma(
+                    receveur=receveur.groupe_sanguin, donneur=p.groupe_sanguin
+                ):
+                    raise HTTPException(
+                        status_code=409, detail="incompatibilité ABO produit ↔ receveur"
+                    )
 
         if requires_crossmatch(type_produit=p.type_produit):
             cm = db.execute(
@@ -574,7 +604,9 @@ def servir_commande(
             if cm is None:
                 raise HTTPException(status_code=409, detail="cross-match compatible manquant")
 
-        don_statut = db.execute(select(Don.statut_qualification).where(Don.id == p.don_id)).scalar_one_or_none()
+        don_statut = db.execute(
+            select(Don.statut_qualification).where(Don.id == p.don_id)
+        ).scalar_one_or_none()
         if don_statut != "LIBERE":
             raise HTTPException(status_code=409, detail="don non libéré")
 
@@ -627,5 +659,7 @@ def servir_commande(
     return {
         "commande_id": str(commande.id),
         "statut": commande.statut,
-        "poches": [{"poche_id": str(r.poche_id), "receveur_id": str(r.receveur_id)} for r in reservations],
+        "poches": [
+            {"poche_id": str(r.poche_id), "receveur_id": str(r.receveur_id)} for r in reservations
+        ],
     }

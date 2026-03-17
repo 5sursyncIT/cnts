@@ -1,5 +1,3 @@
-import uuid
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -32,7 +30,9 @@ def create_or_update_crossmatch(
 
     if payload.resultat == "COMPATIBLE":
         if poche.groupe_sanguin is None or receveur.groupe_sanguin is None:
-            raise HTTPException(status_code=422, detail="groupe sanguin manquant (poche ou receveur)")
+            raise HTTPException(
+                status_code=422, detail="groupe sanguin manquant (poche ou receveur)"
+            )
         if not is_compatible_rbc(receveur=receveur.groupe_sanguin, donneur=poche.groupe_sanguin):
             raise HTTPException(status_code=409, detail="incompatibilité receveur ↔ poche")
 

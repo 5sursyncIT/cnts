@@ -39,6 +39,7 @@ def override_get_db():
     finally:
         db.close()
 
+
 client = TestClient(app)
 
 
@@ -97,7 +98,9 @@ def don_libere(don_id):
         ("SYPHILIS", "NEGATIF"),
     ]
     for type_test, resultat in tests:
-        client.post("/api/analyses", json={"don_id": don_id, "type_test": type_test, "resultat": resultat})
+        client.post(
+            "/api/analyses", json={"don_id": don_id, "type_test": type_test, "resultat": resultat}
+        )
     client.post(f"/api/liberation/{don_id}/liberer")
     return don_id
 

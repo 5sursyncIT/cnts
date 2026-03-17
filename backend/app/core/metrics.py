@@ -8,7 +8,9 @@ class Metrics:
     def __init__(self) -> None:
         self._lock = threading.Lock()
         self._counters: dict[tuple[str, tuple[tuple[str, str], ...]], int] = defaultdict(int)
-        self._timers_ms_sum: dict[tuple[str, tuple[tuple[str, str], ...]], float] = defaultdict(float)
+        self._timers_ms_sum: dict[tuple[str, tuple[tuple[str, str], ...]], float] = defaultdict(
+            float
+        )
         self._timers_ms_count: dict[tuple[str, tuple[tuple[str, str], ...]], int] = defaultdict(int)
 
     def inc(self, name: str, *, labels: dict[str, str]) -> None:

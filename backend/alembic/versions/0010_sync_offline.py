@@ -50,8 +50,12 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()")),
         sa.UniqueConstraint("sync_device_id", "client_event_id", name="uq_sync_device_event"),
     )
-    op.create_index("ix_sync_ingested_events_sync_device_id", "sync_ingested_events", ["sync_device_id"])
-    op.create_index("ix_sync_ingested_events_client_event_id", "sync_ingested_events", ["client_event_id"])
+    op.create_index(
+        "ix_sync_ingested_events_sync_device_id", "sync_ingested_events", ["sync_device_id"]
+    )
+    op.create_index(
+        "ix_sync_ingested_events_client_event_id", "sync_ingested_events", ["client_event_id"]
+    )
     op.create_index("ix_sync_ingested_events_event_type", "sync_ingested_events", ["event_type"])
     op.create_index("ix_sync_ingested_events_status", "sync_ingested_events", ["status"])
     op.create_index("ix_sync_ingested_events_created_at", "sync_ingested_events", ["created_at"])
