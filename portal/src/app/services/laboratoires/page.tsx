@@ -1,162 +1,157 @@
 import Image from "next/image";
-import Link from "next/link";
-import { FlaskConical, Microscope, Shield, CheckCircle, Dna } from "lucide-react";
+import type { ReactNode } from "react";
+import { Button, Card, PageBanner, SectionTitle } from "@/components/cnts/primitives";
+import { Icon } from "@/components/cnts/icon";
+import { laboratoires, org } from "@/components/cnts/data";
 
 export const metadata = {
-  title: "Laboratoires — SGI-CNTS",
+  title: "Laboratoires — CNTS Sénégal",
   description:
-    "Les laboratoires du CNTS : qualification biologique, immuno-hématologie, biologie moléculaire et contrôle qualité.",
+    "Les laboratoires du CNTS : qualification biologique de chaque don de sang et examens spécialisés d’hématologie et d’immuno-hématologie pour les patients.",
 };
 
-export default function LaboratoiresPage() {
-  const laboratoires = [
-    {
-      nom: "Laboratoire de Qualification Biologique des Dons (QBD)",
-      description:
-        "Réalise les 6 tests obligatoires sur chaque don de sang pour garantir la sécurité transfusionnelle. Aucun produit sanguin n'est libéré sans validation biologique complète.",
-      tests: [
-        "Groupage ABO / Rhésus (D, C, E, c, e, Kell)",
-        "Dépistage VIH 1/2 (Anticorps + Ag p24)",
-        "Dépistage Hépatite B (Ag HBs)",
-        "Dépistage Hépatite C (Anticorps anti-VHC)",
-        "Dépistage Syphilis (TPHA/VDRL)",
-        "Tests NAT (PCR) pour VIH, VHB, VHC",
-      ],
-      icon: <Shield className="h-8 w-8 text-primary" />,
-    },
-    {
-      nom: "Laboratoire d'Immuno-Hématologie",
-      description:
-        "Spécialisé dans la compatibilité transfusionnelle, le phénotypage étendu et l'identification des anticorps irréguliers. Gère le registre national des groupes rares.",
-      tests: [
-        "Phénotypage étendu (Kell, Duffy, Kidd, MNS, Lewis)",
-        "Recherche d'Agglutinines Irrégulières (RAI)",
-        "Épreuves de compatibilité au laboratoire",
-        "Identification d'anticorps complexes",
-        "Registre national des donneurs de groupes rares",
-        "Conseil transfusionnel pour patients immunisés",
-      ],
-      icon: <Microscope className="h-8 w-8 text-blue-600" />,
-    },
-    {
-      nom: "Laboratoire de Biologie Moléculaire",
-      description:
-        "Effectue les tests de détection génomique virale (NAT/PCR), permettant de réduire la période fenêtre sérologique et d'améliorer la détection précoce des infections.",
-      tests: [
-        "PCR VIH (période fenêtre réduite à 7 jours)",
-        "PCR VHB (période fenêtre réduite à 20 jours)",
-        "PCR VHC (période fenêtre réduite à 7 jours)",
-        "Contrôle de qualité interne des réactifs",
-        "Participation aux contrôles externes (EEQ)",
-      ],
-      icon: <Dna className="h-8 w-8 text-green-600" />,
-    },
-    {
-      nom: "Laboratoire de Contrôle Qualité",
-      description:
-        "Assure le contrôle de la conformité des produits sanguins préparés : volume, taux d'hémoglobine résiduel, contamination bactérienne, et respect des normes de stockage.",
-      tests: [
-        "Contrôle des CGR (Ht, Hb, volume, leucocytes résiduels)",
-        "Contrôle des PFC (facteurs de coagulation, fibrinogène)",
-        "Contrôle des CP (numération plaquettaire, pH, stérilité)",
-        "Monitoring température des enceintes de stockage",
-        "Contrôle microbiologique",
-      ],
-      icon: <FlaskConical className="h-8 w-8 text-amber-600" />,
-    },
-  ];
+function MaxWrap({ children, w = 1180 }: { children: ReactNode; w?: number }) {
+  return <div style={{ maxWidth: w, margin: "0 auto", padding: "var(--gutter)" }}>{children}</div>;
+}
 
+function PoleCard({
+  icon,
+  kicker,
+  title,
+  desc,
+  items,
+}: {
+  icon: string;
+  kicker: string;
+  title: string;
+  desc: string;
+  items: string[];
+}) {
   return (
-    <div className="bg-zinc-50 min-h-screen">
-      {/* Hero */}
-      <div className="bg-zinc-900 text-white py-16 md:py-24">
-        <div className="mx-auto max-w-7xl px-4">
-          <div className="flex flex-col md:flex-row items-center gap-12">
-            <div className="flex-1 text-center md:text-left">
-              <div className="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-sm font-medium backdrop-blur-sm border border-white/20 mb-6">
-                <FlaskConical className="h-4 w-4 mr-2" />
-                Excellence scientifique
-              </div>
-              <h1 className="text-4xl font-bold md:text-5xl mb-4">
-                Nos laboratoires
-              </h1>
-              <p className="mt-4 text-zinc-300 max-w-xl text-lg">
-                Le CNTS dispose de laboratoires de pointe pour assurer la sécurité
-                biologique de chaque produit sanguin distribué.
-              </p>
+    <Card pad={28} style={{ height: "100%" }}>
+      <div
+        style={{
+          width: 52,
+          height: 52,
+          borderRadius: 14,
+          background: "var(--red-50)",
+          color: "var(--brand)",
+          display: "grid",
+          placeItems: "center",
+          marginBottom: 16,
+        }}
+      >
+        <Icon name={icon} size={26} />
+      </div>
+      <div className="kicker" style={{ marginBottom: 6 }}>
+        {kicker}
+      </div>
+      <h3 className="font-serif" style={{ fontSize: 23, fontWeight: 600, letterSpacing: "-0.015em", marginBottom: 10 }}>
+        {title}
+      </h3>
+      <p style={{ fontSize: 15, color: "var(--ink-600)", lineHeight: 1.6, marginBottom: 18 }}>{desc}</p>
+      <div style={{ display: "grid", gap: 10 }}>
+        {items.map((t) => (
+          <div key={t} style={{ display: "flex", gap: 10, fontSize: 14.5, color: "var(--ink-700)", alignItems: "flex-start" }}>
+            <Icon name="check" size={17} style={{ color: "var(--brand)", flexShrink: 0, marginTop: 2 }} />
+            {t}
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+export default function LaboratoiresPage() {
+  const { qualification, patients } = laboratoires;
+  return (
+    <div>
+      <PageBanner
+        kicker="Services · Laboratoires"
+        title="Les laboratoires du CNTS"
+        sub="Un rôle crucial dans la sécurité transfusionnelle et le diagnostic médical."
+      />
+
+      <MaxWrap>
+        <div className="two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 44, alignItems: "center" }}>
+          <div>
+            <div className="kicker" style={{ marginBottom: 10 }}>
+              Deux pôles complémentaires
             </div>
-            <div className="hidden md:block w-80 h-64 relative shrink-0">
-              <Image src="/images/illustration-laboratoire.svg" alt="Illustration laboratoire" fill className="object-contain drop-shadow-2xl" priority />
-            </div>
+            <h2
+              className="font-serif"
+              style={{ fontSize: "clamp(24px,3vw,33px)", fontWeight: 600, letterSpacing: "-0.02em", lineHeight: 1.12, marginBottom: 16 }}
+            >
+              Sécuriser chaque don, accompagner chaque patient
+            </h2>
+            <p style={{ color: "var(--ink-600)", fontSize: 16, lineHeight: 1.65, marginBottom: 14 }}>{laboratoires.intro}</p>
+            <p style={{ color: "var(--ink-600)", fontSize: 16, lineHeight: 1.65 }}>
+              Le laboratoire de qualification biologique des poches de sang et le laboratoire d’analyses pour patients.
+            </p>
+          </div>
+          <div
+            style={{ height: 320, borderRadius: "var(--r-lg)", position: "relative", overflow: "hidden", border: "1px solid var(--line)" }}
+          >
+            <Image src="/images/labo_cnts.webp" alt="Laboratoire du CNTS" fill style={{ objectFit: "cover" }} />
           </div>
         </div>
-      </div>
+      </MaxWrap>
 
-      <div className="mx-auto max-w-7xl px-4 py-16 space-y-12">
-        {laboratoires.map((labo, idx) => (
-          <section
-            key={idx}
-            className="bg-white p-8 rounded-xl border border-zinc-200 shadow-sm"
-          >
-            <div className="flex items-start gap-4 mb-6">
-              <div className="w-14 h-14 bg-zinc-50 rounded-xl flex items-center justify-center shrink-0">
-                {labo.icon}
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-zinc-900">{labo.nom}</h2>
-                <p className="text-zinc-600 mt-2">{labo.description}</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-6 pl-0 md:pl-18">
-              {labo.tests.map((test, tidx) => (
-                <div
-                  key={tidx}
-                  className="flex items-start gap-2 p-3 bg-zinc-50 rounded-lg"
-                >
-                  <CheckCircle className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
-                  <span className="text-sm text-zinc-700">{test}</span>
-                </div>
-              ))}
-            </div>
-          </section>
-        ))}
-
-        {/* Accréditation */}
-        <section className="bg-blue-50 rounded-2xl p-8 md:p-12 border border-blue-100">
-          <h2 className="text-2xl font-bold text-zinc-900 mb-4">
-            Démarche qualité
-          </h2>
-          <p className="text-zinc-700 mb-4">
-            Les laboratoires du CNTS participent régulièrement aux programmes
-            d'évaluation externe de la qualité (EEQ) et suivent les
-            recommandations de l'OMS pour les services de transfusion sanguine.
-          </p>
-          <p className="text-zinc-700">
-            L'objectif est l'accréditation selon la norme ISO 15189 pour les
-            laboratoires de biologie médicale et la certification AfSBT (Africa
-            Society for Blood Transfusion).
-          </p>
-        </section>
-
-        {/* CTA */}
-        <section className="text-center">
-          <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Link
-              href="/services/produits-sanguins"
-              className="inline-flex items-center justify-center rounded-md bg-primary text-white font-bold px-8 py-3 hover:bg-primary/90 transition-colors"
-            >
-              Nos produits sanguins
-            </Link>
-            <Link
-              href="/recherche"
-              className="inline-flex items-center justify-center rounded-md border border-zinc-300 bg-white text-zinc-900 font-medium px-8 py-3 hover:bg-zinc-50 transition-colors"
-            >
-              Recherche & Innovation
-            </Link>
+      <section style={{ background: "var(--surface-1)", borderTop: "1px solid var(--line)", borderBottom: "1px solid var(--line)" }}>
+        <MaxWrap>
+          <SectionTitle kicker="Nos laboratoires" title="Qualification des dons et analyses pour patients" />
+          <div className="two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+            <PoleCard
+              icon="shield"
+              kicker="Sécurité transfusionnelle"
+              title={qualification.t}
+              desc={qualification.d}
+              items={qualification.tests}
+            />
+            <PoleCard
+              icon="flask"
+              kicker="Diagnostic médical"
+              title={patients.t}
+              desc={patients.d}
+              items={patients.tests}
+            />
           </div>
-        </section>
-      </div>
+        </MaxWrap>
+      </section>
+
+      <MaxWrap>
+        <Card pad={28} style={{ background: "var(--red-50)", borderColor: "var(--red-100)" }}>
+          <div style={{ display: "flex", gap: 24, alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
+            <div style={{ flex: "1 1 420px" }}>
+              <h2 className="font-serif" style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.015em", marginBottom: 8 }}>
+                Besoin d’une analyse ?
+              </h2>
+              <p style={{ color: "var(--ink-600)", fontSize: 15, lineHeight: 1.6 }}>
+                Choisissez le service souhaité, sélectionnez la date et l’heure qui vous conviennent : un membre de notre
+                équipe vous contactera pour confirmer le rendez-vous.
+              </p>
+              <div style={{ display: "flex", gap: 18, flexWrap: "wrap", marginTop: 12, fontSize: 14, color: "var(--ink-700)" }}>
+                <span style={{ display: "inline-flex", gap: 7, alignItems: "center" }}>
+                  <Icon name="clock" size={16} style={{ color: "var(--brand)" }} />
+                  {org.hours}
+                </span>
+                <span style={{ display: "inline-flex", gap: 7, alignItems: "center" }}>
+                  <Icon name="phone" size={16} style={{ color: "var(--brand)" }} />
+                  {org.phone}
+                </span>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <Button href="/espace-patient/rendez-vous" icon="calendarCheck">
+                Prendre rendez-vous
+              </Button>
+              <Button href="/services" variant="outline" iconRight="arrowR">
+                Tous les services
+              </Button>
+            </div>
+          </div>
+        </Card>
+      </MaxWrap>
     </div>
   );
 }

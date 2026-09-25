@@ -1,4 +1,5 @@
 import React from 'react';
+import { org } from "@/components/cnts/data";
 
 export default function MentionsLegales() {
   return (
@@ -11,17 +12,17 @@ export default function MentionsLegales() {
           <h2 className="text-xl font-semibold text-zinc-900 mb-4">1. Éditeur du site</h2>
           <p>
             Le présent site est la propriété du <strong>Centre National de Transfusion Sanguine (CNTS)</strong> du Sénégal.<br />
-            Établissement public de santé.<br />
-            <strong>Adresse :</strong> Avenue Cheikh Anta Diop, Dakar, Sénégal<br />
-            <strong>Téléphone :</strong> +221 33 821 38 67<br />
-            <strong>Email :</strong> contact@cnts.sn
+            Établissement public de santé placé sous la tutelle du {org.tutelle}.<br />
+            <strong>Adresse :</strong> {org.address} — {org.bp}<br />
+            <strong>Téléphone :</strong> {org.phone}<br />
+            <strong>Email :</strong> {org.email}
           </p>
         </section>
 
         <section>
           <h2 className="text-xl font-semibold text-zinc-900 mb-4">2. Directeur de la publication</h2>
           <p>
-            Le Directeur de la publication est le Directeur du CNTS.
+            Le Directeur de la publication est le Directeur du CNTS, {org.director.name}.
           </p>
         </section>
 

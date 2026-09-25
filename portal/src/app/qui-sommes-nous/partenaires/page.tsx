@@ -1,209 +1,230 @@
-import Link from "next/link";
-import { Handshake, Globe, Building2, Heart, GraduationCap } from "lucide-react";
+import Image from "next/image";
+import type { ReactNode } from "react";
+import { Button, Card, PageBanner, SectionTitle } from "@/components/cnts/primitives";
+import { Icon } from "@/components/cnts/icon";
+import { partenaires } from "@/components/cnts/data";
+import { apiClient } from "@/lib/api-client";
+import { logger } from "@/lib/logger";
 
 export const metadata = {
-  title: "Nos partenaires — SGI-CNTS",
+  title: "Nos partenaires — CNTS Sénégal",
   description:
-    "Les partenaires nationaux et internationaux du CNTS : institutions, ONG, organisations internationales et partenaires techniques.",
+    "Les partenaires nationaux et internationaux du CNTS : institutions, universités, organisations internationales et agences de développement.",
 };
 
-export default function PartenairesPage() {
-  const partenairesInstitutionnels = [
-    {
-      nom: "Ministère de la Santé et de l'Action Sociale",
-      description:
-        "Tutelle institutionnelle du CNTS. Définit les politiques nationales de santé et assure le financement public de la transfusion sanguine.",
-      type: "Tutelle",
-    },
-    {
-      nom: "Programme National de Transfusion Sanguine (PNTS)",
-      description:
-        "Coordonne la mise en œuvre de la politique nationale de transfusion sanguine et assure le suivi des indicateurs de performance.",
-      type: "Programme",
-    },
-    {
-      nom: "Direction de la Pharmacie et du Médicament",
-      description:
-        "Assure la réglementation et le contrôle de la qualité des produits sanguins labiles au niveau national.",
-      type: "Réglementation",
-    },
-    {
-      nom: "Hôpitaux et Centres de Santé du Sénégal",
-      description:
-        "Partenaires de proximité pour la distribution des produits sanguins et le suivi transfusionnel des patients.",
-      type: "Soins",
-    },
-  ];
+export const dynamic = "force-dynamic";
 
-  const partenairesInternationaux = [
-    {
-      nom: "Organisation Mondiale de la Santé (OMS)",
-      description:
-        "Appui technique et normatif pour la sécurité transfusionnelle. Fournit les recommandations et les lignes directrices internationales.",
-      domaine: "Santé publique",
-    },
-    {
-      nom: "Croix-Rouge / Croissant-Rouge",
-      description:
-        "Partenaire historique pour la promotion du don de sang bénévole et l'organisation de collectes mobiles.",
-      domaine: "Humanitaire",
-    },
-    {
-      nom: "Etablissement Français du Sang (EFS)",
-      description:
-        "Coopération technique bilatérale : formation du personnel, transfert de technologies, échanges d'expertise.",
-      domaine: "Coopération technique",
-    },
-    {
-      nom: "ISBT (International Society of Blood Transfusion)",
-      description:
-        "Référentiel scientifique et technique. Le CNTS applique la norme ISBT 128 pour l'étiquetage et la traçabilité.",
-      domaine: "Standards",
-    },
-    {
-      nom: "AABB (Association for the Advancement of Blood & Biotherapies)",
-      description:
-        "Formation continue et accréditation. Fournit les normes de bonnes pratiques pour les services de transfusion.",
-      domaine: "Accréditation",
-    },
-    {
-      nom: "Africa Society for Blood Transfusion (AfSBT)",
-      description:
-        "Réseau panafricain pour l'amélioration de la transfusion sanguine en Afrique. Échanges d'expériences et certification.",
-      domaine: "Réseau africain",
-    },
-  ];
+type Partner = {
+  name: string;
+  description?: string | null;
+  category: string;
+  type?: string | null;
+  logo_url?: string | null;
+  website_url?: string | null;
+};
 
-  const partenairesAcademiques = [
-    {
-      nom: "Université Cheikh Anta Diop (UCAD)",
-      description:
-        "Partenariat recherche et formation : stages, thèses, projets de recherche en immunohématologie et virologie.",
-    },
-    {
-      nom: "Université Gaston Berger (UGB)",
-      description:
-        "Collaboration sur les projets de santé publique et d'épidémiologie liés à la transfusion sanguine.",
-    },
-    {
-      nom: "Institut Pasteur de Dakar",
-      description:
-        "Partenariat scientifique pour les analyses virologiques avancées et la surveillance épidémiologique.",
-    },
-  ];
+type PartnerSection = { category: string; partners: Partner[] };
+
+const CATEGORY_ICONS: Record<string, string> = {
+  Institutionnel: "building",
+  International: "globe",
+  Académique: "award",
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  Institutionnel: "Partenaires institutionnels",
+  International: "Partenaires internationaux",
+  Académique: "Partenaires académiques",
+};
+
+// Contenu de repli (repris du site officiel) affiché tant qu'aucun partenaire n'a été saisi dans le CMS.
+const FALLBACK_PARTNERS: Partner[] = partenaires;
+
+function groupByCategory(items: Partner[]): PartnerSection[] {
+  const order: string[] = [];
+  const map = new Map<string, Partner[]>();
+  for (const item of items) {
+    if (!map.has(item.category)) {
+      map.set(item.category, []);
+      order.push(item.category);
+    }
+    map.get(item.category)!.push(item);
+  }
+  return order.map((category) => ({ category, partners: map.get(category)! }));
+}
+
+function MaxWrap({ children, w = 1180 }: { children: ReactNode; w?: number }) {
+  return <div style={{ maxWidth: w, margin: "0 auto", padding: "var(--gutter)" }}>{children}</div>;
+}
+
+function initials(name: string) {
+  return name
+    .replace(/\(.*?\)/g, "")
+    .split(/[\s—-]+/)
+    .filter((w) => w.length > 2 && /^[A-ZÀ-Ý]/.test(w))
+    .slice(0, 3)
+    .map((w) => w[0])
+    .join("");
+}
+
+function LogoTile({ p }: { p: Partner }) {
+  return (
+    <div
+      style={{
+        position: "relative",
+        height: 96,
+        borderRadius: "var(--r-md)",
+        background: "#fff",
+        border: "1px solid var(--line)",
+        marginBottom: 16,
+        overflow: "hidden",
+        display: "grid",
+        placeItems: "center",
+      }}
+    >
+      {p.logo_url ? (
+        <div style={{ position: "absolute", inset: 14 }}>
+          <Image src={p.logo_url} alt={`Logo ${p.name}`} fill sizes="240px" style={{ objectFit: "contain" }} />
+        </div>
+      ) : (
+        <span
+          className="font-serif"
+          aria-hidden
+          style={{ fontSize: 26, fontWeight: 600, color: "var(--red-700)", letterSpacing: "0.02em" }}
+        >
+          {initials(p.name) || <Icon name="building" size={28} />}
+        </span>
+      )}
+    </div>
+  );
+}
+
+export default async function PartenairesPage() {
+  let partners: Partner[] = FALLBACK_PARTNERS;
+
+  try {
+    const data = await apiClient.partners.list({ published_only: true });
+    if (data && data.length > 0) {
+      partners = data;
+    }
+  } catch (error) {
+    logger.error({ err: error }, "Failed to fetch partners");
+  }
+
+  const sections = groupByCategory(partners);
 
   return (
-    <div className="bg-zinc-50 min-h-screen">
-      {/* Hero */}
-      <div className="bg-zinc-900 text-white py-16 md:py-24">
-        <div className="mx-auto max-w-7xl px-4 text-center">
-          <div className="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-sm font-medium backdrop-blur-sm border border-white/20 mb-6">
-            <Handshake className="h-4 w-4 mr-2" />
-            Ensemble pour la transfusion
-          </div>
-          <h1 className="text-4xl font-bold md:text-5xl mb-4">
-            Nos partenaires
-          </h1>
-          <p className="mt-4 text-zinc-300 max-w-2xl mx-auto text-lg">
-            Le CNTS collabore avec de nombreux partenaires nationaux et
-            internationaux pour garantir la sécurité transfusionnelle au
-            Sénégal.
-          </p>
-        </div>
-      </div>
+    <div>
+      <PageBanner
+        kicker="Le CNTS · Partenaires"
+        title="Ensemble pour la sécurité transfusionnelle"
+        sub="Le Centre National de Transfusion Sanguine collabore avec plusieurs partenaires nationaux et internationaux pour renforcer la sécurité transfusionnelle et promouvoir le don volontaire."
+      />
 
-      <div className="mx-auto max-w-7xl px-4 py-16 space-y-20">
-        {/* Partenaires institutionnels */}
-        <section>
-          <div className="flex items-center gap-3 mb-8">
-            <Building2 className="h-7 w-7 text-primary" />
-            <h2 className="text-3xl font-bold text-zinc-900">
-              Partenaires institutionnels
-            </h2>
-          </div>
+      <MaxWrap w={920}>
+        <p style={{ color: "var(--ink-600)", fontSize: 16.5, lineHeight: 1.65, textAlign: "center" }}>
+          Ces collaborations permettent d’assurer la formation du personnel, la modernisation des infrastructures et la
+          mise en œuvre des programmes de recherche et de sensibilisation.
+        </p>
+      </MaxWrap>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {partenairesInstitutionnels.map((p, idx) => (
-              <div
-                key={idx}
-                className="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm hover:shadow-md transition-shadow"
-              >
-                <span className="inline-block text-xs font-semibold px-2.5 py-1 rounded-full bg-red-50 text-primary mb-3">
-                  {p.type}
+      {sections.map((section, si) => (
+        <section
+          key={section.category}
+          style={
+            si % 2 === 0
+              ? { background: "var(--surface-1)", borderTop: "1px solid var(--line)", borderBottom: "1px solid var(--line)" }
+              : undefined
+          }
+        >
+          <MaxWrap>
+            <SectionTitle
+              kicker={section.category}
+              title={
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 12 }}>
+                  <span style={{ color: "var(--brand)", display: "inline-flex" }}>
+                    <Icon name={CATEGORY_ICONS[section.category] ?? "users"} size={26} />
+                  </span>
+                  {CATEGORY_LABELS[section.category] ?? section.category}
                 </span>
-                <h3 className="text-lg font-bold text-zinc-900">{p.nom}</h3>
-                <p className="text-zinc-600 mt-2">{p.description}</p>
-              </div>
-            ))}
-          </div>
+              }
+            />
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 18 }}>
+              {section.partners.map((p, idx) => (
+                <Card key={p.name + idx} pad={18} style={{ display: "flex", flexDirection: "column" }}>
+                  <LogoTile p={p} />
+                  {p.type && (
+                    <span
+                      style={{
+                        alignSelf: "flex-start",
+                        padding: "3px 10px",
+                        borderRadius: "var(--r-pill)",
+                        background: "var(--red-50)",
+                        color: "var(--brand)",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        marginBottom: 8,
+                      }}
+                    >
+                      {p.type}
+                    </span>
+                  )}
+                  <h3 style={{ fontSize: 15.5, fontWeight: 700, color: "var(--ink-900)", lineHeight: 1.3 }}>{p.name}</h3>
+                  {p.description && (
+                    <p style={{ fontSize: 13.5, color: "var(--ink-600)", lineHeight: 1.5, marginTop: 6, flex: 1 }}>
+                      {p.description}
+                    </p>
+                  )}
+                  {p.website_url && (
+                    <a
+                      href={p.website_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                        marginTop: 12,
+                        fontSize: 13.5,
+                        fontWeight: 700,
+                        color: "var(--brand)",
+                        textDecoration: "none",
+                      }}
+                    >
+                      Visiter le site <Icon name="arrowR" size={14} />
+                    </a>
+                  )}
+                </Card>
+              ))}
+            </div>
+          </MaxWrap>
         </section>
+      ))}
 
-        {/* Partenaires internationaux */}
-        <section>
-          <div className="flex items-center gap-3 mb-8">
-            <Globe className="h-7 w-7 text-primary" />
-            <h2 className="text-3xl font-bold text-zinc-900">
-              Partenaires internationaux
-            </h2>
+      <MaxWrap w={920}>
+        <div
+          style={{
+            textAlign: "center",
+            padding: "36px 28px",
+            borderRadius: "var(--r-lg)",
+            background: "var(--red-50)",
+          }}
+        >
+          <div style={{ color: "var(--brand)", display: "inline-flex", marginBottom: 12 }}>
+            <Icon name="heart" size={30} />
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {partenairesInternationaux.map((p, idx) => (
-              <div
-                key={idx}
-                className="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm"
-              >
-                <span className="inline-block text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 mb-3">
-                  {p.domaine}
-                </span>
-                <h3 className="font-bold text-zinc-900">{p.nom}</h3>
-                <p className="text-zinc-600 mt-2 text-sm">{p.description}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Partenaires académiques */}
-        <section>
-          <div className="flex items-center gap-3 mb-8">
-            <GraduationCap className="h-7 w-7 text-primary" />
-            <h2 className="text-3xl font-bold text-zinc-900">
-              Partenaires académiques
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {partenairesAcademiques.map((p, idx) => (
-              <div
-                key={idx}
-                className="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm"
-              >
-                <h3 className="font-bold text-zinc-900">{p.nom}</h3>
-                <p className="text-zinc-600 mt-2 text-sm">{p.description}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Devenir partenaire */}
-        <section className="bg-primary/5 rounded-2xl p-8 md:p-12 text-center">
-          <Heart className="h-10 w-10 text-primary mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-zinc-900 mb-4">
-            Devenir partenaire du CNTS
-          </h2>
-          <p className="text-zinc-600 max-w-xl mx-auto mb-6">
-            Vous souhaitez contribuer à l'amélioration de la transfusion
-            sanguine au Sénégal ? Contactez-nous pour explorer les possibilités
-            de partenariat.
-          </p>
-          <Link
-            href="/contact"
-            className="inline-flex items-center justify-center rounded-md bg-primary text-white font-bold px-8 py-3 hover:bg-primary/90 transition-colors"
+          <p
+            className="font-serif"
+            style={{ fontSize: "clamp(18px, 2.2vw, 22px)", lineHeight: 1.45, color: "var(--ink-900)", marginBottom: 20 }}
           >
-            Nous contacter
-          </Link>
-        </section>
-      </div>
+            Grâce à ce réseau de partenaires, le CNTS consolide sa place d’institution de référence et continue
+            d’améliorer la disponibilité du sang sur tout le territoire national.
+          </p>
+          <Button href="/contact" iconRight="arrowR">
+            Devenir partenaire — nous contacter
+          </Button>
+        </div>
+      </MaxWrap>
     </div>
   );
 }

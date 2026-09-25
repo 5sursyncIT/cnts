@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { org } from "@/components/cnts/data";
 import { Download, Mail, Phone, FileText, Image as ImageIcon, ExternalLink } from "lucide-react";
 import { apiClient } from "@/lib/api-client";
 import { logger } from "@/lib/logger";
@@ -18,7 +19,7 @@ export default async function PressePage() {
     // Récupération parallèle des communiqués et des ressources
     const [releasesData, resourcesData] = await Promise.all([
       apiClient.articles.list({ category: "COMMUNIQUE", published_only: true }),
-      apiClient.articles.list({ category: "Ressource", published_only: true })
+      apiClient.articles.list({ category: "RESSOURCE", published_only: true })
     ]);
     
     pressReleases = releasesData;
@@ -148,7 +149,7 @@ export default async function PressePage() {
                   </div>
                   <div>
                     <div className="text-xs font-medium text-zinc-500 uppercase">Email</div>
-                    <a href="mailto:presse@cnts.sn" className="text-zinc-900 font-medium hover:text-primary">presse@cnts.sn</a>
+                    <a href={`mailto:${org.emailCommunication}`} className="text-zinc-900 font-medium hover:text-primary">{org.emailCommunication}</a>
                   </div>
                 </div>
 
@@ -158,15 +159,11 @@ export default async function PressePage() {
                   </div>
                   <div>
                     <div className="text-xs font-medium text-zinc-500 uppercase">Téléphone</div>
-                    <a href="tel:+221338000000" className="text-zinc-900 font-medium hover:text-primary">+221 33 821 82 72</a>
+                    <a href={`tel:${org.phone.replace(/\s/g, "")}`} className="text-zinc-900 font-medium hover:text-primary">{org.phone}</a>
                   </div>
                 </div>
               </div>
 
-              <hr className="my-6 border-zinc-100" />
-
-              <h4 className="font-semibold text-zinc-900 mb-2">Responsable Communication</h4>
-              <p className="text-sm text-zinc-600">Mme. Aminata Diallo</p>
             </div>
 
             {/* Chiffres Clés Card */}

@@ -25,8 +25,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Force bypass MFA check in middleware if disabled globally
-  const disableMfa = process.env.BACKOFFICE_DISABLE_MFA === "1" || true; // Force true for now as requested
+  // MFA désactivé par défaut tant que le flux MFA backend n'est pas finalisé.
+  // Définir BACKOFFICE_DISABLE_MFA="0" pour l'exiger une fois le flux complet.
+  const disableMfa = process.env.BACKOFFICE_DISABLE_MFA !== "0";
   if (!disableMfa && !session.mfa && pathname !== "/mfa") {
     const url = request.nextUrl.clone();
     url.pathname = "/mfa";

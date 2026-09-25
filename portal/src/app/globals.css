@@ -1,21 +1,103 @@
 @import "tailwindcss";
 
+/* ============================================================
+   CNTS Sénégal — Design Tokens
+   Direction: institutionnelle & sérieuse · rouge sang · sobre
+   ============================================================ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --primary: #d32f2f;
+  /* ---- Brand red scale (anchored to the logo's deep crimson) ---- */
+  --red-50:  oklch(0.967 0.018 22);
+  --red-100: oklch(0.930 0.038 22);
+  --red-200: oklch(0.870 0.075 23);
+  --red-300: oklch(0.780 0.120 24);
+  --red-400: oklch(0.660 0.165 25);
+  --red-500: oklch(0.575 0.192 26);
+  --red-600: oklch(0.505 0.190 26);   /* primary brand */
+  --red-700: oklch(0.435 0.168 25);
+  --red-800: oklch(0.365 0.140 24);
+  --red-900: oklch(0.300 0.110 23);   /* logo deep maroon */
+  --red-950: oklch(0.235 0.085 23);
+
+  --brand:        var(--red-600);
+  --brand-strong: var(--red-700);
+  --brand-deep:   var(--red-900);
+
+  /* ---- Warm neutral ink + surfaces ---- */
+  --ink-900: oklch(0.225 0.012 45);
+  --ink-800: oklch(0.310 0.012 45);
+  --ink-700: oklch(0.410 0.012 45);
+  --ink-600: oklch(0.510 0.010 45);
+  --ink-500: oklch(0.615 0.009 45);
+  --ink-400: oklch(0.720 0.007 50);
+  --ink-300: oklch(0.820 0.006 50);
+
+  --line:        oklch(0.910 0.006 50);
+  --line-soft:   oklch(0.945 0.005 50);
+  --line-strong: oklch(0.845 0.008 45);
+
+  --surface:   #ffffff;
+  --surface-1: oklch(0.989 0.003 60);
+  --surface-2: oklch(0.975 0.005 55);
+  --surface-3: oklch(0.958 0.007 50);
+  --paper:     oklch(0.982 0.004 58);
+
+  /* dark institutional band (footer / pro shell) */
+  --night-900: oklch(0.205 0.018 25);
+  --night-800: oklch(0.255 0.024 24);
+  --night-700: oklch(0.320 0.028 24);
+
+  /* ---- Functional / status ---- */
+  --ok:    oklch(0.585 0.130 155);
+  --ok-bg: oklch(0.955 0.035 155);
+  --warn:    oklch(0.700 0.150 70);
+  --warn-bg: oklch(0.960 0.055 80);
+  --crit:    oklch(0.540 0.205 27);
+  --crit-bg: oklch(0.955 0.040 25);
+  --info:    oklch(0.560 0.110 250);
+  --info-bg: oklch(0.960 0.030 250);
+
+  /* ---- Typography (wired to next/font variables in layout.tsx) ---- */
+  --font-sans:  var(--font-public-sans), "Public Sans", system-ui, -apple-system, sans-serif;
+  --font-serif: var(--font-newsreader), "Newsreader", Georgia, "Times New Roman", serif;
+  --font-mono:  var(--font-spline-mono), "Spline Sans Mono", ui-monospace, "SF Mono", monospace;
+
+  --tracking-tight: -0.02em;
+  --tracking-wide: 0.04em;
+  --tracking-label: 0.14em;
+
+  /* ---- Radii ---- */
+  --r-xs: 6px;
+  --r-sm: 9px;
+  --r-md: 13px;
+  --r-lg: 18px;
+  --r-xl: 26px;
+  --r-pill: 999px;
+
+  /* ---- Shadows (soft, institutional, low contrast) ---- */
+  --sh-xs: 0 1px 2px oklch(0.3 0.03 25 / 0.06);
+  --sh-sm: 0 1px 2px oklch(0.3 0.03 25 / 0.05), 0 2px 6px oklch(0.3 0.03 25 / 0.05);
+  --sh-md: 0 2px 4px oklch(0.3 0.03 25 / 0.05), 0 8px 22px oklch(0.3 0.03 25 / 0.08);
+  --sh-lg: 0 8px 16px oklch(0.3 0.03 25 / 0.07), 0 24px 60px oklch(0.3 0.03 25 / 0.12);
+  --ring: 0 0 0 4px oklch(0.575 0.192 26 / 0.16);
+
+  /* ---- Spacing rhythm ---- */
+  --gutter: clamp(20px, 4vw, 56px);
+
+  /* ---- Legacy aliases (kept for any Tailwind utility usage) ---- */
+  --background: var(--paper);
+  --foreground: var(--ink-900);
+  --primary: var(--brand);
   --primary-foreground: #ffffff;
-  --secondary: #f3f4f6;
-  --secondary-foreground: #1f2937;
-  --muted: #f3f4f6;
-  --muted-foreground: #6b7280;
-  --accent: #fef2f2;
-  --accent-foreground: #991b1b;
-  --destructive: #ef4444;
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--ink-800);
+  --muted: var(--surface-3);
+  --muted-foreground: var(--ink-500);
+  --accent: var(--red-50);
+  --accent-foreground: var(--red-700);
+  --destructive: var(--crit);
   --destructive-foreground: #ffffff;
-  --border: #e5e7eb;
-  --input: #e5e7eb;
-  --ring: #d32f2f;
+  --border: var(--line);
+  --input: var(--line);
 }
 
 @theme inline {
@@ -34,19 +116,128 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+
+  /* brand scale exposed to Tailwind utilities */
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-deep: var(--brand-deep);
+  --color-ink-900: var(--ink-900);
+  --color-ink-700: var(--ink-700);
+  --color-ink-600: var(--ink-600);
+  --color-ink-500: var(--ink-500);
+
+  --font-sans: var(--font-sans);
+  --font-serif: var(--font-serif);
+  --font-mono: var(--font-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  font-family: var(--font-sans);
+  color: var(--ink-900);
+  background: var(--paper);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-synthesis: none;
+}
+
+::selection { background: var(--red-200); color: var(--red-950); }
+
+h1, h2, h3, h4, p { margin: 0; }
+
+.font-serif { font-family: var(--font-serif); }
+.font-mono  { font-family: var(--font-mono); }
+
+/* eyebrow / kicker label */
+.kicker {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--brand);
+}
+
+/* striped image placeholder */
+.ph {
+  position: relative;
+  background-color: var(--surface-3);
+  background-image: repeating-linear-gradient(
+    -45deg,
+    oklch(0.92 0.02 25 / 0.7) 0 10px,
+    oklch(0.96 0.012 40 / 0.7) 10px 20px
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  color: var(--ink-600);
+}
+.ph::after {
+  content: attr(data-label);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-500);
+  padding: 4px 10px;
+  background: oklch(1 0 0 / 0.7);
+  border-radius: var(--r-pill);
+  text-align: center;
+}
+
+/* focus visibility */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+  border-radius: var(--r-sm);
+}
+
+/* thin scrollbars inside app */
+.scroll-thin::-webkit-scrollbar { width: 10px; height: 10px; }
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: var(--line-strong); border-radius: 999px;
+  border: 3px solid var(--surface);
+}
+
+/* urgent ticker pulse */
+@keyframes cntsPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(255,255,255,.55); }
+  70%  { box-shadow: 0 0 0 7px rgba(255,255,255,0); }
+  100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); }
+}
+
+/* shared content container */
+.cnts-container {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: var(--gutter);
+}
+
+/* ---- Responsive grid helpers (ported from design kit) ---- */
+@media (max-width: 1040px) {
+  .desktop-nav { display: none !important; }
+  .mobile-only { display: flex !important; }
+  .util-addr { display: none !important; }
+}
+@media (max-width: 1000px) {
+  .two-col, .donor-grid, .hero-grid { grid-template-columns: 1fr !important; }
+  .grid-4 { grid-template-columns: repeat(2, 1fr) !important; }
+  .hero-photo { display: none !important; }
+  .pro-aside { display: none !important; }
+}
+@media (max-width: 760px) {
+  .grid-3, .footer-grid { grid-template-columns: 1fr 1fr !important; }
+  .step-label { display: none !important; }
+  .util-left span:nth-child(2) { display: none !important; }
+}
+@media (max-width: 640px) {
+  .grid-3 { grid-template-columns: 1fr !important; }
+}
+@media (max-width: 560px) {
+  .grid-3, .grid-4, .footer-grid { grid-template-columns: 1fr !important; }
+  .day-grid { grid-template-columns: repeat(3, 1fr) !important; }
 }

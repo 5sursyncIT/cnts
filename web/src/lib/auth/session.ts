@@ -10,6 +10,12 @@ export type BackOfficeSession = {
 
 export const sessionCookieName = "cnts_bo_session";
 
+// Cookie httpOnly portant le jeton d'accès du backend FastAPI. Apache route
+// /api/* directement vers le backend : ce cookie (envoyé automatiquement car
+// sur le même domaine, path "/") permet au backend d'authentifier les appels
+// du navigateur via la dépendance `access_cookie_scheme`.
+export const accessCookieName = "cnts_access";
+
 function getSecretKey() {
   const secret = process.env.BACKOFFICE_SESSION_SECRET ?? "dev-only-change-me";
   return new TextEncoder().encode(secret);

@@ -1,213 +1,194 @@
 import Image from "next/image";
-import Link from "next/link";
-import { Droplet, Thermometer, Clock, Shield, AlertCircle } from "lucide-react";
+import type { ReactNode } from "react";
+import { Button, Card, PageBanner, SectionTitle } from "@/components/cnts/primitives";
+import { Icon } from "@/components/cnts/icon";
+import { ppcd, products, reseau } from "@/components/cnts/data";
 
 export const metadata = {
-  title: "Produits Sanguins — SGI-CNTS",
+  title: "Produits sanguins (PPCD) — CNTS Sénégal",
   description:
-    "Les produits sanguins labiles préparés par le CNTS : concentrés de globules rouges, plasma frais congelé, concentrés plaquettaires.",
+    "Prélèvement, production, conservation et distribution des produits sanguins labiles : la chaîne transfusionnelle du CNTS, du donneur au receveur.",
 };
 
-export default function ProduitsSanguinsPage() {
-  const produits = [
-    {
-      nom: "Concentré de Globules Rouges (CGR)",
-      code: "CGR",
-      description:
-        "Produit de référence pour la transfusion. Contient les globules rouges séparés du sang total par centrifugation.",
-      indications: [
-        "Anémies sévères (Hb < 7 g/dL)",
-        "Hémorragies aiguës",
-        "Chirurgies majeures",
-        "Drépanocytose (échanges transfusionnels)",
-      ],
-      conservation: "2 à 6°C pendant 42 jours",
-      volume: "250 à 300 ml",
-      couleur: "bg-red-50 border-red-200 text-red-700",
-    },
-    {
-      nom: "Plasma Frais Congelé (PFC)",
-      code: "PFC",
-      description:
-        "Fraction liquide du sang contenant les facteurs de coagulation. Congelé dans les 6 heures suivant le prélèvement.",
-      indications: [
-        "Troubles de la coagulation",
-        "CIVD (coagulation intravasculaire disséminée)",
-        "Échanges plasmatiques",
-        "Brûlures étendues",
-      ],
-      conservation: "-25°C pendant 1 an",
-      volume: "200 à 250 ml",
-      couleur: "bg-amber-50 border-amber-200 text-amber-700",
-    },
-    {
-      nom: "Concentré Plaquettaire (CP)",
-      code: "CP",
-      description:
-        "Préparation riche en plaquettes sanguines, obtenue par centrifugation du sang total ou par aphérèse.",
-      indications: [
-        "Thrombopénies sévères (< 20 000/mm³)",
-        "Chimiothérapies anticancéreuses",
-        "Leucémies et aplasies médullaires",
-        "Chirurgies avec risque hémorragique",
-      ],
-      conservation: "20 à 24°C sous agitation pendant 5 jours",
-      volume: "50 à 60 ml (standard) / 200 ml (aphérèse)",
-      couleur: "bg-orange-50 border-orange-200 text-orange-700",
-    },
-    {
-      nom: "Sang Total (ST)",
-      code: "ST",
-      description:
-        "Sang complet non fractionné. Utilisé principalement en situation d'urgence ou quand le fractionnement n'est pas disponible.",
-      indications: [
-        "Hémorragies massives",
-        "Exsanguino-transfusions néonatales",
-        "Situations d'urgence en zone reculée",
-      ],
-      conservation: "2 à 6°C pendant 35 jours",
-      volume: "450 ml (± 10%)",
-      couleur: "bg-rose-50 border-rose-200 text-rose-700",
-    },
-  ];
+function MaxWrap({ children, w = 1180 }: { children: ReactNode; w?: number }) {
+  return <div style={{ maxWidth: w, margin: "0 auto", padding: "var(--gutter)" }}>{children}</div>;
+}
 
+export default function ProduitsSanguinsPage() {
   return (
-    <div className="bg-zinc-50 min-h-screen">
-      {/* Hero */}
-      <div className="bg-zinc-900 text-white py-16 md:py-24">
-        <div className="mx-auto max-w-7xl px-4">
-          <div className="flex flex-col md:flex-row items-center gap-12">
-            <div className="flex-1 text-center md:text-left">
-              <div className="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-sm font-medium backdrop-blur-sm border border-white/20 mb-6">
-                <Droplet className="h-4 w-4 mr-2 fill-current text-red-500" />
-                Produits Sanguins Labiles
+    <div>
+      <PageBanner
+        kicker="Services · PPCD"
+        title="Prélèvement, Production, Conservation et Distribution du sang"
+        sub="Garantir la qualité, la sécurité et la disponibilité des produits sanguins labiles sur tout le territoire."
+      />
+
+      {/* Chaîne PPCD */}
+      <MaxWrap>
+        <SectionTitle kicker="Le cœur technique du CNTS" title="Du donneur au receveur, une chaîne continue" sub={ppcd.intro} />
+        <div className="grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
+          {ppcd.etapes.map((e, i) => (
+            <Card key={e.t} pad={22} style={{ height: "100%" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+                <div
+                  style={{
+                    width: 46,
+                    height: 46,
+                    borderRadius: 13,
+                    background: "var(--red-50)",
+                    color: "var(--brand)",
+                    display: "grid",
+                    placeItems: "center",
+                  }}
+                >
+                  <Icon name={e.icon} size={23} />
+                </div>
+                <span className="font-serif" style={{ fontSize: 28, fontWeight: 600, color: "var(--ink-300)" }}>
+                  {String(i + 1).padStart(2, "0")}
+                </span>
               </div>
-              <h1 className="text-4xl font-bold md:text-5xl mb-4">
-                Nos produits sanguins
-              </h1>
-              <p className="mt-4 text-zinc-300 max-w-xl text-lg">
-                Le CNTS prépare et distribue des produits sanguins labiles (PSL) de
-                qualité, conformes aux normes ISBT 128, pour l'ensemble des
-                établissements de santé du Sénégal.
-              </p>
+              <h3 style={{ fontSize: 16.5, fontWeight: 700, marginBottom: 8 }}>{e.t}</h3>
+              <p style={{ fontSize: 14, color: "var(--ink-600)", lineHeight: 1.55 }}>{e.d}</p>
+            </Card>
+          ))}
+        </div>
+      </MaxWrap>
+
+      {/* Produits */}
+      <section style={{ background: "var(--surface-1)", borderTop: "1px solid var(--line)", borderBottom: "1px solid var(--line)" }}>
+        <MaxWrap>
+          <SectionTitle
+            kicker="Produits sanguins labiles"
+            title="Une utilisation thérapeutique ciblée"
+            sub="Une fois qualifié, le sang total est séparé en ses différents composants, pour une utilisation adaptée à chaque patient et pathologie."
+          />
+          <div className="two-col" style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 18 }}>
+            {products.map((p) => (
+              <Card key={p.name} pad={24}>
+                <div style={{ display: "flex", gap: 16 }}>
+                  <div
+                    style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: 13,
+                      background: "var(--red-50)",
+                      color: "var(--brand)",
+                      display: "grid",
+                      placeItems: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Icon name={p.icon} size={24} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, gap: 10, flexWrap: "wrap" }}>
+                      <h3 style={{ fontSize: 16.5, fontWeight: 700 }}>{p.name}</h3>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-500)", whiteSpace: "nowrap" }}>
+                        Conservation · {p.life}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: 14, color: "var(--ink-600)", lineHeight: 1.5 }}>{p.desc}</p>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </MaxWrap>
+      </section>
+
+      {/* Conservation + distribution */}
+      <MaxWrap>
+        <div className="two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32, alignItems: "start" }}>
+          <div>
+            <div className="kicker" style={{ marginBottom: 10 }}>
+              Conservation
             </div>
-            <div className="hidden md:block w-72 h-56 relative shrink-0">
-              <Image src="/images/illustration-don-sang.svg" alt="Produits sanguins" fill className="object-contain drop-shadow-2xl" priority />
+            <h2
+              className="font-serif"
+              style={{ fontSize: "clamp(23px,2.8vw,30px)", fontWeight: 600, letterSpacing: "-0.02em", marginBottom: 12 }}
+            >
+              À température contrôlée
+            </h2>
+            <p style={{ color: "var(--ink-600)", fontSize: 15, lineHeight: 1.6, marginBottom: 18 }}>
+              Les produits sont conservés à température contrôlée pour préserver leur efficacité. Des systèmes automatisés
+              garantissent la traçabilité et le respect des normes.
+            </p>
+            <Card pad={0} style={{ overflow: "hidden" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14.5 }}>
+                <thead>
+                  <tr style={{ background: "var(--surface-1)", textAlign: "left" }}>
+                    <th style={{ padding: "12px 18px", fontWeight: 700, color: "var(--ink-700)" }}>Produit</th>
+                    <th style={{ padding: "12px 18px", fontWeight: 700, color: "var(--ink-700)" }}>Température</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ppcd.conservation.map((c) => (
+                    <tr key={c.produit} style={{ borderTop: "1px solid var(--line)" }}>
+                      <td style={{ padding: "12px 18px", color: "var(--ink-800)" }}>{c.produit}</td>
+                      <td style={{ padding: "12px 18px", fontWeight: 700, color: "var(--brand)", whiteSpace: "nowrap" }}>{c.temp}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Card>
+          </div>
+
+          <div>
+            <div className="kicker" style={{ marginBottom: 10 }}>
+              Distribution
+            </div>
+            <h2
+              className="font-serif"
+              style={{ fontSize: "clamp(23px,2.8vw,30px)", fontWeight: 600, letterSpacing: "-0.02em", marginBottom: 12 }}
+            >
+              Une fourniture continue et sécurisée
+            </h2>
+            <p style={{ color: "var(--ink-600)", fontSize: 15, lineHeight: 1.6, marginBottom: 18 }}>
+              Le CNTS assure la livraison quotidienne des produits sanguins labiles à Dakar et sur l’ensemble du territoire
+              national. Les transports frigorifiques maintiennent la chaîne du froid jusqu’au patient. Destinataires :
+            </p>
+            <div style={{ display: "grid", gap: 12 }}>
+              {ppcd.destinataires.map((d) => (
+                <div key={d} style={{ display: "flex", gap: 10, fontSize: 14.5, color: "var(--ink-700)", alignItems: "flex-start" }}>
+                  <Icon name="building" size={18} style={{ color: "var(--brand)", flexShrink: 0, marginTop: 1 }} />
+                  {d}
+                </div>
+              ))}
             </div>
           </div>
         </div>
-      </div>
+      </MaxWrap>
 
-      <div className="mx-auto max-w-7xl px-4 py-16 space-y-12">
-        {/* Produits */}
-        {produits.map((produit, idx) => (
-          <section
-            key={idx}
-            className="bg-white p-8 rounded-xl border border-zinc-200 shadow-sm"
-          >
-            <div className="flex flex-col md:flex-row md:items-start gap-6">
-              <div className="shrink-0">
-                <span
-                  className={`inline-block text-lg font-bold px-4 py-2 rounded-lg border ${produit.couleur}`}
-                >
-                  {produit.code}
-                </span>
-              </div>
-
-              <div className="flex-1">
-                <h2 className="text-2xl font-bold text-zinc-900 mb-2">
-                  {produit.nom}
-                </h2>
-                <p className="text-zinc-600 mb-6">{produit.description}</p>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  <div className="flex items-start gap-2 p-3 bg-zinc-50 rounded-lg">
-                    <Thermometer className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-xs text-zinc-500">Conservation</p>
-                      <p className="text-sm font-medium text-zinc-900">
-                        {produit.conservation}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2 p-3 bg-zinc-50 rounded-lg">
-                    <Droplet className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-xs text-zinc-500">Volume</p>
-                      <p className="text-sm font-medium text-zinc-900">
-                        {produit.volume}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2 p-3 bg-zinc-50 rounded-lg">
-                    <Clock className="h-5 w-5 text-green-500 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-xs text-zinc-500">
-                        Disponibilité
-                      </p>
-                      <p className="text-sm font-medium text-zinc-900">
-                        Sur commande
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <h3 className="font-semibold text-zinc-900 mb-2">
-                  Indications principales
-                </h3>
-                <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {produit.indications.map((indication, iidx) => (
-                    <li
-                      key={iidx}
-                      className="flex items-start gap-2 text-sm text-zinc-700"
-                    >
-                      <Shield className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                      {indication}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </section>
-        ))}
-
-        {/* Sécurité */}
-        <section className="bg-green-50 rounded-2xl p-8 md:p-12 border border-green-100">
-          <div className="flex items-start gap-4">
-            <Shield className="h-8 w-8 text-green-600 shrink-0 mt-1" />
+      {/* Réseau */}
+      <section style={{ background: "var(--surface-1)", borderTop: "1px solid var(--line)" }}>
+        <MaxWrap>
+          <div className="two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 44, alignItems: "center" }}>
             <div>
-              <h3 className="text-xl font-bold text-zinc-900 mb-2">
-                Sécurité transfusionnelle
-              </h3>
-              <p className="text-zinc-700">
-                Chaque don fait l'objet de 6 tests obligatoires (ABO, Rhésus,
-                VIH, VHB, VHC, Syphilis) avant libération. Le CNTS applique les
-                normes internationales de bonnes pratiques et assure une
-                traçabilité complète de la veine du donneur à la veine du
-                receveur.
+              <div className="kicker" style={{ marginBottom: 10 }}>
+                Un réseau national
+              </div>
+              <h2
+                className="font-serif"
+                style={{ fontSize: "clamp(23px,2.8vw,30px)", fontWeight: 600, letterSpacing: "-0.02em", marginBottom: 14 }}
+              >
+                Piloté depuis le CNTS à Dakar-Fann
+              </h2>
+              <p style={{ color: "var(--ink-600)", fontSize: 15.5, lineHeight: 1.65, marginBottom: 12 }}>
+                Cette organisation en réseau garantit la traçabilité, la qualité et la disponibilité du sang à travers le pays.
               </p>
+              <p style={{ color: "var(--ink-600)", fontSize: 15.5, lineHeight: 1.65, marginBottom: 20 }}>{reseau.expansion}</p>
+              <Button href="/qui-sommes-nous/organisation" variant="outline" iconRight="arrowR">
+                Découvrir le réseau
+              </Button>
+            </div>
+            <div
+              style={{ height: 340, borderRadius: "var(--r-lg)", position: "relative", overflow: "hidden", border: "1px solid var(--line)", background: "var(--surface)" }}
+            >
+              <Image src={reseau.map} alt="Carte du réseau transfusionnel du CNTS" fill style={{ objectFit: "contain" }} />
             </div>
           </div>
-        </section>
-
-        {/* Commande */}
-        <section className="bg-primary/5 rounded-2xl p-8 md:p-12 text-center">
-          <AlertCircle className="h-10 w-10 text-primary mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-zinc-900 mb-4">
-            Vous êtes un établissement de santé ?
-          </h2>
-          <p className="text-zinc-600 max-w-xl mx-auto mb-6">
-            Pour commander des produits sanguins, contactez notre service de
-            distribution ou passez par le système de commande en ligne.
-          </p>
-          <Link
-            href="/contact"
-            className="inline-flex items-center justify-center rounded-md bg-primary text-white font-bold px-8 py-3 hover:bg-primary/90 transition-colors"
-          >
-            Contacter la distribution
-          </Link>
-        </section>
-      </div>
+        </MaxWrap>
+      </section>
     </div>
   );
 }

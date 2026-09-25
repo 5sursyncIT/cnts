@@ -1,190 +1,128 @@
-import Link from "next/link";
-import { BookOpen, ExternalLink, Calendar } from "lucide-react";
+import type { ReactNode } from "react";
+import Image from "next/image";
+import { Button, Card, PageBanner, SectionTitle } from "@/components/cnts/primitives";
+import { frDate } from "@/components/cnts/format";
+import { Icon } from "@/components/cnts/icon";
+import { communiques, org } from "@/components/cnts/data";
 
 export const metadata = {
-  title: "Publications scientifiques — SGI-CNTS",
+  title: "Publications & abstracts — CNTS Sénégal",
   description:
-    "Publications scientifiques du CNTS : articles, thèses, communications et travaux de recherche en transfusion sanguine.",
+    "Le CNTS valorise la production scientifique de ses équipes : articles, rapports et résumés de recherche issus de ses travaux et de ses partenariats.",
 };
 
+function MaxWrap({ children, w = 1180 }: { children: ReactNode; w?: number }) {
+  return <div style={{ maxWidth: w, margin: "0 auto", padding: "var(--gutter)" }}>{children}</div>;
+}
+
 export default function PublicationsPage() {
-  const publications = [
-    {
-      titre: "Séroprévalence des marqueurs viraux chez les donneurs de sang au Sénégal : étude rétrospective sur 10 ans",
-      auteurs: "Equipe CNTS et al.",
-      revue: "Transfusion Clinique et Biologique",
-      annee: "2024",
-      type: "Article original",
-    },
-    {
-      titre: "Distribution des phénotypes érythrocytaires dans la population des donneurs de sang à Dakar",
-      auteurs: "Equipe CNTS, UCAD",
-      revue: "Revue Africaine de Médecine Transfusionnelle",
-      annee: "2023",
-      type: "Article original",
-    },
-    {
-      titre: "Impact de l'introduction des tests NAT sur la sécurité transfusionnelle au CNTS de Dakar",
-      auteurs: "Equipe CNTS",
-      revue: "Vox Sanguinis",
-      annee: "2023",
-      type: "Article original",
-    },
-    {
-      titre: "Prise en charge transfusionnelle de la drépanocytose au Sénégal : expérience du CNTS",
-      auteurs: "Equipe CNTS, Hôpital A. Le Dantec",
-      revue: "Médecine d'Afrique Noire",
-      annee: "2022",
-      type: "Revue",
-    },
-    {
-      titre: "Évaluation d'un système d'information pour la traçabilité des produits sanguins labiles",
-      auteurs: "Equipe CNTS",
-      revue: "Journal Africain de Technologie Médicale",
-      annee: "2022",
-      type: "Article original",
-    },
-    {
-      titre: "Registre national des donneurs de groupes sanguins rares au Sénégal : bilan et perspectives",
-      auteurs: "Equipe CNTS, AfSBT",
-      revue: "ISBT Science Series",
-      annee: "2021",
-      type: "Communication",
-    },
-  ];
-
-  const theses = [
-    {
-      titre: "Étude des anticorps irréguliers chez les patients polytransfusés au CNTS de Dakar",
-      auteur: "Dr. A. Diallo",
-      universite: "UCAD - Faculté de Médecine",
-      annee: "2024",
-      type: "Thèse de médecine",
-    },
-    {
-      titre: "Prévalence de l'infection occulte par le VHB chez les donneurs de sang séronégatifs",
-      auteur: "Dr. M. Ndiaye",
-      universite: "UCAD - Faculté de Pharmacie",
-      annee: "2023",
-      type: "Thèse de pharmacie",
-    },
-    {
-      titre: "Optimisation de la gestion des stocks de produits sanguins par l'intelligence artificielle",
-      auteur: "M. S. Fall",
-      universite: "UGB - Master Informatique",
-      annee: "2023",
-      type: "Mémoire de master",
-    },
-  ];
-
-  const typeColors: Record<string, string> = {
-    "Article original": "bg-blue-50 text-blue-700",
-    "Revue": "bg-green-50 text-green-700",
-    "Communication": "bg-purple-50 text-purple-700",
-    "Thèse de médecine": "bg-red-50 text-red-700",
-    "Thèse de pharmacie": "bg-amber-50 text-amber-700",
-    "Mémoire de master": "bg-teal-50 text-teal-700",
-  };
-
   return (
-    <div className="bg-zinc-50 min-h-screen">
-      {/* Hero */}
-      <div className="bg-zinc-900 text-white py-16 md:py-24">
-        <div className="mx-auto max-w-7xl px-4 text-center">
-          <div className="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-sm font-medium backdrop-blur-sm border border-white/20 mb-6">
-            <BookOpen className="h-4 w-4 mr-2" />
-            Productions scientifiques
+    <div>
+      <PageBanner
+        kicker="Recherche & Innovation"
+        title="Publications & abstracts"
+        sub="Les connaissances partagées au service de la santé publique."
+      />
+
+      <MaxWrap>
+        <div className="two-col" style={{ display: "grid", gridTemplateColumns: "1.15fr 1fr", gap: 40, alignItems: "center" }}>
+          <div>
+            <SectionTitle kicker="Production scientifique" title="Valoriser les travaux de nos équipes" />
+            <p style={{ color: "var(--ink-600)", fontSize: 15.5, lineHeight: 1.65 }}>
+              Le CNTS valorise la production scientifique de ses équipes à travers la diffusion d’articles, de rapports
+              et de résumés de recherche issus de ses travaux et de ses partenariats. Chaque service est encouragé à
+              partager ses publications pour contribuer à l’avancement du savoir médical et à la promotion de la
+              recherche collaborative.
+            </p>
           </div>
-          <h1 className="text-4xl font-bold md:text-5xl mb-4">
-            Publications
-          </h1>
-          <p className="mt-4 text-zinc-300 max-w-2xl mx-auto text-lg">
-            Les travaux scientifiques du CNTS publiés dans les revues nationales
-            et internationales.
-          </p>
+          <Image
+            src="/images/labo_cnts.webp"
+            alt="Laboratoire du CNTS"
+            width={560}
+            height={400}
+            priority
+            style={{ width: "100%", height: "auto", borderRadius: "var(--r-lg)", objectFit: "cover" }}
+          />
         </div>
-      </div>
 
-      <div className="mx-auto max-w-7xl px-4 py-16 space-y-20">
-        {/* Articles */}
-        <section>
-          <h2 className="text-2xl font-bold text-zinc-900 mb-8">
-            Articles et communications
-          </h2>
-          <div className="space-y-4">
-            {publications.map((pub, idx) => (
-              <div
-                key={idx}
-                className="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm hover:shadow-md transition-shadow"
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <span
-                    className={`text-xs font-semibold px-2.5 py-1 rounded-full ${typeColors[pub.type] || "bg-zinc-100 text-zinc-700"}`}
+        <section style={{ marginTop: 44 }}>
+          <SectionTitle kicker="Publications récentes" title="Rapports et études du CNTS" />
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {communiques.map((c) => (
+              <Card key={c.title} pad={24}>
+                <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+                  <div
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 12,
+                      flexShrink: 0,
+                      background: "var(--red-50)",
+                      color: "var(--brand)",
+                      display: "grid",
+                      placeItems: "center",
+                    }}
                   >
-                    {pub.type}
-                  </span>
-                  <span className="flex items-center gap-1 text-sm text-zinc-500">
-                    <Calendar className="h-3.5 w-3.5" />
-                    {pub.annee}
-                  </span>
+                    <Icon name="flask" size={22} />
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <h3 style={{ fontSize: 17, fontWeight: 700, lineHeight: 1.35 }}>{c.title}</h3>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 14,
+                        flexWrap: "wrap",
+                        marginTop: 6,
+                        fontSize: 13.5,
+                        color: "var(--ink-500)",
+                      }}
+                    >
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        <Icon name="building" size={15} />
+                        {c.source}
+                      </span>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        <Icon name="calendar" size={15} />
+                        Publié le {frDate(c.date)}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <h3 className="text-lg font-bold text-zinc-900">{pub.titre}</h3>
-                <p className="text-sm text-zinc-600 mt-1">{pub.auteurs}</p>
-                <p className="text-sm text-primary font-medium mt-1 flex items-center gap-1">
-                  {pub.revue}
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </p>
-              </div>
+              </Card>
             ))}
           </div>
         </section>
+      </MaxWrap>
 
-        {/* Thèses */}
-        <section>
-          <h2 className="text-2xl font-bold text-zinc-900 mb-8">
-            Thèses et mémoires
-          </h2>
-          <div className="space-y-4">
-            {theses.map((these, idx) => (
-              <div
-                key={idx}
-                className="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm"
+      <section style={{ background: "var(--surface-1)", borderTop: "1px solid var(--line)" }}>
+        <MaxWrap>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 24, flexWrap: "wrap" }}>
+            <div style={{ maxWidth: 600 }}>
+              <h2
+                className="font-serif"
+                style={{ fontSize: "clamp(22px,2.6vw,28px)", fontWeight: 600, letterSpacing: "-0.02em", marginBottom: 8 }}
               >
-                <div className="flex items-center gap-3 mb-3">
-                  <span
-                    className={`text-xs font-semibold px-2.5 py-1 rounded-full ${typeColors[these.type] || "bg-zinc-100 text-zinc-700"}`}
-                  >
-                    {these.type}
-                  </span>
-                  <span className="text-sm text-zinc-500">{these.annee}</span>
-                </div>
-                <h3 className="font-bold text-zinc-900">{these.titre}</h3>
-                <p className="text-sm text-zinc-600 mt-1">
-                  {these.auteur} — {these.universite}
-                </p>
-              </div>
-            ))}
+                Obtenir une publication
+              </h2>
+              <p style={{ color: "var(--ink-600)", fontSize: 15, lineHeight: 1.6 }}>
+                Pour toute demande concernant ces documents, contactez le service communication du CNTS :{" "}
+                <a href={`mailto:${org.emailCommunication}`} style={{ color: "var(--brand)", fontWeight: 600 }}>
+                  {org.emailCommunication}
+                </a>
+                .
+              </p>
+            </div>
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+              <Button variant="outline" icon="chevL" href="/recherche">
+                Recherche & Innovation
+              </Button>
+              <Button variant="primary" icon="users" href="/recherche/appels">
+                Collaborer avec le CNTS
+              </Button>
+            </div>
           </div>
-        </section>
-
-        {/* CTA */}
-        <section className="text-center">
-          <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Link
-              href="/recherche/projets"
-              className="inline-flex items-center justify-center rounded-md bg-primary text-white font-bold px-8 py-3 hover:bg-primary/90 transition-colors"
-            >
-              Projets en cours
-            </Link>
-            <Link
-              href="/recherche/appels"
-              className="inline-flex items-center justify-center rounded-md border border-zinc-300 bg-white text-zinc-900 font-medium px-8 py-3 hover:bg-zinc-50 transition-colors"
-            >
-              Appels à collaboration
-            </Link>
-          </div>
-        </section>
-      </div>
+        </MaxWrap>
+      </section>
     </div>
   );
 }

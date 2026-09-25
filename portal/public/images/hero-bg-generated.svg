@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1200" width="100%" height="100%">
+  <defs>
+    <linearGradient id="glass" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.02"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="25" stdDeviation="30" flood-color="#4a0000" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <!-- Fond style verre -->
+  <rect width="800" height="1200" fill="url(#glass)" />
+  
+  <!-- Goutte de sang principale -->
+  <path d="M 400 300 
+           C 400 300 160 640 160 820 
+           C 160 960 270 1060 400 1060 
+           C 530 1060 640 960 640 820 
+           C 640 640 400 300 400 300 Z" 
+        fill="#ff3b49" 
+        filter="url(#shadow)"/>
+  
+  <!-- Reflet -->
+  <path d="M 240 800 C 240 700 340 500 380 440 C 340 520 280 660 280 800 C 280 860 300 900 340 940 C 280 900 240 860 240 800 Z" 
+        fill="#ffffff" 
+        opacity="0.3"/>
+
+  <!-- Cœur blanc intérieur -->
+  <path d="M 400 740 
+           C 400 740 320 660 270 710 
+           C 220 760 250 860 400 970 
+           C 550 860 580 760 530 710 
+           C 480 660 400 740 400 740 Z" 
+        fill="#ffffff" 
+        opacity="0.9"/>
+        
+  <!-- Croix médicales décoratives -->
+  <path d="M 160 360 L 200 360 L 200 320 L 220 320 L 220 360 L 260 360 L 260 380 L 220 380 L 220 420 L 200 420 L 200 380 L 160 380 Z" fill="#ffffff" opacity="0.4" transform="scale(0.8) translate(100, 200)"/>
+  <path d="M 160 360 L 200 360 L 200 320 L 220 320 L 220 360 L 260 360 L 260 380 L 220 380 L 220 420 L 200 420 L 200 380 L 160 380 Z" fill="#ffffff" opacity="0.6" transform="scale(0.5) translate(1000, 400)"/>
+  <path d="M 160 360 L 200 360 L 200 320 L 220 320 L 220 360 L 260 360 L 260 380 L 220 380 L 220 420 L 200 420 L 200 380 L 160 380 Z" fill="#ffffff" opacity="0.5" transform="scale(0.6) translate(800, 1200)"/>
+</svg>

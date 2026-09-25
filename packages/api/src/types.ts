@@ -30,8 +30,10 @@ export interface DonneurCreate {
   date_naissance?: string;
   adresse?: string;
   region?: string;
+  departement?: string;
   telephone?: string;
   email?: string;
+  profession?: string;
   groupe_sanguin?: string;
 }
 
@@ -42,16 +44,17 @@ export interface DonneurUpdate {
   date_naissance?: string | null;
   adresse?: string | null;
   region?: string | null;
+  departement?: string | null;
   telephone?: string | null;
   email?: string | null;
+  profession?: string | null;
   groupe_sanguin?: string | null;
   cni?: string | null;
 }
 
 export interface Donneur {
   id: UUID;
-  cni_hash: string;
-  // CNI is NOT exposed for privacy/GDPR compliance - only the hash is returned
+  // Ni le CNI ni son empreinte (cni_hash) ne sont exposés par l'API (RGPD).
   nom: string;
   prenom: string;
   sexe: "H" | "F";
@@ -73,6 +76,7 @@ export interface EligibiliteResponse {
   eligible_le: string | null; // ISO date
   raison: string | null;
   delai_jours: number | null;
+  age: number | null;
 }
 
 // ============================================================================
@@ -628,6 +632,126 @@ export interface Article {
   tags: string[];
   author_id: UUID | null;
   published_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FaqItemCreate {
+  question: string;
+  answer: string;
+  category?: string;
+  display_order?: number;
+  is_published?: boolean;
+}
+
+export interface FaqItemUpdate {
+  question?: string;
+  answer?: string;
+  category?: string;
+  display_order?: number;
+  is_published?: boolean;
+}
+
+export interface FaqItem {
+  id: UUID;
+  question: string;
+  answer: string;
+  category: string;
+  display_order: number;
+  is_published: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ContactMessageStatus = "NOUVEAU" | "TRAITE" | "ARCHIVE";
+
+export interface ContactMessageCreate {
+  name: string;
+  email: string;
+  phone?: string | null;
+  subject?: string;
+  message: string;
+  /** Pot de miel anti-robots : laisser vide. */
+  website?: string;
+}
+
+export interface ContactMessage {
+  id: UUID;
+  name: string;
+  email: string;
+  phone: string | null;
+  subject: string;
+  message: string;
+  status: ContactMessageStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TeamMemberCreate {
+  name: string;
+  role: string;
+  specialty?: string | null;
+  bio?: string | null;
+  photo_url?: string | null;
+  display_order?: number;
+  is_published?: boolean;
+}
+
+export interface TeamMemberUpdate {
+  name?: string;
+  role?: string;
+  specialty?: string | null;
+  bio?: string | null;
+  photo_url?: string | null;
+  display_order?: number;
+  is_published?: boolean;
+}
+
+export interface TeamMember {
+  id: UUID;
+  name: string;
+  role: string;
+  specialty: string | null;
+  bio: string | null;
+  photo_url: string | null;
+  display_order: number;
+  is_published: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PartnerCreate {
+  name: string;
+  description?: string | null;
+  category?: string;
+  type?: string | null;
+  logo_url?: string | null;
+  website_url?: string | null;
+  display_order?: number;
+  is_published?: boolean;
+}
+
+export interface PartnerUpdate {
+  name?: string;
+  description?: string | null;
+  category?: string;
+  type?: string | null;
+  logo_url?: string | null;
+  website_url?: string | null;
+  display_order?: number;
+  is_published?: boolean;
+}
+
+export interface Partner {
+  id: UUID;
+  name: string;
+  description: string | null;
+  category: string;
+  type: string | null;
+  logo_url: string | null;
+  website_url: string | null;
+  display_order: number;
+  is_published: boolean;
   created_at: string;
   updated_at: string;
 }

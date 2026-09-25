@@ -11,6 +11,9 @@ class DonCreate(BaseModel):
     date_don: dt.date
     type_don: str = Field(min_length=2, max_length=32)
     idempotency_key: str | None = Field(default=None, max_length=128)
+    # Permet à un personnel médical de passer outre le contrôle d'éligibilité
+    # (délai inter-don / âge) en connaissance de cause. Tracé via l'événement.
+    ignorer_eligibilite: bool = False
 
 
 class DonOut(BaseModel):

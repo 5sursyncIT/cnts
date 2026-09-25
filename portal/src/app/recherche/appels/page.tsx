@@ -1,165 +1,162 @@
-import Link from "next/link";
-import { Handshake, GraduationCap, FlaskConical, Calendar, Mail, ArrowRight } from "lucide-react";
+import type { ReactNode } from "react";
+import Image from "next/image";
+import { Button, Card, PageBanner, SectionTitle } from "@/components/cnts/primitives";
+import { Icon } from "@/components/cnts/icon";
+import { celluleRecherche, org, research } from "@/components/cnts/data";
 
 export const metadata = {
-  title: "Appels à collaboration — SGI-CNTS",
+  title: "Appels à collaboration — CNTS Sénégal",
   description:
-    "Opportunités de collaboration scientifique avec le CNTS : stages, thèses, projets de recherche et partenariats.",
+    "Le CNTS ouvre régulièrement des appels à collaboration à destination des chercheurs, étudiants et institutions désireux de participer à ses projets de recherche ou d’en proposer de nouveaux.",
 };
 
+function MaxWrap({ children, w = 1180 }: { children: ReactNode; w?: number }) {
+  return <div style={{ maxWidth: w, margin: "0 auto", padding: "var(--gutter)" }}>{children}</div>;
+}
+
+const publics = [
+  { icon: "flask", t: "Chercheurs", d: "Participez à un projet de recherche du CNTS ou proposez-en un nouveau." },
+  { icon: "award", t: "Étudiants", d: "Associez vos travaux aux projets menés en transfusion, hématologie et sécurité biologique." },
+  { icon: "building", t: "Institutions", d: "Développez un partenariat scientifique national ou international avec le CNTS." },
+];
+
+const mailSubject = encodeURIComponent("Proposition de collaboration — Cellule de recherche");
+
 export default function AppelsPage() {
-  const opportunites = [
-    {
-      type: "Stage de recherche",
-      titre: "Caractérisation des variants ABO dans la population sénégalaise",
-      description:
-        "Stage de 6 mois au laboratoire d'immuno-hématologie pour étudier les sous-groupes ABO par techniques moléculaires.",
-      profil: "Master 2 ou thèse en biologie / hématologie",
-      duree: "6 mois",
-      disponible: true,
-    },
-    {
-      type: "Projet collaboratif",
-      titre: "Évaluation de tests rapides de dépistage en collecte mobile",
-      description:
-        "Évaluation comparative de nouveaux tests rapides combinés (VIH/VHB/VHC/Syphilis) pour les collectes en zone rurale.",
-      profil: "Laboratoire ou institution de recherche",
-      duree: "18 mois",
-      disponible: true,
-    },
-    {
-      type: "Thèse de doctorat",
-      titre: "Modélisation prédictive de la demande transfusionnelle au Sénégal",
-      description:
-        "Co-encadrement d'une thèse en data science appliquée à la prévision des besoins en produits sanguins.",
-      profil: "Doctorant en informatique / biostatistiques",
-      duree: "3 ans",
-      disponible: true,
-    },
-    {
-      type: "Partenariat technique",
-      titre: "Interfaçage automates — système d'information du CNTS",
-      description:
-        "Développement de connecteurs ASTM/HL7 pour l'interfaçage automatique des automates d'analyses avec le SGI-CNTS.",
-      profil: "Entreprise ou laboratoire d'informatique biomédicale",
-      duree: "12 mois",
-      disponible: false,
-    },
-  ];
-
-  const typeIcons: Record<string, React.ReactNode> = {
-    "Stage de recherche": <GraduationCap className="h-5 w-5 text-blue-600" />,
-    "Projet collaboratif": <FlaskConical className="h-5 w-5 text-green-600" />,
-    "Thèse de doctorat": <GraduationCap className="h-5 w-5 text-purple-600" />,
-    "Partenariat technique": <Handshake className="h-5 w-5 text-amber-600" />,
-  };
-
   return (
-    <div className="bg-zinc-50 min-h-screen">
-      {/* Hero */}
-      <div className="bg-zinc-900 text-white py-16 md:py-24">
-        <div className="mx-auto max-w-7xl px-4 text-center">
-          <div className="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-sm font-medium backdrop-blur-sm border border-white/20 mb-6">
-            <Handshake className="h-4 w-4 mr-2" />
-            Collaborons ensemble
+    <div>
+      <PageBanner
+        kicker="Recherche & Innovation"
+        title="Appels à collaboration"
+        sub="La recherche progresse grâce au partage et à la coopération. Ensemble, construisons la transfusion de demain."
+      />
+
+      <MaxWrap>
+        <div className="two-col" style={{ display: "grid", gridTemplateColumns: "1.15fr 1fr", gap: 40, alignItems: "center" }}>
+          <div>
+            <SectionTitle kicker="Cellule de recherche" title="Collaborer avec le CNTS" />
+            <p style={{ color: "var(--ink-600)", fontSize: 15.5, lineHeight: 1.65 }}>{celluleRecherche.appel}</p>
           </div>
-          <h1 className="text-4xl font-bold md:text-5xl mb-4">
-            Appels à collaboration
-          </h1>
-          <p className="mt-4 text-zinc-300 max-w-2xl mx-auto text-lg">
-            Le CNTS est ouvert aux collaborations scientifiques et techniques.
-            Découvrez les opportunités actuelles.
-          </p>
+          <Image
+            src="/images/recherche-1.jpg"
+            alt="Collaboration scientifique au CNTS"
+            width={560}
+            height={400}
+            priority
+            style={{ width: "100%", height: "auto", borderRadius: "var(--r-lg)", objectFit: "cover" }}
+          />
         </div>
-      </div>
 
-      <div className="mx-auto max-w-4xl px-4 py-16 space-y-8">
-        {opportunites.map((opp, idx) => (
-          <section
-            key={idx}
-            className={`bg-white p-8 rounded-xl border shadow-sm ${opp.disponible ? "border-zinc-200" : "border-zinc-200 opacity-60"}`}
-          >
-            <div className="flex flex-wrap items-center gap-3 mb-4">
-              <span className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-zinc-100 text-zinc-700">
-                {typeIcons[opp.type]}
-                {opp.type}
-              </span>
-              <span className="flex items-center gap-1 text-sm text-zinc-500">
-                <Calendar className="h-3.5 w-3.5" />
-                {opp.duree}
-              </span>
-              {opp.disponible ? (
-                <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-green-50 text-green-700">
-                  Ouvert
-                </span>
-              ) : (
-                <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-zinc-100 text-zinc-500">
-                  Pourvu
-                </span>
-              )}
-            </div>
+        <div className="grid-3" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 18, marginTop: 36 }}>
+          {publics.map((p) => (
+            <Card key={p.t} pad={24}>
+              <div
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 12,
+                  background: "var(--red-50)",
+                  color: "var(--brand)",
+                  display: "grid",
+                  placeItems: "center",
+                  marginBottom: 14,
+                }}
+              >
+                <Icon name={p.icon} size={22} />
+              </div>
+              <h3 style={{ fontSize: 16.5, fontWeight: 700, marginBottom: 6 }}>{p.t}</h3>
+              <p style={{ fontSize: 14, color: "var(--ink-600)", lineHeight: 1.55 }}>{p.d}</p>
+            </Card>
+          ))}
+        </div>
+      </MaxWrap>
 
-            <h2 className="text-xl font-bold text-zinc-900 mb-2">
-              {opp.titre}
-            </h2>
-            <p className="text-zinc-600 mb-4">{opp.description}</p>
-            <p className="text-sm text-zinc-700">
-              <span className="font-medium">Profil recherché :</span>{" "}
-              {opp.profil}
-            </p>
-          </section>
-        ))}
+      {/* Comment proposer */}
+      <section style={{ background: "var(--surface-1)", borderTop: "1px solid var(--line)", borderBottom: "1px solid var(--line)" }}>
+        <MaxWrap>
+          <div className="two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 22, alignItems: "stretch" }}>
+            <Card pad={28}>
+              <div className="kicker" style={{ marginBottom: 10 }}>
+                Proposer une collaboration
+              </div>
+              <h2
+                className="font-serif"
+                style={{ fontSize: "clamp(22px,2.6vw,28px)", fontWeight: 600, letterSpacing: "-0.02em", marginBottom: 10 }}
+              >
+                Rejoindre un projet ou soumettre une initiative
+              </h2>
+              <p style={{ color: "var(--ink-600)", fontSize: 15, lineHeight: 1.6 }}>
+                Si vous souhaitez rejoindre un projet existant ou soumettre une nouvelle initiative, adressez votre
+                proposition au CNTS. Les demandes sont examinées par la Cellule de recherche, qui en assure le suivi
+                scientifique et administratif.
+              </p>
+              <div
+                style={{
+                  marginTop: 18,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "12px 14px",
+                  background: "var(--surface-1)",
+                  borderRadius: "var(--r-sm)",
+                  fontSize: 14.5,
+                }}
+              >
+                <Icon name="mail" size={18} style={{ color: "var(--brand)" }} />
+                <a href={`mailto:${org.email}?subject=${mailSubject}`} style={{ color: "var(--ink-900)", fontWeight: 600 }}>
+                  {org.email}
+                </a>
+              </div>
+              <div style={{ marginTop: 18, display: "flex", gap: 12, flexWrap: "wrap" }}>
+                <Button variant="primary" icon="mail" href={`mailto:${org.email}?subject=${mailSubject}`}>
+                  Proposer une collaboration
+                </Button>
+                <Button variant="outline" icon="phone" href="/contact">
+                  Nous contacter
+                </Button>
+              </div>
+            </Card>
 
-        {/* Comment postuler */}
-        <section className="bg-primary/5 rounded-2xl p-8 md:p-12">
-          <h2 className="text-2xl font-bold text-zinc-900 mb-4">
-            Comment postuler ?
-          </h2>
-          <div className="space-y-4 text-zinc-700">
-            <p>
-              Pour toute candidature ou proposition de collaboration, envoyez un
-              dossier comprenant :
-            </p>
-            <ul className="space-y-2 pl-4">
-              <li className="flex items-start gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0 mt-2" />
-                Une lettre de motivation précisant l'opportunité visée
-              </li>
-              <li className="flex items-start gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0 mt-2" />
-                Un CV détaillé ou présentation de votre structure
-              </li>
-              <li className="flex items-start gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0 mt-2" />
-                Un résumé de votre projet de recherche (si applicable)
-              </li>
-            </ul>
-            <div className="flex items-center gap-2 mt-6 p-4 bg-white rounded-lg border border-zinc-200">
-              <Mail className="h-5 w-5 text-primary shrink-0" />
-              <span className="font-medium">recherche@cnts.sn</span>
-            </div>
+            <Card pad={28}>
+              <div className="kicker" style={{ marginBottom: 10 }}>
+                Projets du CNTS
+              </div>
+              <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>Des projets déjà engagés</h3>
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                {research.map((r, i) => (
+                  <div
+                    key={r.t}
+                    style={{
+                      display: "flex",
+                      gap: 11,
+                      padding: "10px 0",
+                      borderBottom: i < research.length - 1 ? "1px solid var(--line-soft)" : "none",
+                      fontSize: 14.5,
+                      color: "var(--ink-700)",
+                    }}
+                  >
+                    <Icon name="chevR" size={18} style={{ color: "var(--brand)", marginTop: 1 }} />
+                    {r.t}
+                  </div>
+                ))}
+              </div>
+              <div style={{ marginTop: 16 }}>
+                <Button variant="outline" size="sm" iconRight="arrowR" href="/recherche/projets">
+                  Voir les projets
+                </Button>
+              </div>
+            </Card>
           </div>
-        </section>
+        </MaxWrap>
+      </section>
 
-        {/* CTA */}
-        <section className="text-center pt-4">
-          <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Link
-              href="/contact"
-              className="inline-flex items-center justify-center rounded-md bg-primary text-white font-bold px-8 py-3 hover:bg-primary/90 transition-colors"
-            >
-              Nous contacter
-              <ArrowRight className="h-4 w-4 ml-2" />
-            </Link>
-            <Link
-              href="/recherche"
-              className="inline-flex items-center justify-center rounded-md border border-zinc-300 bg-white text-zinc-900 font-medium px-8 py-3 hover:bg-zinc-50 transition-colors"
-            >
-              Retour Recherche
-            </Link>
-          </div>
-        </section>
-      </div>
+      <MaxWrap>
+        <div style={{ display: "flex", justifyContent: "center" }}>
+          <Button variant="ghost" icon="chevL" href="/recherche">
+            Retour à Recherche & Innovation
+          </Button>
+        </div>
+      </MaxWrap>
     </div>
   );
 }

@@ -17,7 +17,7 @@ services:
       dockerfile: ./portal/Dockerfile
     environment:
       NODE_ENV: production
-      NEXT_PUBLIC_APP_URL: https://cnts.5sursync.com
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://cnts.gouv.sn}
       BACKEND_URL: http://api:8000
     ports:
       - "127.0.0.1:3000:3000"
@@ -29,7 +29,7 @@ services:
       dockerfile: ./web/Dockerfile
     environment:
       NODE_ENV: production
-      NEXT_PUBLIC_APP_URL: https://cnts.5sursync.com
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://cnts.gouv.sn}
       BACKEND_API_URL: http://api:8000
     ports:
       - "127.0.0.1:3001:3000"
@@ -43,7 +43,10 @@ services:
       CNTS_ENV: ${CNTS_ENV:-dev}
       CNTS_LOG_LEVEL: ${CNTS_LOG_LEVEL:-INFO}
       CNTS_DATABASE_URL: ${CNTS_DATABASE_URL:-postgresql+psycopg://cnts:cnts@db:5432/cnts}
-      CNTS_CNI_HASH_KEY: ${CNTS_CNI_HASH_KEY:-change-me}
+      CNTS_CNI_HASH_KEY: ${CNTS_CNI_HASH_KEY:?CNTS_CNI_HASH_KEY requis (voir .env)}
+      CNTS_AUTH_TOKEN_SECRET: ${CNTS_AUTH_TOKEN_SECRET:?CNTS_AUTH_TOKEN_SECRET requis (voir .env)}
+      CNTS_RECOVERY_CODES_SECRET: ${CNTS_RECOVERY_CODES_SECRET:?CNTS_RECOVERY_CODES_SECRET requis (voir .env)}
+      CNTS_ADMIN_TOKEN: ${CNTS_ADMIN_TOKEN:?CNTS_ADMIN_TOKEN requis (voir .env)}
       CNTS_DIN_SITE_CODE: ${CNTS_DIN_SITE_CODE:-CNTS0}
       CNTS_FRACTIONNEMENT_MAX_OVERAGE_ML: ${CNTS_FRACTIONNEMENT_MAX_OVERAGE_ML:-250}
       CNTS_REDIS_URL: redis://redis:6379/0
@@ -73,7 +76,10 @@ services:
       CNTS_ENV: ${CNTS_ENV:-dev}
       CNTS_LOG_LEVEL: ${CNTS_LOG_LEVEL:-INFO}
       CNTS_DATABASE_URL: ${CNTS_DATABASE_URL:-postgresql+psycopg://cnts:cnts@db:5432/cnts}
-      CNTS_CNI_HASH_KEY: ${CNTS_CNI_HASH_KEY:-change-me}
+      CNTS_CNI_HASH_KEY: ${CNTS_CNI_HASH_KEY:?CNTS_CNI_HASH_KEY requis (voir .env)}
+      CNTS_AUTH_TOKEN_SECRET: ${CNTS_AUTH_TOKEN_SECRET:?CNTS_AUTH_TOKEN_SECRET requis (voir .env)}
+      CNTS_RECOVERY_CODES_SECRET: ${CNTS_RECOVERY_CODES_SECRET:?CNTS_RECOVERY_CODES_SECRET requis (voir .env)}
+      CNTS_ADMIN_TOKEN: ${CNTS_ADMIN_TOKEN:?CNTS_ADMIN_TOKEN requis (voir .env)}
       CNTS_REDIS_URL: redis://redis:6379/0
     depends_on:
       - db

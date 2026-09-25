@@ -52,6 +52,7 @@ export function ArticleForm({
       excerpt: initialData?.excerpt || "",
       content: initialData?.content || "",
       image_url: initialData?.image_url || "",
+      tags: initialData?.tags || [],
     },
   });
 
@@ -59,6 +60,18 @@ export function ArticleForm({
   const title = watch("title");
   const imageUrl = watch("image_url");
   const content = watch("content");
+  const category = watch("category");
+
+  // Tags are edited as a comma-separated string but stored as an array.
+  const [tagsInput, setTagsInput] = useState((initialData?.tags || []).join(", "));
+
+  const onFormSubmit = handleSubmit(async (values) => {
+    const tags = tagsInput
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+    await onSubmit({ ...values, tags });
+  });
 
   // Auto-generate slug from title if slug is empty or was auto-generated
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -117,7 +130,7 @@ export function ArticleForm({
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+    <form onSubmit={onFormSubmit} className="space-y-8">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Content - Left Column */}
         <div className="lg:col-span-2 space-y-6">
@@ -253,9 +266,10 @@ export function ArticleForm({
               <div className="space-y-2">
                 <Label htmlFor="status">Statut</Label>
                 <Select id="status" {...register("status")}>
-                  <option value="DRAFT">Draft (Brouillon)</option>
-                  <option value="REVIEW">Review (Relecture)</option>
-                  <option value="PUBLISHED">Published (Publié)</option>
+                  <option value="DRAFT">Brouillon</option>
+                  <option value="REVIEW">En relecture</option>
+                  <option value="PUBLISHED">Publié</option>
+                  <option value="ARCHIVED">Archivé</option>
                 </Select>
               </div>
               <div className="space-y-2">
@@ -268,14 +282,29 @@ export function ArticleForm({
                   <option value="RESSOURCE">Ressource (Médiathèque)</option>
                 </Select>
                 <div className="text-xs text-zinc-500 bg-zinc-50 p-2 rounded border border-zinc-100 mt-1">
-                  {watch("category") === "COMMUNIQUE" 
+                  {category === "COMMUNIQUE"
                     ? "Sera visible dans 'Actualités' ET 'Espace Presse'."
-                    : watch("category") === "RESSOURCE"
+                    : category === "RESSOURCE"
                     ? "Sera visible uniquement dans la Médiathèque (Espace Presse)."
                     : "Sera visible uniquement dans 'Actualités'."}
                 </div>
               </div>
-              
+
+              <div className="space-y-2">
+                <Label htmlFor="tags">Tags</Label>
+                <Input
+                  id="tags"
+                  value={tagsInput}
+                  onChange={(e) => setTagsInput(e.target.value)}
+                  placeholder="ex: PDF, communiqué, 2026"
+                />
+                <p className="text-xs text-zinc-500">
+                  {category === "RESSOURCE"
+                    ? "Le 1er tag définit le type affiché dans la Médiathèque (ex: PDF, ZIP, IMAGE)."
+                    : "Séparez les tags par des virgules."}
+                </p>
+              </div>
+
               <Separator />
               
               <div className="flex flex-col gap-2 pt-2">

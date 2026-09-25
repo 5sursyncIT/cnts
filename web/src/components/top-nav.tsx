@@ -66,7 +66,7 @@ export function TopNav(props: { user: User }) {
               </Link>
             )}
             <Link className="text-sm text-zinc-700 hover:text-zinc-900" href="/cms">
-              CMS
+              Contenus
             </Link>
             {canReadAdmin && (
               <Link className="text-sm text-zinc-700 hover:text-zinc-900" href="/admin/roles">

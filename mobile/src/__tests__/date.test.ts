@@ -8,15 +8,15 @@ describe("checkEligibilite", () => {
     expect(result.joursRestants).toBeNull();
   });
 
-  it("retourne éligible pour homme après 60 jours", () => {
-    const date70DaysAgo = format(subDays(new Date(), 70), "yyyy-MM-dd");
-    const result = checkEligibilite("H", date70DaysAgo);
+  it("retourne éligible pour homme après 3 mois", () => {
+    const date100DaysAgo = format(subDays(new Date(), 100), "yyyy-MM-dd");
+    const result = checkEligibilite("H", date100DaysAgo);
     expect(result.eligible).toBe(true);
   });
 
-  it("retourne non éligible pour homme avant 60 jours", () => {
-    const date30DaysAgo = format(subDays(new Date(), 30), "yyyy-MM-dd");
-    const result = checkEligibilite("H", date30DaysAgo);
+  it("retourne non éligible pour homme avant 3 mois", () => {
+    const date70DaysAgo = format(subDays(new Date(), 70), "yyyy-MM-dd");
+    const result = checkEligibilite("H", date70DaysAgo);
     expect(result.eligible).toBe(false);
     expect(result.joursRestants).toBeGreaterThan(0);
   });

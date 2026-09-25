@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
@@ -27,10 +28,10 @@ def get_articles(
     """
     query = select(Article)
 
-    if published_only:
-        query = query.where(Article.is_published.is_(True))
-    elif status:
-        query = query.where(Article.is_published.is_(status == "PUBLISHED"))
+    if status:
+        query = query.where(Article.status == status)
+    elif published_only:
+        query = query.where(Article.status == "PUBLISHED")
 
     if category:
         query = query.where(Article.category == category)
@@ -62,10 +63,10 @@ def create_article(
     Create new article.
     """
     payload = article_in.model_dump()
-    status = payload.pop("status", None)
-    payload.pop("tags", None)
-    if status is not None:
-        payload["is_published"] = status == "PUBLISHED"
+    status_value = payload.get("status") or "DRAFT"
+    payload["status"] = status_value
+    payload["is_published"] = status_value == "PUBLISHED"
+    payload["author_id"] = current_user.id
     article = Article(**payload)
     db.add(article)
     db.commit()
@@ -89,10 +90,12 @@ def update_article(
         raise HTTPException(status_code=404, detail="Article not found")
 
     update_data = article_in.model_dump(exclude_unset=True)
-    status = update_data.pop("status", None)
-    update_data.pop("tags", None)
-    if status is not None:
-        update_data["is_published"] = status == "PUBLISHED"
+    new_status = update_data.get("status")
+    if new_status is not None:
+        # Stamp the publication date the first time an article goes live.
+        if new_status == "PUBLISHED" and not article.is_published:
+            article.published_at = datetime.now(timezone.utc)
+        update_data["is_published"] = new_status == "PUBLISHED"
     for field, value in update_data.items():
         setattr(article, field, value)
 

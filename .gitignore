@@ -11,3 +11,8 @@ dist/
 build/
 
 .DS_Store
+
+# Dumps de base et archives locales
+backup_*.sql
+*.sql.gz
+docs/cnts.zip

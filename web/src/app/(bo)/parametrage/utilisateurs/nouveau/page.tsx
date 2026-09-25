@@ -105,7 +105,7 @@ export default function NouveauUtilisateurPage() {
                             type="email"
                             value={formData.email}
                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                            placeholder="utilisateur@cnts.sn"
+                            placeholder="utilisateur@cnts.gouv.sn"
                             className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 ${errors.email ? "border-red-500" : "border-gray-300"
                                 }`}
                         />

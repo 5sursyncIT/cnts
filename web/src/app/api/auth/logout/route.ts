@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 import { logAuditEvent } from "@/lib/audit/log";
-import { sessionCookieName, verifySessionToken } from "@/lib/auth/session";
+import { accessCookieName, sessionCookieName, verifySessionToken } from "@/lib/auth/session";
 import { preAuthCookieName } from "@/lib/auth/preauth";
 
 export async function POST(request: Request) {
@@ -12,10 +12,11 @@ export async function POST(request: Request) {
 
   cookieStore.delete(sessionCookieName);
   cookieStore.delete(preAuthCookieName);
+  cookieStore.delete(accessCookieName);
 
   logAuditEvent({ actorEmail: session?.email, action: "auth.logout" });
   // Use the public APP_URL for redirect to avoid localhost issues
-  const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://cnts.5sursync.com";
+  const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://cnts.gouv.sn";
   // The web app is mounted at /admin via Nginx, so we redirect to /admin/login
   return NextResponse.redirect(new URL(`${APP_URL}/admin/login`));
 }

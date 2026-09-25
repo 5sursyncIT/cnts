@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 import { logAuditEvent } from "@/lib/audit/log";
 import { signPreAuth, preAuthCookieName } from "@/lib/auth/preauth";
-import { signSession, sessionCookieName } from "@/lib/auth/session";
+import { accessCookieName, signSession, sessionCookieName } from "@/lib/auth/session";
 
 export async function POST(request: Request) {
   const form = await request.formData();
@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   const password = String(form.get("password") ?? "");
   const next = String(form.get("next") ?? "/dashboard");
   const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
-  const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://cnts.5sursync.com";
+  const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://cnts.gouv.sn";
 
   try {
     // Call Backend API
@@ -36,6 +36,7 @@ export async function POST(request: Request) {
     const cookieStore = await cookies();
     cookieStore.delete(sessionCookieName);
     cookieStore.delete(preAuthCookieName);
+    cookieStore.delete(accessCookieName);
 
     // MFA Flow
     if (mfa_required) {
@@ -71,6 +72,17 @@ export async function POST(request: Request) {
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
       path: "/"
+    });
+
+    // Jeton d'accès backend conservé dans un cookie httpOnly : le navigateur
+    // l'enverra automatiquement aux appels /api/* (routés par Apache vers le
+    // backend), qui les authentifiera. TTL aligné sur celui du backend (8 h).
+    cookieStore.set(accessCookieName, access_token, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 8 * 60 * 60
     });
 
     logAuditEvent({ actorEmail: user.email, action: "auth.login_success" });

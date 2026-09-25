@@ -94,6 +94,17 @@ export function createApiClient(options: ApiClientOptions) {
       },
     });
 
+  // Helper pour PATCH requests
+  const patch = <TResponse>(path: string, body?: any) =>
+    requestJson<TResponse>({
+      fetchImpl,
+      url: `${baseUrl}${path}`,
+      init: {
+        method: "PATCH",
+        body: body ? JSON.stringify(body) : undefined,
+      },
+    });
+
   // Helper pour DELETE requests
   const del = <TResponse>(path: string) =>
     requestJson<TResponse>({
@@ -483,6 +494,78 @@ export function createApiClient(options: ApiClientOptions) {
         put<T.Article>(`/articles/${id}`, data),
 
       delete: (id: T.UUID) => del<{ ok: boolean }>(`/articles/${id}`),
+    },
+
+    // ========================================================================
+    // CMS - FAQ
+    // ========================================================================
+    faq: {
+      list: (params?: {
+        category?: string;
+        published_only?: boolean;
+        skip?: number;
+        limit?: number;
+      }) => get<T.FaqItem[]>("/faq", params),
+
+      get: (id: T.UUID) => get<T.FaqItem>(`/faq/${id}`),
+
+      create: (data: T.FaqItemCreate) => post<T.FaqItem>("/faq", data),
+
+      update: (id: T.UUID, data: T.FaqItemUpdate) =>
+        put<T.FaqItem>(`/faq/${id}`, data),
+
+      delete: (id: T.UUID) => del<{ ok: boolean }>(`/faq/${id}`),
+    },
+
+    // ========================================================================
+    // CONTACT (formulaire du portail → boîte de réception BO)
+    // ========================================================================
+    contact: {
+      send: (data: T.ContactMessageCreate) => post<{ ok: boolean }>("/contact", data),
+
+      list: (params?: { status?: T.ContactMessageStatus; skip?: number; limit?: number }) =>
+        get<T.ContactMessage[]>("/contact", params),
+
+      setStatus: (id: T.UUID, status: T.ContactMessageStatus) =>
+        patch<T.ContactMessage>(`/contact/${id}`, { status }),
+    },
+
+    // ========================================================================
+    // CMS - TEAM
+    // ========================================================================
+    team: {
+      list: (params?: { published_only?: boolean; skip?: number; limit?: number }) =>
+        get<T.TeamMember[]>("/team", params),
+
+      get: (id: T.UUID) => get<T.TeamMember>(`/team/${id}`),
+
+      create: (data: T.TeamMemberCreate) => post<T.TeamMember>("/team", data),
+
+      update: (id: T.UUID, data: T.TeamMemberUpdate) =>
+        put<T.TeamMember>(`/team/${id}`, data),
+
+      delete: (id: T.UUID) => del<{ ok: boolean }>(`/team/${id}`),
+    },
+
+    // ========================================================================
+    // CMS - PARTNERS
+    // ========================================================================
+    partners: {
+      list: (params?: {
+        category?: string;
+        published_only?: boolean;
+        skip?: number;
+        limit?: number;
+      }) => get<T.Partner[]>("/partners", params),
+
+      get: (id: T.UUID) => get<T.Partner>(`/partners/${id}`),
+
+      create: (data: T.PartnerCreate) => post<T.Partner>("/partners", data),
+
+      update: (id: T.UUID, data: T.PartnerUpdate) =>
+        put<T.Partner>(`/partners/${id}`, data),
+
+      delete: (id: T.UUID) => del<{ ok: boolean }>(`/partners/${id}`),
     },
 
     // ========================================================================

@@ -2,14 +2,14 @@ import { addMonths, differenceInDays, format, isAfter, parseISO } from "date-fns
 import { fr } from "date-fns/locale";
 
 /** Vérifie l'éligibilité au don selon le sexe.
- *  Hommes : 2 mois (60j), Femmes : 4 mois (120j). */
+ *  Règle CNTS : hommes tous les 3 mois, femmes tous les 4 mois. */
 export function checkEligibilite(
   sexe: "H" | "F",
   dernierDon: string | null
 ): { eligible: boolean; eligibleLe: Date | null; joursRestants: number | null } {
   if (!dernierDon) return { eligible: true, eligibleLe: null, joursRestants: null };
 
-  const mois = sexe === "H" ? 2 : 4;
+  const mois = sexe === "H" ? 3 : 4;
   const eligibleLe = addMonths(parseISO(dernierDon), mois);
   const now = new Date();
   const eligible = isAfter(now, eligibleLe) || now.getTime() === eligibleLe.getTime();

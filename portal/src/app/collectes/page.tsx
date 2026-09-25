@@ -1,234 +1,200 @@
-import Image from "next/image";
-import Link from "next/link";
-import { Calendar, MapPin, Clock, Users, ArrowRight } from "lucide-react";
+"use client";
 
-export const metadata = {
-  title: "Collectes de sang à venir — SGI-CNTS",
-  description:
-    "Calendrier des collectes de sang fixes et mobiles organisées par le CNTS à travers le Sénégal.",
+import { useState } from "react";
+import { Card, Button, PageBanner } from "@/components/cnts/primitives";
+import { centers, org } from "@/components/cnts/data";
+import { SenegalMap, geoToSvg } from "@/components/cnts/senegal-map";
+
+// Rattachement ville → région (code SimpleMaps) pour surligner la région active.
+const CITY_REGION: Record<string, string> = {
+  Dakar: "SNDK",
+  Kaolack: "SNKL",
 };
 
-export default function CollectesPage() {
-  const collectesFixes = [
-    {
-      lieu: "CNTS Dakar — Siège",
-      adresse: "Avenue Cheikh Anta Diop, Dakar",
-      horaires: "Lundi au Vendredi : 8h - 16h | Samedi : 8h - 13h",
-      type: "Permanent",
-    },
-    {
-      lieu: "CTS de Thiès",
-      adresse: "Centre Hospitalier Régional de Thiès",
-      horaires: "Lundi au Vendredi : 8h - 15h",
-      type: "Permanent",
-    },
-    {
-      lieu: "CTS de Saint-Louis",
-      adresse: "Hôpital Régional de Saint-Louis",
-      horaires: "Lundi au Vendredi : 8h - 15h",
-      type: "Permanent",
-    },
-    {
-      lieu: "CTS de Kaolack",
-      adresse: "Hôpital Régional de Kaolack",
-      horaires: "Lundi au Vendredi : 8h - 15h",
-      type: "Permanent",
-    },
-  ];
+type Pin = { id: string; name: string; region: string; x: number; y: number; sx: number; sy: number };
 
-  const collectesMobiles = [
-    {
-      nom: "Collecte UCAD — Campus social",
-      date: "15 Février 2026",
-      horaires: "9h - 16h",
-      lieu: "Université Cheikh Anta Diop, Dakar",
-      places: 150,
-      statut: "PLANIFIEE",
-    },
-    {
-      nom: "Collecte entreprise — Sonatel",
-      date: "22 Février 2026",
-      horaires: "10h - 15h",
-      lieu: "Siège Sonatel, Dakar",
-      places: 80,
-      statut: "PLANIFIEE",
-    },
-    {
-      nom: "Collecte communautaire — Pikine",
-      date: "1er Mars 2026",
-      horaires: "8h - 14h",
-      lieu: "Centre communautaire de Pikine",
-      places: 100,
-      statut: "PLANIFIEE",
-    },
-    {
-      nom: "Collecte Garnison — Camp Dial Diop",
-      date: "8 Mars 2026",
-      horaires: "8h - 16h",
-      lieu: "Camp militaire Dial Diop, Dakar",
-      places: 200,
-      statut: "PLANIFIEE",
-    },
-    {
-      nom: "Journée mondiale du donneur",
-      date: "14 Juin 2026",
-      horaires: "8h - 18h",
-      lieu: "Place de l'Indépendance, Dakar",
-      places: 500,
-      statut: "PLANIFIEE",
-    },
+// Projection des centres + écartement des pins trop proches (cluster de Dakar).
+function buildPins(): Pin[] {
+  const base = centers.map((c) => {
+    const { x, y } = geoToSvg(c.lng, c.lat);
+    return { id: c.id, name: c.name, region: CITY_REGION[c.city] ?? "", x, y };
+  });
+  const CLUSTER = 45;
+  const RING = 34;
+  const groups: { cx: number; cy: number; items: typeof base }[] = [];
+  base.forEach((p) => {
+    const g = groups.find((g) => Math.hypot(g.cx - p.x, g.cy - p.y) < CLUSTER);
+    if (g) g.items.push(p);
+    else groups.push({ cx: p.x, cy: p.y, items: [p] });
+  });
+  const out: Pin[] = [];
+  groups.forEach((g) => {
+    if (g.items.length === 1) {
+      const p = g.items[0];
+      out.push({ ...p, sx: p.x, sy: p.y });
+      return;
+    }
+    g.items.forEach((p, i) => {
+      const ang = (Math.PI * 2 * i) / g.items.length - Math.PI / 2;
+      out.push({ ...p, sx: g.cx + Math.cos(ang) * RING, sy: g.cy + Math.sin(ang) * RING });
+    });
+  });
+  return out;
+}
+
+const PINS = buildPins();
+
+export default function CollectesPage() {
+  const [filter, setFilter] = useState<"tous" | "fixe" | "mobile">("tous");
+  const [active, setActive] = useState(centers[0].id);
+  const list = centers.filter((c) => (filter === "tous" ? true : c.type === filter));
+  const filters: [("tous" | "fixe" | "mobile"), string][] = [
+    ["tous", "Tous"],
+    ["fixe", "Centres fixes"],
+    ["mobile", "Collectes mobiles"],
   ];
+  const activeCenter = centers.find((c) => c.id === active);
+  const activeRegion = activeCenter ? CITY_REGION[activeCenter.city] ?? "" : "";
 
   return (
-    <div className="bg-zinc-50 min-h-screen">
-      {/* Hero */}
-      <div className="bg-zinc-900 text-white py-16 md:py-24">
-        <div className="mx-auto max-w-7xl px-4">
-          <div className="flex flex-col md:flex-row items-center gap-12">
-            <div className="flex-1 text-center md:text-left">
-              <div className="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-sm font-medium backdrop-blur-sm border border-white/20 mb-6">
-                <Calendar className="h-4 w-4 mr-2" />
-                Donnez près de chez vous
-              </div>
-              <h1 className="text-4xl font-bold md:text-5xl mb-4">
-                Collectes de sang
-              </h1>
-              <p className="mt-4 text-zinc-300 max-w-xl text-lg">
-                Retrouvez les lieux et dates des prochaines collectes de sang
-                organisées par le CNTS à travers le Sénégal.
-              </p>
+    <div>
+      <PageBanner
+        kicker="Collectes & centres"
+        title="Où donner son sang ?"
+        sub={`Le siège du CNTS à Dakar-Fann et le réseau de ${org.structures} structures de transfusion accueillent les donneurs. Les collectes mobiles sont organisées dans les entreprises, administrations et universités.`}
+      />
+      <div style={{ maxWidth: 1180, margin: "0 auto", padding: "var(--gutter)" }}>
+        <div style={{ display: "flex", gap: 8, marginBottom: 22, flexWrap: "wrap" }}>
+          {filters.map(([k, l]) => (
+            <button
+              key={k}
+              onClick={() => setFilter(k)}
+              style={{
+                padding: "9px 18px",
+                borderRadius: "var(--r-pill)",
+                fontSize: 13.5,
+                fontWeight: 600,
+                cursor: "pointer",
+                border: "1px solid " + (filter === k ? "var(--brand)" : "var(--line-strong)"),
+                background: filter === k ? "var(--brand)" : "var(--surface)",
+                color: filter === k ? "#fff" : "var(--ink-700)",
+                transition: "all .15s",
+              }}
+            >
+              {l}
+            </button>
+          ))}
+        </div>
+        <div
+          className="two-col"
+          style={{ display: "grid", gridTemplateColumns: "1fr 1.1fr", gap: 24, alignItems: "start" }}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {list.length === 0 && (
+              <Card pad={22}>
+                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>Aucune collecte mobile annoncée pour le moment</h3>
+                <p style={{ fontSize: 14, color: "var(--ink-600)", lineHeight: 1.55, marginBottom: 14 }}>
+                  Les prochaines collectes sont annoncées dans nos actualités. Vous souhaitez en organiser une dans votre
+                  entreprise, administration ou association ? Contactez-nous au {org.phone}.
+                </p>
+                <Button size="sm" variant="outline" iconRight="arrowR" href="/services/promotion-don">
+                  Organiser une collecte
+                </Button>
+              </Card>
+            )}
+            {list.map((c) => (
+              <Card
+                key={c.id}
+                pad={18}
+                hover
+                onClick={() => setActive(c.id)}
+                style={{
+                  borderColor: active === c.id ? "var(--brand)" : "var(--line)",
+                  boxShadow: active === c.id ? "var(--ring)" : "var(--sh-xs)",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                  <div>
+                    <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4, lineHeight: 1.25 }}>{c.name}</h3>
+                    <div style={{ fontSize: 13, color: "var(--ink-600)", marginBottom: 2 }}>
+                      {c.area}, {c.city}
+                    </div>
+                    <div style={{ fontSize: 13, color: "var(--ink-600)" }}>{c.hours}</div>
+                  </div>
+                </div>
+                <div style={{ marginTop: 14, display: "flex", gap: 8 }}>
+                  <Button size="sm" variant="primary" icon="calendarCheck" href="/espace-patient/rendez-vous">
+                    Réserver
+                  </Button>
+                  <Button size="sm" variant="ghost" icon="phone" href={`tel:${org.phone.replace(/\s/g, "")}`}>
+                    Appeler
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+          <div style={{ position: "sticky", top: 90 }}>
+            <div
+              style={{
+                position: "relative",
+                width: "100%",
+                aspectRatio: "1000 / 736",
+                borderRadius: "var(--r-lg)",
+                border: "1px solid var(--line)",
+                background: "var(--surface-1)",
+                overflow: "hidden",
+                padding: 12,
+              }}
+            >
+              {activeCenter && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 14,
+                    left: 14,
+                    zIndex: 2,
+                    background: "var(--surface)",
+                    border: "1px solid var(--line)",
+                    borderRadius: "var(--r-md)",
+                    boxShadow: "var(--sh-sm)",
+                    padding: "8px 13px",
+                    maxWidth: "65%",
+                  }}
+                >
+                  <div style={{ fontSize: 11, color: "var(--ink-500)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                    Sélectionné
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ink-900)", lineHeight: 1.2 }}>
+                    {activeCenter.name}
+                  </div>
+                  <div style={{ fontSize: 12.5, color: "var(--ink-600)" }}>{activeCenter.city}</div>
+                </div>
+              )}
+              <SenegalMap activeRegion={activeRegion}>
+                {PINS.map((p) => {
+                  const on = active === p.id;
+                  return (
+                    <g
+                      key={p.id}
+                      onClick={() => setActive(p.id)}
+                      style={{ cursor: "pointer" }}
+                      transform={`translate(${p.sx} ${p.sy})`}
+                    >
+                      <title>{p.name}</title>
+                      <circle r={on ? 24 : 16} fill={on ? "var(--brand)" : "var(--red-700)"} stroke="#fff" strokeWidth={4} opacity={on ? 1 : 0.92}>
+                        {on && <animate attributeName="r" values="20;26;20" dur="1.6s" repeatCount="indefinite" />}
+                      </circle>
+                      <circle r={on ? 7 : 5} fill="#fff" />
+                    </g>
+                  );
+                })}
+              </SenegalMap>
             </div>
-            <div className="hidden md:block w-80 h-64 relative shrink-0">
-              <Image src="/images/illustration-collecte.svg" alt="Illustration collecte mobile" fill className="object-contain drop-shadow-2xl" priority />
+            <div style={{ marginTop: 10, fontSize: 12, color: "var(--ink-500)", textAlign: "right" }}>
+              Carte © simplemaps.com
             </div>
           </div>
         </div>
-      </div>
-
-      <div className="mx-auto max-w-7xl px-4 py-16 space-y-20">
-        {/* Prochaines collectes mobiles */}
-        <section>
-          <h2 className="text-3xl font-bold text-zinc-900 mb-2">
-            Prochaines collectes mobiles
-          </h2>
-          <p className="text-zinc-600 mb-8">
-            Le CNTS se déplace dans les entreprises, universités et communes pour
-            faciliter l'accès au don.
-          </p>
-
-          <div className="space-y-4">
-            {collectesMobiles.map((collecte, idx) => (
-              <div
-                key={idx}
-                className="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm hover:shadow-md transition-shadow"
-              >
-                <div className="flex flex-col md:flex-row md:items-center gap-4">
-                  {/* Date */}
-                  <div className="shrink-0 w-28 text-center">
-                    <div className="bg-primary/10 rounded-lg p-3">
-                      <p className="text-xs text-primary font-medium uppercase">
-                        {collecte.date.split(" ").slice(1).join(" ")}
-                      </p>
-                      <p className="text-2xl font-bold text-primary">
-                        {collecte.date.split(" ")[0]}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Détails */}
-                  <div className="flex-1">
-                    <h3 className="text-lg font-bold text-zinc-900">
-                      {collecte.nom}
-                    </h3>
-                    <div className="flex flex-wrap gap-4 mt-2 text-sm text-zinc-600">
-                      <span className="flex items-center gap-1">
-                        <MapPin className="h-4 w-4 text-primary" />
-                        {collecte.lieu}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-4 w-4 text-primary" />
-                        {collecte.horaires}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Users className="h-4 w-4 text-primary" />
-                        {collecte.places} places
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Action */}
-                  <div className="shrink-0">
-                    <Link
-                      href="/espace-patient"
-                      className="inline-flex items-center justify-center rounded-md bg-primary text-white font-medium px-4 py-2 text-sm hover:bg-primary/90 transition-colors"
-                    >
-                      S'inscrire
-                      <ArrowRight className="h-4 w-4 ml-1" />
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Centres de collecte fixes */}
-        <section>
-          <h2 className="text-3xl font-bold text-zinc-900 mb-2">
-            Centres de collecte permanents
-          </h2>
-          <p className="text-zinc-600 mb-8">
-            Vous pouvez vous présenter sans rendez-vous dans nos centres de
-            collecte fixes.
-          </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {collectesFixes.map((centre, idx) => (
-              <div
-                key={idx}
-                className="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm"
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-green-50 text-green-700">
-                    {centre.type}
-                  </span>
-                </div>
-                <h3 className="text-lg font-bold text-zinc-900 mt-2">
-                  {centre.lieu}
-                </h3>
-                <div className="space-y-2 mt-3 text-sm text-zinc-600">
-                  <div className="flex items-start gap-2">
-                    <MapPin className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                    {centre.adresse}
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Clock className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                    {centre.horaires}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* CTA organiser */}
-        <section className="bg-primary/5 rounded-2xl p-8 md:p-12 text-center">
-          <Calendar className="h-10 w-10 text-primary mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-zinc-900 mb-4">
-            Organisez une collecte
-          </h2>
-          <p className="text-zinc-600 max-w-xl mx-auto mb-6">
-            Entreprise, université, association ou collectivité : le CNTS met à
-            disposition une équipe mobile pour organiser une collecte sur votre
-            site.
-          </p>
-          <Link
-            href="/contact"
-            className="inline-flex items-center justify-center rounded-md bg-primary text-white font-bold px-8 py-3 hover:bg-primary/90 transition-colors"
-          >
-            Demander une collecte
-          </Link>
-        </section>
       </div>
     </div>
   );

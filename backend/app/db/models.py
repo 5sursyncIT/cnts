@@ -12,6 +12,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -42,6 +43,13 @@ class Donneur(Base):
     # Link to UserAccount for patient access
     user_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("user_accounts.id"), nullable=True, index=True
+    )
+
+    # Suppression logique : on ne supprime jamais physiquement un donneur, car
+    # ses dons doivent rester traçables (hémovigilance). deleted_at != NULL =>
+    # masqué des listes/recherches mais conservé en base.
+    deleted_at: Mapped[DateTime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
     )
 
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -451,12 +459,23 @@ class Article(Base):
     content: Mapped[str] = mapped_column(Text)
     category: Mapped[str] = mapped_column(String(64), index=True)
     image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    status: Mapped[str] = mapped_column(
+        String(16), default="DRAFT", server_default="DRAFT", index=True
+    )
+    tags: Mapped[list[str]] = mapped_column(
+        JSON().with_variant(JSONB(), "postgresql"),
+        default=list,
+        server_default=text("'[]'"),
+        nullable=False,
+    )
+    author_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("user_accounts.id", ondelete="SET NULL"), nullable=True
+    )
     published_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
-    is_published: Mapped[bool] = mapped_column(
-        Boolean, default=True, index=True
-    )  # Deprecated in favor of status
+    # Kept in sync with `status` (status == "PUBLISHED") for backward-compatible queries.
+    is_published: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
 
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[DateTime] = mapped_column(
@@ -465,17 +484,93 @@ class Article(Base):
         onupdate=func.now(),
     )
 
-    @property
-    def status(self) -> str:
-        return "PUBLISHED" if self.is_published else "DRAFT"
 
-    @property
-    def tags(self) -> list[str]:
-        return []
+class FaqItem(Base):
+    """Editable Foire Aux Questions entry shown on the public portal."""
 
-    @property
-    def author_id(self) -> uuid.UUID | None:
-        return None
+    __tablename__ = "faq_items"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    question: Mapped[str] = mapped_column(String(300))
+    answer: Mapped[str] = mapped_column(Text)
+    category: Mapped[str] = mapped_column(String(80), default="Général", index=True)
+    display_order: Mapped[int] = mapped_column(Integer, default=0, index=True)
+    is_published: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
+class ContactMessage(Base):
+    """Message envoyé depuis le formulaire de contact du portail public."""
+
+    __tablename__ = "contact_messages"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String(150))
+    email: Mapped[str] = mapped_column(String(254))
+    phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    subject: Mapped[str] = mapped_column(String(200))
+    message: Mapped[str] = mapped_column(Text)
+    # NOUVEAU → TRAITE (ou ARCHIVE)
+    status: Mapped[str] = mapped_column(String(20), default="NOUVEAU", index=True)
+    client_ip: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    created_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+    updated_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
+class TeamMember(Base):
+    """Editable team member shown on the public portal /equipe page."""
+
+    __tablename__ = "team_members"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String(150))
+    role: Mapped[str] = mapped_column(String(150))
+    specialty: Mapped[str | None] = mapped_column(String(150), nullable=True)
+    bio: Mapped[str | None] = mapped_column(Text, nullable=True)
+    photo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    display_order: Mapped[int] = mapped_column(Integer, default=0, index=True)
+    is_published: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
+class Partner(Base):
+    """Editable partner shown on the public portal /qui-sommes-nous/partenaires page."""
+
+    __tablename__ = "partners"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String(200))
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Grouping section on the portal, e.g. "Institutionnel" / "International" / "Académique".
+    category: Mapped[str] = mapped_column(String(80), default="Institutionnel", index=True)
+    # Optional sub-label (Tutelle, Santé publique, Standards...).
+    type: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    logo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    website_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    display_order: Mapped[int] = mapped_column(Integer, default=0, index=True)
+    is_published: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
 
 
 class ColdChainStorage(Base):

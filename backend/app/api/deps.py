@@ -1,7 +1,7 @@
 import uuid
 
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, APIKeyHeader
+from fastapi.security import OAuth2PasswordBearer, APIKeyHeader, APIKeyCookie
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -11,13 +11,45 @@ from app.db.session import get_db
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login", auto_error=False)
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+# Le Back Office (Next.js) est servi par Apache qui route /api/* directement vers
+# le backend : le navigateur ne peut donc pas passer par le proxy Next pour
+# injecter un Bearer. On accepte aussi le jeton d'accès via un cookie httpOnly
+# (posé au login), validé exactement comme un Bearer.
+access_cookie_scheme = APIKeyCookie(name="cnts_access", auto_error=False)
+
+# Rôles considérés comme "personnel" (tout sauf un compte patient).
+PATIENT_ROLE = "PATIENT"
+ADMIN_ROLE = "ADMIN"
+
+
+def _resolve_user(db: Session, token: str | None) -> UserAccount | None:
+    """Valide un jeton d'accès et renvoie l'utilisateur actif, ou None."""
+    if not token:
+        return None
+    payload = verify_token(token, secret=settings.auth_token_secret)
+    if not payload or payload.get("type") != "access":
+        return None
+    try:
+        user_id = uuid.UUID(str(payload.get("sub")))
+    except ValueError:
+        return None
+    user = db.get(UserAccount, user_id)
+    if not user or not user.is_active:
+        return None
+    return user
 
 
 def get_current_user(
     db: Session = Depends(get_db),
-    token: str = Depends(oauth2_scheme),
+    token: str | None = Depends(oauth2_scheme),
+    cookie_token: str | None = Depends(access_cookie_scheme),
 ) -> UserAccount:
-    """Require authentication - raises 401 if not authenticated."""
+    """Require authentication - raises 401 if not authenticated.
+
+    Accepte le jeton via l'en-tête ``Authorization: Bearer`` (clients API,
+    mobile) ou via le cookie httpOnly ``cnts_access`` (navigateur Back Office).
+    """
+    token = token or cookie_token
     if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -113,3 +145,23 @@ def require_auth_in_production(
 
     # In dev, allow unauthenticated access with a warning
     return None
+
+
+def require_staff(user: UserAccount = Depends(get_current_user)) -> UserAccount:
+    """Authentification obligatoire + rôle personnel (tout sauf PATIENT)."""
+    if (user.role or "").upper() == PATIENT_ROLE:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Accès réservé au personnel du centre",
+        )
+    return user
+
+
+def require_admin(user: UserAccount = Depends(get_current_user)) -> UserAccount:
+    """Authentification obligatoire + rôle administrateur."""
+    if (user.role or "").upper() != ADMIN_ROLE:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Action réservée aux administrateurs",
+        )
+    return user

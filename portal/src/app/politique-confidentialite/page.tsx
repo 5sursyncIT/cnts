@@ -1,4 +1,5 @@
 import React from 'react';
+import { org } from "@/components/cnts/data";
 
 export default function PolitiqueConfidentialite() {
   return (
@@ -58,8 +59,8 @@ export default function PolitiqueConfidentialite() {
           </p>
           <p className="mt-2">
             Pour exercer ces droits, vous pouvez nous contacter à l'adresse suivante :<br />
-            <strong>Email :</strong> dpo@cnts.sn<br />
-            <strong>Adresse postale :</strong> CNTS, Avenue Cheikh Anta Diop, Dakar.
+            <strong>Email :</strong> {org.email}<br />
+            <strong>Adresse postale :</strong> CNTS, {org.address} — {org.bp}.
           </p>
         </section>
 

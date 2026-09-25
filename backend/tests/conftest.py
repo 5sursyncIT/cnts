@@ -6,6 +6,7 @@ and common domain fixtures (donneur, don, analyses).
 """
 
 import datetime as dt
+import uuid
 
 import pytest
 from fastapi.testclient import TestClient
@@ -13,9 +14,29 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app.api.deps import require_admin, require_staff
 from app.db.base import Base
+from app.db.models import UserAccount
 from app.db.session import get_db
 from app.main import app
+
+
+def _test_staff_user() -> UserAccount:
+    """Utilisateur administrateur factice pour satisfaire l'auth RBAC des routes."""
+    return UserAccount(
+        id=uuid.uuid4(),
+        email="test-admin@cnts.local",
+        password_hash="x",
+        is_active=True,
+        role="ADMIN",
+    )
+
+
+# Posé dès l'import de conftest (avant toute collecte) pour couvrir aussi les
+# modules de test qui définissent leur PROPRE fixture `setup_database` (et qui
+# masquent donc celle ci-dessous). Ces dépendances ne touchent pas la base.
+app.dependency_overrides[require_staff] = _test_staff_user
+app.dependency_overrides[require_admin] = _test_staff_user
 
 # ---------- Database setup ----------
 

@@ -1,46 +1,58 @@
 import datetime as dt
+import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select, or_
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.api.deps import require_auth_in_production
-from app.core.dates import add_months
+from app.api.deps import require_admin, require_staff
+from app.core.eligibilite import evaluer_eligibilite
 from app.core.security import hash_cni
-from app.db.models import CarteDonneur, Donneur, UserAccount
+from app.db.models import CarteDonneur, Don, Donneur, UserAccount
 from app.db.session import get_db
 from app.schemas.donneurs import DonneurCreate, DonneurOut, DonneurUpdate, EligibiliteOut
 
 router = APIRouter(prefix="/donneurs")
 
 
+def _apply_donneur_fields(row: Donneur, payload: DonneurCreate) -> None:
+    row.nom = payload.nom
+    row.prenom = payload.prenom
+    row.sexe = payload.sexe
+    row.date_naissance = payload.date_naissance
+    row.groupe_sanguin = payload.groupe_sanguin
+    row.adresse = payload.adresse
+    row.region = payload.region
+    row.departement = payload.departement
+    row.telephone = payload.telephone
+    row.email = payload.email
+    row.profession = payload.profession
+
+
 @router.post("", response_model=DonneurOut)
 def create_donneur(
     payload: DonneurCreate,
     db: Session = Depends(get_db),
-    _user: UserAccount | None = Depends(require_auth_in_production),
+    _user: UserAccount = Depends(require_staff),
 ) -> Donneur:
     cni_hash = hash_cni(payload.cni)
+    # Le CNI n'est jamais stocké en clair (RGPD) ; seule son empreinte sert à
+    # détecter les doublons.
     existing = db.execute(select(Donneur).where(Donneur.cni_hash == cni_hash)).scalar_one_or_none()
     if existing is not None:
+        if existing.deleted_at is None:
+            # On NE renvoie PAS la fiche existante : cela transformerait cet
+            # endpoint en oracle révélant qu'une personne est déjà donneuse.
+            raise HTTPException(status_code=409, detail="Un donneur avec ce CNI existe déjà")
+        # Réactivation d'un donneur précédemment supprimé (même CNI).
+        existing.deleted_at = None
+        _apply_donneur_fields(existing, payload)
+        db.commit()
+        db.refresh(existing)
         return existing
-    row = Donneur(
-        cni_hash=cni_hash,
-        # CNI is NOT stored in plaintext for privacy/GDPR compliance
-        # Only the hash is kept for duplicate detection
-        nom=payload.nom,
-        prenom=payload.prenom,
-        sexe=payload.sexe,
-        date_naissance=payload.date_naissance,
-        groupe_sanguin=payload.groupe_sanguin,
-        adresse=payload.adresse,
-        region=payload.region,
-        departement=payload.departement,
-        telephone=payload.telephone,
-        email=payload.email,
-        profession=payload.profession,
-        dernier_don=None,
-    )
+
+    row = Donneur(cni_hash=cni_hash, dernier_don=None)
+    _apply_donneur_fields(row, payload)
     db.add(row)
     db.commit()
     db.refresh(row)
@@ -57,8 +69,9 @@ def list_donneurs(
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=1000),
     db: Session = Depends(get_db),
+    _user: UserAccount = Depends(require_staff),
 ) -> list[Donneur]:
-    stmt = select(Donneur)
+    stmt = select(Donneur).where(Donneur.deleted_at.is_(None))
 
     if numero_carte:
         # Recherche par numéro de carte donneur (identifiant unique)
@@ -87,15 +100,26 @@ def list_donneurs(
         stmt = stmt.where(Donneur.region == region)
 
     stmt = stmt.options(selectinload(Donneur.carte_donneur))
+    # Tri stable (created_at + id) pour une pagination par offset déterministe.
     return list(
-        db.execute(stmt.order_by(Donneur.created_at.desc()).offset(offset).limit(limit)).scalars()
+        db.execute(
+            stmt.order_by(Donneur.created_at.desc(), Donneur.id.desc())
+            .offset(offset)
+            .limit(limit)
+        ).scalars()
     )
 
 
 @router.get("/{donneur_id}", response_model=DonneurOut)
-def get_donneur(donneur_id: str, db: Session = Depends(get_db)) -> Donneur:
+def get_donneur(
+    donneur_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    _user: UserAccount = Depends(require_staff),
+) -> Donneur:
     row = db.execute(
-        select(Donneur).where(Donneur.id == donneur_id).options(selectinload(Donneur.carte_donneur))
+        select(Donneur)
+        .where(Donneur.id == donneur_id, Donneur.deleted_at.is_(None))
+        .options(selectinload(Donneur.carte_donneur))
     ).scalar_one_or_none()
     if row is None:
         raise HTTPException(status_code=404, detail="donneur not found")
@@ -104,13 +128,13 @@ def get_donneur(donneur_id: str, db: Session = Depends(get_db)) -> Donneur:
 
 @router.put("/{donneur_id}", response_model=DonneurOut)
 def update_donneur(
-    donneur_id: str,
+    donneur_id: uuid.UUID,
     payload: DonneurUpdate,
     db: Session = Depends(get_db),
-    _user: UserAccount | None = Depends(require_auth_in_production),
+    _user: UserAccount = Depends(require_staff),
 ) -> Donneur:
     row = db.get(Donneur, donneur_id)
-    if row is None:
+    if row is None or row.deleted_at is not None:
         raise HTTPException(status_code=404, detail="donneur not found")
 
     if payload.cni is not None:
@@ -147,45 +171,48 @@ def update_donneur(
 
 @router.get("/{donneur_id}/eligibilite", response_model=EligibiliteOut)
 def eligibilite(
-    donneur_id: str,
+    donneur_id: uuid.UUID,
     as_of: dt.date | None = Query(default=None),
     db: Session = Depends(get_db),
+    _user: UserAccount = Depends(require_staff),
 ) -> EligibiliteOut:
     row = db.get(Donneur, donneur_id)
-    if row is None:
+    if row is None or row.deleted_at is not None:
         raise HTTPException(status_code=404, detail="donneur not found")
     ref_date = as_of or dt.date.today()
-    if row.dernier_don is None:
-        return EligibiliteOut(
-            eligible=True,
-            eligible_le=None,
-            raison="Premier don — aucun délai requis",
-        )
-    months = 2 if row.sexe == "H" else 4
-    eligible_le = add_months(row.dernier_don, months)
-    is_eligible = ref_date >= eligible_le
-    delai = (eligible_le - ref_date).days if not is_eligible else None
-    raison = (
-        "Éligible au don"
-        if is_eligible
-        else f"Délai inter-don non respecté ({months * 30} jours minimum)"
+
+    last_don = db.execute(
+        select(Don)
+        .where(Don.donneur_id == donneur_id)
+        .order_by(Don.date_don.desc(), Don.created_at.desc())
+        .limit(1)
+    ).scalar_one_or_none()
+
+    result = evaluer_eligibilite(
+        sexe=row.sexe,
+        date_naissance=row.date_naissance,
+        dernier_don=row.dernier_don,
+        dernier_type_don=last_don.type_don if last_don else None,
+        ref_date=ref_date,
     )
     return EligibiliteOut(
-        eligible=is_eligible,
-        eligible_le=eligible_le,
-        raison=raison,
-        delai_jours=delai,
+        eligible=result.eligible,
+        eligible_le=result.eligible_le,
+        raison=result.raison,
+        delai_jours=result.delai_jours,
+        age=result.age,
     )
 
 
 @router.delete("/{donneur_id}", status_code=204)
 def delete_donneur(
-    donneur_id: str,
+    donneur_id: uuid.UUID,
     db: Session = Depends(get_db),
-    _user: UserAccount | None = Depends(require_auth_in_production),
+    _user: UserAccount = Depends(require_admin),
 ) -> None:
     row = db.get(Donneur, donneur_id)
-    if row is None:
+    if row is None or row.deleted_at is not None:
         raise HTTPException(status_code=404, detail="donneur not found")
-    db.delete(row)
+    # Suppression logique : la fiche et ses dons restent traçables (hémovigilance).
+    row.deleted_at = func.now()
     db.commit()

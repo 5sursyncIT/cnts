@@ -102,6 +102,97 @@ export function useDeleteArticle(api: ApiClient) {
 }
 
 // ============================================================================
+// FAQ HOOKS
+// ============================================================================
+
+export function useFaqItems(api: ApiClient, params?: Parameters<ApiClient["faq"]["list"]>[0]) {
+  return useQuery(["faq", JSON.stringify(params)], () => api.faq.list(params));
+}
+
+export function useContactMessages(
+  api: ApiClient,
+  params?: Parameters<ApiClient["contact"]["list"]>[0]
+) {
+  return useQuery(["contact-messages", JSON.stringify(params)], () => api.contact.list(params));
+}
+
+export function useSetContactMessageStatus(api: ApiClient) {
+  return useMutation((payload: { id: T.UUID; status: T.ContactMessageStatus }) =>
+    api.contact.setStatus(payload.id, payload.status)
+  );
+}
+
+export function useFaqItem(api: ApiClient, id: string) {
+  return useQuery(["faq-item", id], () => api.faq.get(id), { enabled: !!id });
+}
+
+export function useCreateFaqItem(api: ApiClient) {
+  return useMutation((data: T.FaqItemCreate) => api.faq.create(data));
+}
+
+export function useUpdateFaqItem(api: ApiClient) {
+  return useMutation((payload: { id: T.UUID; data: T.FaqItemUpdate }) =>
+    api.faq.update(payload.id, payload.data)
+  );
+}
+
+export function useDeleteFaqItem(api: ApiClient) {
+  return useMutation((id: T.UUID) => api.faq.delete(id));
+}
+
+// ============================================================================
+// TEAM HOOKS
+// ============================================================================
+
+export function useTeamMembers(api: ApiClient, params?: Parameters<ApiClient["team"]["list"]>[0]) {
+  return useQuery(["team", JSON.stringify(params)], () => api.team.list(params));
+}
+
+export function useTeamMember(api: ApiClient, id: string) {
+  return useQuery(["team-member", id], () => api.team.get(id), { enabled: !!id });
+}
+
+export function useCreateTeamMember(api: ApiClient) {
+  return useMutation((data: T.TeamMemberCreate) => api.team.create(data));
+}
+
+export function useUpdateTeamMember(api: ApiClient) {
+  return useMutation((payload: { id: T.UUID; data: T.TeamMemberUpdate }) =>
+    api.team.update(payload.id, payload.data)
+  );
+}
+
+export function useDeleteTeamMember(api: ApiClient) {
+  return useMutation((id: T.UUID) => api.team.delete(id));
+}
+
+// ============================================================================
+// PARTNER HOOKS
+// ============================================================================
+
+export function usePartners(api: ApiClient, params?: Parameters<ApiClient["partners"]["list"]>[0]) {
+  return useQuery(["partners", JSON.stringify(params)], () => api.partners.list(params));
+}
+
+export function usePartner(api: ApiClient, id: string) {
+  return useQuery(["partner", id], () => api.partners.get(id), { enabled: !!id });
+}
+
+export function useCreatePartner(api: ApiClient) {
+  return useMutation((data: T.PartnerCreate) => api.partners.create(data));
+}
+
+export function useUpdatePartner(api: ApiClient) {
+  return useMutation((payload: { id: T.UUID; data: T.PartnerUpdate }) =>
+    api.partners.update(payload.id, payload.data)
+  );
+}
+
+export function useDeletePartner(api: ApiClient) {
+  return useMutation((id: T.UUID) => api.partners.delete(id));
+}
+
+// ============================================================================
 // UPLOAD HOOK
 // ============================================================================
 
@@ -130,10 +221,6 @@ export function useUpdateDonneur(api: ApiClient) {
     api.donneurs.update(payload.id, payload.data)
   );
 }
-
-// ... existing code ...
-
-
 
 export function useDeleteDonneur(api: ApiClient) {
   return useMutation((id: T.UUID) => api.donneurs.delete(id));

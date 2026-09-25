@@ -2,17 +2,28 @@
 
 import { useDonneurs } from "@cnts/api";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/api-client";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function DonneursPage() {
+  const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [sexeFilter, setSexeFilter] = useState<"H" | "F" | "">("");
   const [groupeFilter, setGroupeFilter] = useState("");
   const [regionFilter, setRegionFilter] = useState("");
   const [page, setPage] = useState(1);
   const ITEMS_PER_PAGE = 20;
+
+  // Recherche debouncée : le backend fait un ILIKE '%q%' non indexable, on évite
+  // donc une requête (scan complet) à chaque frappe.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchQuery(searchInput);
+      setPage(1);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   const REGIONS_SENEGAL = [
     "Dakar", "Diourbel", "Fatick", "Kaffrine", "Kaolack", "Kédougou",
@@ -22,14 +33,19 @@ export default function DonneursPage() {
 
   const GROUPES_SANGUINS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
-  const { data: donneurs, status, error, refetch } = useDonneurs(apiClient, {
+  const { data, status, error, refetch } = useDonneurs(apiClient, {
     q: searchQuery || undefined,
     sexe: (sexeFilter || undefined) as "H" | "F" | undefined,
     groupe_sanguin: groupeFilter || undefined,
     region: regionFilter || undefined,
-    limit: ITEMS_PER_PAGE,
+    // On demande un élément de plus que la page pour savoir s'il existe une page
+    // suivante (l'API ne renvoie pas de total).
+    limit: ITEMS_PER_PAGE + 1,
     offset: (page - 1) * ITEMS_PER_PAGE,
   });
+
+  const hasNext = (data?.length ?? 0) > ITEMS_PER_PAGE;
+  const donneurs = data?.slice(0, ITEMS_PER_PAGE);
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -58,11 +74,8 @@ export default function DonneursPage() {
             </label>
             <input
               type="text"
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setPage(1);
-              }}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               placeholder="N° carte, nom, prénom, téléphone..."
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             />
@@ -282,7 +295,7 @@ export default function DonneursPage() {
             </button>
             <button
               onClick={() => setPage((p) => p + 1)}
-              disabled={!donneurs || donneurs.length < ITEMS_PER_PAGE}
+              disabled={!hasNext}
               className="px-3 py-1 border border-gray-300 rounded-md disabled:opacity-50 hover:bg-gray-50 flex items-center gap-1 text-sm font-medium text-gray-700"
             >
               Suivant

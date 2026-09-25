@@ -3,20 +3,44 @@
 import { useArticles } from "@cnts/api";
 import Link from "next/link";
 import { apiClient } from "@/lib/api-client";
-import { Plus, Edit, Trash, FileText, CheckCircle, Clock, Search, Filter } from "lucide-react";
+import { Plus, Edit, FileText, CheckCircle, Clock, Search, ExternalLink } from "lucide-react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { ContentNav } from "@/components/content-nav";
+
+const PORTAL_URL = process.env.NEXT_PUBLIC_PORTAL_URL || "https://cnts.gouv.sn";
+
+const STATUS_META: Record<string, { label: string; className: string }> = {
+  PUBLISHED: { label: "Publié", className: "bg-green-50 text-green-700 border-green-200" },
+  DRAFT: { label: "Brouillon", className: "bg-zinc-100 text-zinc-700 border-zinc-200" },
+  REVIEW: { label: "En relecture", className: "bg-yellow-50 text-yellow-700 border-yellow-200" },
+  ARCHIVED: { label: "Archivé", className: "bg-red-50 text-red-700 border-red-200" },
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  ACTUALITE: "Actualité",
+  EVENEMENT: "Événement",
+  COMMUNIQUE: "Communiqué",
+  SANTE: "Santé",
+  RESSOURCE: "Ressource",
+};
 
 export default function CMSPage() {
   const { data: articles, status } = useArticles(apiClient, { limit: 100, published_only: false });
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
 
-  const filteredArticles = articles?.filter(a => 
-    a.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    a.slug.includes(searchTerm.toLowerCase())
-  ) || [];
+  const filteredArticles = articles?.filter(a => {
+    const matchesSearch =
+      a.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      a.slug.includes(searchTerm.toLowerCase());
+    const matchesStatus = !statusFilter || a.status === statusFilter;
+    const matchesCategory = !categoryFilter || a.category === categoryFilter;
+    return matchesSearch && matchesStatus && matchesCategory;
+  }) || [];
 
   const stats = {
     total: articles?.length || 0,
@@ -26,6 +50,7 @@ export default function CMSPage() {
 
   return (
     <div className="space-y-8">
+      <ContentNav />
       {/* Header & Stats */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -92,10 +117,29 @@ export default function CMSPage() {
             />
           </div>
           <div className="ml-auto flex items-center gap-2">
-            <Button variant="outline" size="sm" className="hidden md:flex">
-              <Filter className="mr-2 h-4 w-4" />
-              Filtres
-            </Button>
+            <Select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="h-9 w-auto text-sm"
+              aria-label="Filtrer par statut"
+            >
+              <option value="">Tous les statuts</option>
+              <option value="PUBLISHED">Publié</option>
+              <option value="REVIEW">En relecture</option>
+              <option value="DRAFT">Brouillon</option>
+              <option value="ARCHIVED">Archivé</option>
+            </Select>
+            <Select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="h-9 w-auto text-sm"
+              aria-label="Filtrer par catégorie"
+            >
+              <option value="">Toutes catégories</option>
+              {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </Select>
           </div>
         </div>
 
@@ -148,32 +192,45 @@ export default function CMSPage() {
                   </td>
                   <td className="px-6 py-4">
                     <Badge variant="secondary" className="font-medium">
-                      {article.category}
+                      {CATEGORY_LABELS[article.category] || article.category}
                     </Badge>
                   </td>
                   <td className="px-6 py-4">
                     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border ${
-                      article.status === 'PUBLISHED' ? 'bg-green-50 text-green-700 border-green-200' :
-                      article.status === 'DRAFT' ? 'bg-zinc-100 text-zinc-700 border-zinc-200' :
-                      'bg-yellow-50 text-yellow-700 border-yellow-200'
+                      (STATUS_META[article.status] || STATUS_META.DRAFT).className
                     }`}>
-                      {article.status === 'PUBLISHED' ? 'Publié' : article.status === 'DRAFT' ? 'Brouillon' : 'En relecture'}
+                      {(STATUS_META[article.status] || STATUS_META.DRAFT).label}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-sm text-zinc-500">
                     <div className="flex items-center gap-2">
                       <Clock className="h-3 w-3" />
-                      {new Date(article.published_at).toLocaleDateString('fr-FR')}
+                      {article.status === 'PUBLISHED' && article.published_at
+                        ? new Date(article.published_at).toLocaleDateString('fr-FR')
+                        : '—'}
                     </div>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <Link
-                      href={`/cms/${article.slug}`}
-                      className="inline-flex items-center justify-center h-8 w-8 rounded-md text-zinc-400 hover:text-primary hover:bg-primary/5 transition-colors"
-                      title="Éditer"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Link>
+                    <div className="flex items-center justify-end gap-1">
+                      {article.status === 'PUBLISHED' && (
+                        <a
+                          href={`${PORTAL_URL}/actualites/${article.slug}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center h-8 w-8 rounded-md text-zinc-400 hover:text-primary hover:bg-primary/5 transition-colors"
+                          title="Voir sur le site"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      )}
+                      <Link
+                        href={`/cms/${article.slug}`}
+                        className="inline-flex items-center justify-center h-8 w-8 rounded-md text-zinc-400 hover:text-primary hover:bg-primary/5 transition-colors"
+                        title="Éditer"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}

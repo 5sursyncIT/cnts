@@ -1,64 +1,97 @@
 import { Plus, Minus, HelpCircle, Search } from "lucide-react";
+import { apiClient } from "@/lib/api-client";
+import { logger } from "@/lib/logger";
 
 export const metadata = {
   title: "Foire Aux Questions — SGI-CNTS",
   description: "Réponses aux questions fréquentes sur le don de sang, les contre-indications et le fonctionnement du CNTS.",
 };
 
-export default function FaqPage() {
-  const faqs = [
-    {
-      category: "Le Don de Sang",
-      questions: [
-        {
-          q: "Combien de temps dure un don de sang ?",
-          a: "Le prélèvement en lui-même dure environ 8 à 10 minutes. Cependant, il faut prévoir environ 45 minutes pour l'ensemble du parcours : accueil, entretien médical, prélèvement et collation."
-        },
-        {
-          q: "Est-ce que donner son sang fait mal ?",
-          a: "Vous sentirez une légère piqûre au moment de l'insertion de l'aiguille, comparable à une prise de sang classique. Ensuite, le don est indolore."
-        },
-        {
-          q: "À quelle fréquence puis-je donner ?",
-          a: "Les hommes peuvent donner jusqu'à 6 fois par an et les femmes jusqu'à 4 fois par an. Il faut respecter un intervalle de 8 semaines minimum entre deux dons de sang total."
-        },
-        {
-          q: "Que devient mon sang après le don ?",
-          a: "Votre sang est analysé (groupe sanguin, dépistage de maladies), puis séparé en trois composants : globules rouges, plasma et plaquettes. Ces produits sont ensuite distribués aux hôpitaux pour soigner les patients."
-        }
-      ]
-    },
-    {
-      category: "Conditions & Contre-indications",
-      questions: [
-        {
-          q: "Puis-je donner si je suis sous traitement médical ?",
-          a: "Cela dépend du médicament et de la pathologie. Certains traitements nécessitent un arrêt temporaire, d'autres sont compatibles. L'entretien médical confidentiel avant le don permettra au médecin de trancher."
-        },
-        {
-          q: "J'ai fait un tatouage récemment, puis-je donner ?",
-          a: "Vous devez attendre 4 mois après la réalisation d'un tatouage ou d'un piercing avant de pouvoir donner votre sang, afin d'écarter tout risque infectieux."
-        },
-        {
-          q: "Faut-il être à jeun pour donner son sang ?",
-          a: "Non, au contraire ! Il ne faut jamais venir à jeun. Nous vous recommandons de prendre un repas léger et de bien vous hydrater (eau, jus) avant de venir."
-        }
-      ]
-    },
-    {
-      category: "Espace Patient & Résultats",
-      questions: [
-        {
-          q: "Comment obtenir ma carte de donneur ?",
-          a: "Votre carte de donneur vous sera remise après votre deuxième don. Elle est également disponible en version numérique dans votre Espace Patient sur ce site."
-        },
-        {
-          q: "Suis-je informé si mon sang a un problème ?",
-          a: "Oui, absolument. Si les analyses révèlent une anomalie (anémie, infection...), vous serez contacté par un médecin du CNTS pour une prise en charge et des conseils."
-        }
-      ]
+export const dynamic = "force-dynamic";
+
+type FaqSection = { category: string; questions: { q: string; a: string }[] };
+
+// Contenu de repli affiché tant qu'aucune question n'a été saisie dans le CMS.
+const FALLBACK_FAQS: FaqSection[] = [
+  {
+    category: "Le Don de Sang",
+    questions: [
+      {
+        q: "Combien de temps dure un don de sang ?",
+        a: "Le prélèvement en lui-même dure environ 8 à 10 minutes. Cependant, il faut prévoir environ 45 minutes pour l'ensemble du parcours : accueil, entretien médical, prélèvement et collation."
+      },
+      {
+        q: "Est-ce que donner son sang fait mal ?",
+        a: "Vous sentirez une légère piqûre au moment de l'insertion de l'aiguille, comparable à une prise de sang classique. Ensuite, le don est indolore."
+      },
+      {
+        q: "À quelle fréquence puis-je donner ?",
+        a: "Les hommes peuvent donner leur sang tous les 3 mois (jusqu'à 4 fois par an) et les femmes tous les 4 mois (jusqu'à 3 fois par an). Ce délai permet au corps de reconstituer son volume sanguin et son taux d'hémoglobine."
+      },
+      {
+        q: "Que devient mon sang après le don ?",
+        a: "Votre sang est analysé (groupe sanguin, dépistage de maladies), puis séparé en trois composants : globules rouges, plasma et plaquettes. Ces produits sont ensuite distribués aux hôpitaux pour soigner les patients."
+      }
+    ]
+  },
+  {
+    category: "Conditions & Contre-indications",
+    questions: [
+      {
+        q: "Puis-je donner si je suis sous traitement médical ?",
+        a: "Cela dépend du médicament et de la pathologie. Certains traitements nécessitent un arrêt temporaire, d'autres sont compatibles. L'entretien médical confidentiel avant le don permettra au médecin de trancher."
+      },
+      {
+        q: "J'ai fait un tatouage récemment, puis-je donner ?",
+        a: "Vous devez attendre 4 mois après la réalisation d'un tatouage ou d'un piercing avant de pouvoir donner votre sang, afin d'écarter tout risque infectieux."
+      },
+      {
+        q: "Faut-il être à jeun pour donner son sang ?",
+        a: "Non, au contraire ! Il ne faut jamais venir à jeun. Nous vous recommandons de prendre un repas léger et de bien vous hydrater (eau, jus) avant de venir."
+      }
+    ]
+  },
+  {
+    category: "Espace Patient & Résultats",
+    questions: [
+      {
+        q: "Comment obtenir ma carte de donneur ?",
+        a: "Votre carte de donneur vous sera remise après votre deuxième don. Elle est également disponible en version numérique dans votre Espace Patient sur ce site."
+      },
+      {
+        q: "Suis-je informé si mon sang a un problème ?",
+        a: "Oui, absolument. Si les analyses révèlent une anomalie (anémie, infection...), vous serez contacté par un médecin du CNTS pour une prise en charge et des conseils."
+      }
+    ]
+  }
+];
+
+function groupByCategory(
+  items: { question: string; answer: string; category: string }[]
+): FaqSection[] {
+  const order: string[] = [];
+  const map = new Map<string, { q: string; a: string }[]>();
+  for (const item of items) {
+    if (!map.has(item.category)) {
+      map.set(item.category, []);
+      order.push(item.category);
     }
-  ];
+    map.get(item.category)!.push({ q: item.question, a: item.answer });
+  }
+  return order.map((category) => ({ category, questions: map.get(category)! }));
+}
+
+export default async function FaqPage() {
+  let faqs: FaqSection[] = FALLBACK_FAQS;
+
+  try {
+    const items = await apiClient.faq.list({ published_only: true });
+    if (items && items.length > 0) {
+      faqs = groupByCategory(items);
+    }
+  } catch (error) {
+    logger.error({ err: error }, "Failed to fetch FAQ items");
+  }
 
   return (
     <main className="bg-zinc-50 min-h-screen">
@@ -102,7 +135,7 @@ export default function FaqPage() {
                         <Minus className="h-5 w-5 text-primary hidden group-open:block" />
                       </span>
                     </summary>
-                    <div className="text-zinc-600 px-6 pb-6 pt-0 leading-relaxed border-t border-transparent group-open:border-zinc-100">
+                    <div className="text-zinc-600 px-6 pb-6 pt-0 leading-relaxed border-t border-transparent group-open:border-zinc-100 whitespace-pre-line">
                       {item.a}
                     </div>
                   </details>

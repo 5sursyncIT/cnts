@@ -28,16 +28,21 @@ export default function DonneurDetailPage() {
   const [numeroCarte, setNumeroCarte] = useState("");
 
   const handleDelete = async () => {
-    if (!confirm("Êtes-vous sûr de vouloir supprimer ce donneur ? Cette action est irréversible.")) {
+    if (!confirm("Archiver ce donneur ? Sa fiche sera masquée des listes, mais ses dons restent conservés pour la traçabilité (hémovigilance). Action réservée aux administrateurs.")) {
       return;
     }
 
     try {
       await deleteDonneur(donneurId);
       router.push("/donneurs");
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erreur lors de la suppression", err);
-      alert("Erreur lors de la suppression. Vérifiez que le donneur n'a pas de dons associés.");
+      const detail = err?.body?.detail;
+      alert(
+        err?.status === 403
+          ? "Action réservée aux administrateurs."
+          : detail || "Erreur lors de la suppression."
+      );
     }
   };
 
@@ -57,8 +62,10 @@ export default function DonneurDetailPage() {
           cni: (formData.get("cni") as string) || null,
           adresse: (formData.get("adresse") as string) || null,
           region: (formData.get("region") as string) || null,
+          departement: (formData.get("departement") as string) || null,
           telephone: (formData.get("telephone") as string) || null,
           email: (formData.get("email") as string) || null,
+          profession: (formData.get("profession") as string) || null,
         }
       });
       setIsEditing(false);
@@ -243,9 +250,17 @@ export default function DonneurDetailPage() {
                     ))}
                   </select>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Département</label>
+                  <input name="departement" defaultValue={donneur.departement || ""} className="w-full px-3 py-2 border rounded-md text-gray-900" />
+                </div>
                 <div className="md:col-span-1">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Adresse</label>
                   <input name="adresse" defaultValue={donneur.adresse || ""} className="w-full px-3 py-2 border rounded-md text-gray-900" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Profession</label>
+                  <input name="profession" defaultValue={donneur.profession || ""} className="w-full px-3 py-2 border rounded-md text-gray-900" />
                 </div>
               </div>
               <div className="flex justify-end gap-3 mt-6">
@@ -551,8 +566,9 @@ export default function DonneurDetailPage() {
               Règles d'éligibilité
             </h3>
             <ul className="text-xs text-blue-900 space-y-1">
-              <li>• Hommes: 2 mois entre dons (60 jours)</li>
-              <li>• Femmes: 4 mois entre dons (120 jours)</li>
+              <li>• Âge : 18 à 60 ans</li>
+              <li>• Hommes : 3 mois entre dons (4 dons/an max)</li>
+              <li>• Femmes : 4 mois entre dons (3 dons/an max)</li>
               <li>• Le calcul est fait depuis le dernier don enregistré</li>
             </ul>
           </div>

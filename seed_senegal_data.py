@@ -14,7 +14,8 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 from app.db.models import (
     Base, Donneur, Don, Poche, Analyse, Site, Hopital, 
-    CampagneCollecte, Article, UserAccount, CarteDonneur
+    CampagneCollecte, Article, UserAccount, CarteDonneur, FaqItem,
+    TeamMember, Partner
 )
 from app.core.config import settings
 
@@ -188,8 +189,65 @@ def seed():
         }
     ]
     for a in articles:
+        # status now drives portal visibility; keep seeded articles published.
+        a.setdefault("status", "PUBLISHED")
+        a.setdefault("is_published", True)
         if not db.query(Article).filter_by(slug=a["slug"]).first():
             db.add(Article(**a))
+
+    # 4b. FAQ for Portal
+    print("Seeding FAQ...")
+    faq_items = [
+        {
+            "category": "Le Don de Sang",
+            "display_order": 1,
+            "question": "Combien de temps dure un don de sang ?",
+            "answer": "Le prélèvement dure environ 8 à 10 minutes. Il faut toutefois prévoir 45 minutes pour l'ensemble du parcours : accueil, entretien médical, prélèvement et collation.",
+        },
+        {
+            "category": "Le Don de Sang",
+            "display_order": 2,
+            "question": "À quelle fréquence puis-je donner ?",
+            "answer": "Les hommes peuvent donner leur sang tous les 3 mois (jusqu'à 4 fois par an) et les femmes tous les 4 mois (jusqu'à 3 fois par an). Ce délai permet au corps de reconstituer son volume sanguin et son taux d'hémoglobine.",
+        },
+        {
+            "category": "Conditions & Contre-indications",
+            "display_order": 3,
+            "question": "J'ai fait un tatouage récemment, puis-je donner ?",
+            "answer": "Vous devez attendre 4 mois après un tatouage ou un piercing avant de pouvoir donner votre sang, afin d'écarter tout risque infectieux.",
+        },
+        {
+            "category": "Espace Patient & Résultats",
+            "display_order": 4,
+            "question": "Comment obtenir ma carte de donneur ?",
+            "answer": "Votre carte de donneur vous est remise après votre deuxième don. Elle est aussi disponible en version numérique dans votre Espace Patient.",
+        },
+    ]
+    for f in faq_items:
+        if not db.query(FaqItem).filter_by(question=f["question"]).first():
+            db.add(FaqItem(**f))
+
+    # 4c. Team members for Portal
+    print("Seeding Team...")
+    team_members = [
+        {"display_order": 1, "name": "Pr. Saliou Diop", "role": "Directeur Général", "specialty": "Hématologie", "bio": "Expert reconnu en transfusion sanguine, il dirige le CNTS avec une vision axée sur la qualité et l'innovation."},
+        {"display_order": 2, "name": "Dr. Aissatou Ndiaye", "role": "Responsable Laboratoire", "specialty": "Biologie Médicale", "bio": "Spécialiste en qualification biologique, elle supervise l'ensemble des analyses pour garantir la sécurité des dons."},
+        {"display_order": 3, "name": "Dr. Mamadou Fall", "role": "Chef du service Collecte", "specialty": "Médecine Générale", "bio": "En charge de l'organisation des collectes mobiles et de l'accueil des donneurs."},
+    ]
+    for m in team_members:
+        if not db.query(TeamMember).filter_by(name=m["name"]).first():
+            db.add(TeamMember(**m))
+
+    # 4d. Partners for Portal
+    print("Seeding Partners...")
+    partners = [
+        {"display_order": 1, "category": "Institutionnel", "type": "Tutelle", "name": "Ministère de la Santé et de l'Action Sociale", "description": "Tutelle institutionnelle du CNTS. Définit les politiques nationales de santé."},
+        {"display_order": 2, "category": "International", "type": "Santé publique", "name": "Organisation Mondiale de la Santé (OMS)", "description": "Appui technique et normatif pour la sécurité transfusionnelle."},
+        {"display_order": 3, "category": "Académique", "name": "Université Cheikh Anta Diop (UCAD)", "description": "Partenariat recherche et formation en immunohématologie et virologie."},
+    ]
+    for p in partners:
+        if not db.query(Partner).filter_by(name=p["name"]).first():
+            db.add(Partner(**p))
 
     # 5. Mobile Collections
     print("Seeding Campagnes...")

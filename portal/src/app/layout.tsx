@@ -1,31 +1,43 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Public_Sans, Newsreader, Spline_Sans_Mono } from "next/font/google";
 import "./globals.css";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { ConsentBanner } from "@/components/consent-banner";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const publicSans = Public_Sans({
+  variable: "--font-public-sans",
   subsets: ["latin"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const newsreader = Newsreader({
+  variable: "--font-newsreader",
   subsets: ["latin"],
+  display: "swap",
+  style: ["normal", "italic"],
+});
+
+const splineMono = Spline_Sans_Mono({
+  variable: "--font-spline-mono",
+  subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
   title: "Portail Patient — SGI-CNTS",
   description: "Site institutionnel et espace patient",
-  manifest: "/manifest.json",
-  themeColor: "#d32f2f",
+  manifest: "/app/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
     title: "CNTS Patient",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#7a1118",
 };
 
 export default function RootLayout({
@@ -36,7 +48,7 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${publicSans.variable} ${newsreader.variable} ${splineMono.variable} antialiased`}
       >
         <a
           href="#contenu"

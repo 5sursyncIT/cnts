@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.api.deps import require_auth_in_production
 from app.audit.events import log_event
 from app.core.din import generate_din
+from app.core.eligibilite import evaluer_eligibilite
 from app.core.idempotency import get_idempotent_response, store_idempotent_response
 from app.db.models import Don, Donneur, Poche, UserAccount
 from app.db.session import get_db
@@ -35,8 +36,29 @@ def create_don(
             return JSONResponse(status_code=hit.status_code, content=hit.response_json)
 
     donneur = db.get(Donneur, payload.donneur_id)
-    if donneur is None:
+    if donneur is None or donneur.deleted_at is not None:
         raise HTTPException(status_code=404, detail="donneur not found")
+
+    # Contrôle d'éligibilité côté serveur (délai inter-don / âge), évalué à la
+    # date du don. Surclassable explicitement via ignorer_eligibilite.
+    last_don = db.execute(
+        select(Don)
+        .where(Don.donneur_id == donneur.id)
+        .order_by(Don.date_don.desc(), Don.created_at.desc())
+        .limit(1)
+    ).scalar_one_or_none()
+    elig = evaluer_eligibilite(
+        sexe=donneur.sexe,
+        date_naissance=donneur.date_naissance,
+        dernier_don=donneur.dernier_don,
+        dernier_type_don=last_don.type_don if last_don else None,
+        ref_date=payload.date_don,
+    )
+    if not elig.eligible and not payload.ignorer_eligibilite:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Donneur non éligible à cette date : {elig.raison}",
+        )
 
     din = generate_din(db, date_don=payload.date_don)
     don = Don(
@@ -48,7 +70,10 @@ def create_don(
     )
     db.add(don)
 
-    donneur.dernier_don = payload.date_don
+    # Ne jamais régresser dernier_don : un don antérieur (saisie rétroactive) ne
+    # doit pas écraser une date de don plus récente.
+    if donneur.dernier_don is None or payload.date_don > donneur.dernier_don:
+        donneur.dernier_don = payload.date_don
 
     poche = Poche(
         don=don,

@@ -35,10 +35,14 @@ class DonneurUpdate(BaseModel):
 
 
 class DonneurOut(BaseModel):
-    """Output schema for Donneur - CNI is NOT exposed for privacy/GDPR compliance."""
+    """Schéma de sortie d'un donneur.
+
+    Ni le CNI ni son empreinte (``cni_hash``) ne sont exposés : le hash est un
+    identifiant pseudonyme stable qui ne doit jamais quitter le backend
+    (corrélation inter-systèmes, attaque par dictionnaire si la clé fuite).
+    """
 
     id: uuid.UUID
-    cni_hash: str  # Only the hash is exposed, never the original CNI
     nom: str
     prenom: str
     sexe: str
@@ -52,6 +56,7 @@ class DonneurOut(BaseModel):
     profession: str | None = None
     dernier_don: dt.date | None
     numero_carte: str | None = None
+    created_at: dt.datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -61,3 +66,4 @@ class EligibiliteOut(BaseModel):
     eligible_le: dt.date | None
     raison: str | None = None
     delai_jours: int | None = None
+    age: int | None = None
