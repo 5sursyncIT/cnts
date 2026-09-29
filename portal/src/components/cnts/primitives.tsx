@@ -154,10 +154,23 @@ export function IconBubble({
   tone?: "tint" | "sun" | "red";
   size?: number;
 }) {
+  // Pastille légèrement bombée : dégradé, reflet en haut, ombre teintée.
   const t = {
-    tint: ["var(--tint)", "var(--brand)"],
-    sun: ["var(--acc2-soft)", "var(--acc2-ink)"],
-    red: ["var(--brand)", "#fff"],
+    tint: {
+      bg: "linear-gradient(150deg, oklch(0.97 0.025 35), oklch(0.92 0.05 30))",
+      fg: "var(--brand)",
+      sh: "0 6px 14px oklch(0.55 0.15 27 / .14)",
+    },
+    sun: {
+      bg: "linear-gradient(150deg, oklch(0.96 0.06 88), oklch(0.89 0.1 78))",
+      fg: "var(--acc2-ink)",
+      sh: "0 6px 14px oklch(0.6 0.12 70 / .18)",
+    },
+    red: {
+      bg: "linear-gradient(150deg, var(--red-500), var(--red-700))",
+      fg: "#fff",
+      sh: "0 8px 18px oklch(0.5 0.19 26 / .32)",
+    },
   }[tone];
   return (
     <div
@@ -167,14 +180,15 @@ export function IconBubble({
         width: size,
         height: size,
         borderRadius: 999,
-        background: t[0],
-        color: t[1],
+        background: t.bg,
+        color: t.fg,
         display: "grid",
         placeItems: "center",
         flexShrink: 0,
+        boxShadow: `inset 0 1px 0 rgba(255,255,255,.55), ${t.sh}`,
       }}
     >
-      <Icon name={icon} size={Math.round(size * 0.44)} />
+      <Icon name={icon} size={Math.round(size * 0.52)} />
     </div>
   );
 }
