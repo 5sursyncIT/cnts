@@ -6,16 +6,17 @@ import { preAuthCookieName, verifyPreAuthToken } from "@/lib/auth/preauth";
 import { accessCookieName, signSession, sessionCookieName } from "@/lib/auth/session";
 
 export async function POST(request: Request) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://cnts.gouv.sn";
   const cookieStore = await cookies();
   const preAuthToken = cookieStore.get(preAuthCookieName)?.value;
   if (!preAuthToken) {
-    return NextResponse.redirect(new URL("/admin/login", request.url));
+    return NextResponse.redirect(new URL("/admin/login", appUrl));
   }
 
   const preAuth = await verifyPreAuthToken(preAuthToken);
   if (!preAuth) {
     cookieStore.delete(preAuthCookieName);
-    return NextResponse.redirect(new URL("/admin/login", request.url));
+    return NextResponse.redirect(new URL("/admin/login", appUrl));
   }
 
   const form = await request.formData();
@@ -33,7 +34,7 @@ export async function POST(request: Request) {
     });
     if (!response.ok) {
       logAuditEvent({ actorEmail: preAuth.email, action: "auth.mfa_failed" });
-      return NextResponse.redirect(new URL(`/admin/mfa?error=1&next=${encodeURIComponent(safeNext)}`, request.url));
+      return NextResponse.redirect(new URL(`/admin/mfa?error=1&next=${encodeURIComponent(safeNext)}`, appUrl));
     }
     const { access_token, user } = await response.json();
     if (typeof access_token !== "string" || !user?.id || !user?.email || !user?.role || user.role.toUpperCase() === "PATIENT") {
@@ -50,10 +51,10 @@ export async function POST(request: Request) {
     cookieStore.set(accessCookieName, access_token, cookieOptions);
     logAuditEvent({ actorEmail: user.email, action: "auth.mfa_success" });
     const finalNext = safeNext.startsWith("/admin/") ? safeNext : `/admin${safeNext}`;
-    return NextResponse.redirect(new URL(finalNext, request.url));
+    return NextResponse.redirect(new URL(finalNext, appUrl));
   } catch (error) {
     console.error("MFA verification error:", error);
     logAuditEvent({ actorEmail: preAuth.email, action: "auth.mfa_error" });
-    return NextResponse.redirect(new URL(`/admin/mfa?error=1&next=${encodeURIComponent(safeNext)}`, request.url));
+    return NextResponse.redirect(new URL(`/admin/mfa?error=1&next=${encodeURIComponent(safeNext)}`, appUrl));
   }
 }
