@@ -1,0 +1,65 @@
+{
+  "kind": "collectionType",
+  "collectionName": "articles",
+  "info": {
+    "singularName": "article",
+    "pluralName": "articles",
+    "displayName": "Article",
+    "description": "Actualités, événements et communiqués du portail (/actualites, /presse)."
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true,
+      "maxLength": 250
+    },
+    "slug": {
+      "type": "uid",
+      "targetField": "title",
+      "required": true
+    },
+    "category": {
+      "type": "enumeration",
+      "required": true,
+      "default": "Actualité",
+      "enum": [
+        "Actualité",
+        "Événement",
+        "Campagne",
+        "Partenariat",
+        "Solidarité",
+        "Recherche",
+        "Communiqué"
+      ]
+    },
+    "date": {
+      "type": "date",
+      "required": true
+    },
+    "excerpt": {
+      "type": "text",
+      "maxLength": 400
+    },
+    "cover": {
+      "type": "media",
+      "multiple": false,
+      "allowedTypes": [
+        "images"
+      ]
+    },
+    "body": {
+      "type": "blocks"
+    },
+    "gallery": {
+      "type": "media",
+      "multiple": true,
+      "allowedTypes": [
+        "images"
+      ]
+    }
+  }
+}

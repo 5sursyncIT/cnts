@@ -113,26 +113,7 @@ export function createApiClient(options: ApiClientOptions) {
       init: { method: "DELETE" },
     });
 
-  // Helper pour Upload requests (Multipart)
-  const upload = <TResponse>(path: string, file: File) => {
-    const formData = new FormData();
-    formData.append("file", file);
-    return requestJson<TResponse>({
-      fetchImpl,
-      url: `${baseUrl}${path}`,
-      init: {
-        method: "POST",
-        body: formData,
-      },
-    });
-  };
-
   return {
-    // ========================================================================
-    // UPLOAD
-    // ========================================================================
-    upload: (file: File) => upload<{ url: string }>("/upload", file),
-
     // ========================================================================
     // HEALTH
     // ========================================================================
@@ -475,49 +456,6 @@ export function createApiClient(options: ApiClientOptions) {
     },
 
     // ========================================================================
-    // CMS - ARTICLES
-    // ========================================================================
-    articles: {
-      list: (params?: {
-        category?: string;
-        status?: string;
-        published_only?: boolean;
-        skip?: number;
-        limit?: number;
-      }) => get<T.Article[]>("/articles", params),
-
-      get: (slug: string) => get<T.Article>(`/articles/${slug}`),
-
-      create: (data: T.ArticleCreate) => post<T.Article>("/articles", data),
-
-      update: (id: T.UUID, data: T.ArticleUpdate) =>
-        put<T.Article>(`/articles/${id}`, data),
-
-      delete: (id: T.UUID) => del<{ ok: boolean }>(`/articles/${id}`),
-    },
-
-    // ========================================================================
-    // CMS - FAQ
-    // ========================================================================
-    faq: {
-      list: (params?: {
-        category?: string;
-        published_only?: boolean;
-        skip?: number;
-        limit?: number;
-      }) => get<T.FaqItem[]>("/faq", params),
-
-      get: (id: T.UUID) => get<T.FaqItem>(`/faq/${id}`),
-
-      create: (data: T.FaqItemCreate) => post<T.FaqItem>("/faq", data),
-
-      update: (id: T.UUID, data: T.FaqItemUpdate) =>
-        put<T.FaqItem>(`/faq/${id}`, data),
-
-      delete: (id: T.UUID) => del<{ ok: boolean }>(`/faq/${id}`),
-    },
-
-    // ========================================================================
     // CONTACT (formulaire du portail → boîte de réception BO)
     // ========================================================================
     contact: {
@@ -528,44 +466,6 @@ export function createApiClient(options: ApiClientOptions) {
 
       setStatus: (id: T.UUID, status: T.ContactMessageStatus) =>
         patch<T.ContactMessage>(`/contact/${id}`, { status }),
-    },
-
-    // ========================================================================
-    // CMS - TEAM
-    // ========================================================================
-    team: {
-      list: (params?: { published_only?: boolean; skip?: number; limit?: number }) =>
-        get<T.TeamMember[]>("/team", params),
-
-      get: (id: T.UUID) => get<T.TeamMember>(`/team/${id}`),
-
-      create: (data: T.TeamMemberCreate) => post<T.TeamMember>("/team", data),
-
-      update: (id: T.UUID, data: T.TeamMemberUpdate) =>
-        put<T.TeamMember>(`/team/${id}`, data),
-
-      delete: (id: T.UUID) => del<{ ok: boolean }>(`/team/${id}`),
-    },
-
-    // ========================================================================
-    // CMS - PARTNERS
-    // ========================================================================
-    partners: {
-      list: (params?: {
-        category?: string;
-        published_only?: boolean;
-        skip?: number;
-        limit?: number;
-      }) => get<T.Partner[]>("/partners", params),
-
-      get: (id: T.UUID) => get<T.Partner>(`/partners/${id}`),
-
-      create: (data: T.PartnerCreate) => post<T.Partner>("/partners", data),
-
-      update: (id: T.UUID, data: T.PartnerUpdate) =>
-        put<T.Partner>(`/partners/${id}`, data),
-
-      delete: (id: T.UUID) => del<{ ok: boolean }>(`/partners/${id}`),
     },
 
     // ========================================================================

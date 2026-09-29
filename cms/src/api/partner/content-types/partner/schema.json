@@ -1,0 +1,53 @@
+{
+  "kind": "collectionType",
+  "collectionName": "partners",
+  "info": {
+    "singularName": "partner",
+    "pluralName": "partners",
+    "displayName": "Partenaire",
+    "description": "Partenaires affichés sur /qui-sommes-nous/partenaires, groupés par catégorie."
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true,
+      "maxLength": 200
+    },
+    "category": {
+      "type": "enumeration",
+      "required": true,
+      "default": "Institutionnel",
+      "enum": [
+        "Institutionnel",
+        "International",
+        "Académique"
+      ]
+    },
+    "type": {
+      "type": "string",
+      "maxLength": 80
+    },
+    "description": {
+      "type": "text"
+    },
+    "logo": {
+      "type": "media",
+      "multiple": false,
+      "allowedTypes": [
+        "images"
+      ]
+    },
+    "website_url": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "order": {
+      "type": "integer",
+      "default": 0
+    }
+  }
+}

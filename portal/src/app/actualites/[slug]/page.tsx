@@ -1,40 +1,19 @@
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { apiClient } from "@/lib/api-client";
-import { logger } from "@/lib/logger";
+import { getArticle, getArticles, type CmsArticle } from "@/lib/cms";
+import { CmsBlocks } from "@/components/cnts/cms-blocks";
 import { Button, Card, PageBanner } from "@/components/cnts/primitives";
 import { frDate } from "@/components/cnts/format";
-import { news, type NewsItem } from "@/components/cnts/data";
+import { news } from "@/components/cnts/data";
 
 export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ slug: string }> };
 
-// Normalise an article coming from the CMS (API) into the same shape as the
-// static articles taken from cnts.gouv.sn, so both render with one template.
-type Resolved = Pick<NewsItem, "title" | "cat" | "date" | "img" | "body" | "gallery">;
-
-async function resolveArticle(slug: string): Promise<Resolved | null> {
-  const local = news.find((n) => n.slug === slug);
-  if (local) return local;
-  try {
-    const item = await apiClient.articles.get(slug);
-    if (!item) return null;
-    const paragraphs = (item.content ?? "")
-      .split(/\n\s*\n/)
-      .map((p) => p.trim())
-      .filter(Boolean);
-    return {
-      title: item.title,
-      cat: item.category,
-      date: item.published_at,
-      img: item.image_url ?? "",
-      body: [{ p: paragraphs }],
-    };
-  } catch (error) {
-    logger.error({ err: error }, "Failed to fetch article");
-    return null;
-  }
+// L'article vient du CMS (Strapi) en priorité ; à défaut, des articles statiques
+// repris de cnts.gouv.sn (data.ts), rendus avec le même gabarit.
+async function resolveArticle(slug: string): Promise<CmsArticle | null> {
+  return (await getArticle(slug)) ?? news.find((n) => n.slug === slug) ?? null;
 }
 
 export async function generateMetadata(props: Props) {
@@ -48,7 +27,7 @@ export default async function NewsDetailPage(props: Props) {
   const item = await resolveArticle(slug);
   if (!item) notFound();
 
-  const others = news.filter((n) => n.slug !== slug).slice(0, 2);
+  const others = ((await getArticles({ limit: 3 })) ?? news).filter((n) => n.slug !== slug).slice(0, 2);
 
   return (
     <div>
@@ -69,6 +48,8 @@ export default async function NewsDetailPage(props: Props) {
             <Image src={item.img} alt={item.title} fill priority sizes="(max-width: 900px) 100vw, 820px" style={{ objectFit: "cover" }} />
           </div>
         )}
+
+        {item.blocks && item.blocks.length > 0 && <CmsBlocks blocks={item.blocks} />}
 
         {item.body.map((block, i) => (
           <section key={i} style={{ marginBottom: 26 }}>

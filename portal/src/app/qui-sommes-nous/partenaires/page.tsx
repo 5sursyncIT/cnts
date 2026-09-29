@@ -2,9 +2,8 @@ import Image from "next/image";
 import type { ReactNode } from "react";
 import { Button, Card, PageBanner, SectionTitle } from "@/components/cnts/primitives";
 import { Icon } from "@/components/cnts/icon";
-import { partenaires } from "@/components/cnts/data";
-import { apiClient } from "@/lib/api-client";
-import { logger } from "@/lib/logger";
+import { partenaires, type PartnerItem as Partner } from "@/components/cnts/data";
+import { getPartners } from "@/lib/cms";
 
 export const metadata = {
   title: "Nos partenaires — CNTS Sénégal",
@@ -13,15 +12,6 @@ export const metadata = {
 };
 
 export const dynamic = "force-dynamic";
-
-type Partner = {
-  name: string;
-  description?: string | null;
-  category: string;
-  type?: string | null;
-  logo_url?: string | null;
-  website_url?: string | null;
-};
 
 type PartnerSection = { category: string; partners: Partner[] };
 
@@ -36,9 +26,6 @@ const CATEGORY_LABELS: Record<string, string> = {
   International: "Partenaires internationaux",
   Académique: "Partenaires académiques",
 };
-
-// Contenu de repli (repris du site officiel) affiché tant qu'aucun partenaire n'a été saisi dans le CMS.
-const FALLBACK_PARTNERS: Partner[] = partenaires;
 
 function groupByCategory(items: Partner[]): PartnerSection[] {
   const order: string[] = [];
@@ -100,16 +87,7 @@ function LogoTile({ p }: { p: Partner }) {
 }
 
 export default async function PartenairesPage() {
-  let partners: Partner[] = FALLBACK_PARTNERS;
-
-  try {
-    const data = await apiClient.partners.list({ published_only: true });
-    if (data && data.length > 0) {
-      partners = data;
-    }
-  } catch (error) {
-    logger.error({ err: error }, "Failed to fetch partners");
-  }
+  const partners = (await getPartners()) ?? partenaires;
 
   const sections = groupByCategory(partners);
 

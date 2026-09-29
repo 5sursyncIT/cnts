@@ -5,10 +5,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const TABS = [
-  { href: "/cms", label: "Articles" },
-  { href: "/faq", label: "FAQ" },
-  { href: "/equipe", label: "Équipe" },
-  { href: "/partenaires", label: "Partenaires" },
+  { href: "/cms", label: "Contenus du portail" },
   { href: "/messages", label: "Messages" },
 ];
 

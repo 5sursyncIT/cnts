@@ -226,7 +226,7 @@ export const textesReference = {
 };
 
 // Partenaires (page « Le CNTS » de cnts.gouv.sn) — logos repris du site officiel
-export type PartnerItem = { name: string; category: string; type?: string; description?: string; logo_url?: string };
+export type PartnerItem = { name: string; category: string; type?: string; description?: string; logo_url?: string; website_url?: string };
 export const partenaires: PartnerItem[] = [
   { category: "Institutionnel", type: "Tutelle", name: "Ministère de la Santé et de l'Hygiène Publique", description: "Tutelle du CNTS et appui institutionnel permanent.", logo_url: "/images/partenaires/ministere-sante.png" },
   { category: "Institutionnel", type: "Soins", name: "Hôpital Principal de Dakar", description: "Partenaire hospitalier et scientifique, notamment pour l'étude nationale sur les anémies génétiques.", logo_url: "/images/partenaires/hopital-principal.jpeg" },
@@ -471,3 +471,58 @@ export const promotionDon = {
   entreprises:
     "Entreprises, administrations, associations : organisez une collecte dans vos locaux. Le CNTS assure l'organisation technique, l'équipe médicale et la sensibilisation de vos équipes.",
 };
+
+// Équipe (page /equipe) — contenu de repli tant que le CMS est vide ou injoignable.
+export type TeamItem = { name: string; role: string; specialty?: string | null; bio?: string | null; photo_url?: string | null };
+export const equipe: TeamItem[] = [
+  {
+    name: "Pr. Saliou Diop",
+    role: "Directeur Général",
+    specialty: "Hématologie",
+    bio: "Expert reconnu en transfusion sanguine, le Pr. Diop dirige le CNTS avec une vision axée sur la qualité et l'innovation."
+  },
+  {
+    name: "Dr. Aissatou Ndiaye",
+    role: "Responsable Laboratoire",
+    specialty: "Biologie Médicale",
+    bio: "Spécialiste en qualification biologique, elle supervise l'ensemble des analyses pour garantir la sécurité des dons."
+  },
+  {
+    name: "Dr. Mamadou Fall",
+    role: "Chef du service Collecte",
+    specialty: "Médecine Générale",
+    bio: "En charge de l'organisation des collectes mobiles et de l'accueil des donneurs au centre national."
+  },
+  {
+    name: "Mme. Fatou Cissé",
+    role: "Surveillante Générale",
+    specialty: "Soins Infirmiers",
+    bio: "Coordonne les équipes paramédicales et veille au bon déroulement des prélèvements."
+  },
+  {
+    name: "Dr. Moussa Sow",
+    role: "Responsable Distribution",
+    specialty: "Pharmacie",
+    bio: "Gère les stocks de produits sanguins et leur distribution aux hôpitaux partenaires."
+  },
+  {
+    name: "M. Ousmane Diallo",
+    role: "Responsable Qualité",
+    specialty: "Assurance Qualité",
+    bio: "Veille au respect des normes internationales et à l'amélioration continue des processus."
+  }
+];
+
+// Foire aux questions (page /faq) — contenu de repli tant que le CMS est vide ou injoignable.
+export type FaqItem = { category: string; question: string; answer: string };
+export const faq: FaqItem[] = [
+  { category: "Le Don de Sang", question: "Combien de temps dure un don de sang ?", answer: "Le prélèvement en lui-même dure environ 8 à 10 minutes. Cependant, il faut prévoir environ 45 minutes pour l'ensemble du parcours : accueil, entretien médical, prélèvement et collation." },
+  { category: "Le Don de Sang", question: "Est-ce que donner son sang fait mal ?", answer: "Vous sentirez une légère piqûre au moment de l'insertion de l'aiguille, comparable à une prise de sang classique. Ensuite, le don est indolore." },
+  { category: "Le Don de Sang", question: "À quelle fréquence puis-je donner ?", answer: "Les hommes peuvent donner leur sang tous les 3 mois (jusqu'à 4 fois par an) et les femmes tous les 4 mois (jusqu'à 3 fois par an). Ce délai permet au corps de reconstituer son volume sanguin et son taux d'hémoglobine." },
+  { category: "Le Don de Sang", question: "Que devient mon sang après le don ?", answer: "Votre sang est analysé (groupe sanguin, dépistage de maladies), puis séparé en trois composants : globules rouges, plasma et plaquettes. Ces produits sont ensuite distribués aux hôpitaux pour soigner les patients." },
+  { category: "Conditions & Contre-indications", question: "Puis-je donner si je suis sous traitement médical ?", answer: "Cela dépend du médicament et de la pathologie. Certains traitements nécessitent un arrêt temporaire, d'autres sont compatibles. L'entretien médical confidentiel avant le don permettra au médecin de trancher." },
+  { category: "Conditions & Contre-indications", question: "J'ai fait un tatouage récemment, puis-je donner ?", answer: "Vous devez attendre 4 mois après la réalisation d'un tatouage ou d'un piercing avant de pouvoir donner votre sang, afin d'écarter tout risque infectieux." },
+  { category: "Conditions & Contre-indications", question: "Faut-il être à jeun pour donner son sang ?", answer: "Non, au contraire ! Il ne faut jamais venir à jeun. Nous vous recommandons de prendre un repas léger et de bien vous hydrater (eau, jus) avant de venir." },
+  { category: "Espace Patient & Résultats", question: "Comment obtenir ma carte de donneur ?", answer: "Votre carte de donneur vous sera remise après votre deuxième don. Elle est également disponible en version numérique dans votre Espace Patient sur ce site." },
+  { category: "Espace Patient & Résultats", question: "Suis-je informé si mon sang a un problème ?", answer: "Oui, absolument. Si les analyses révèlent une anomalie (anémie, infection...), vous serez contacté par un médecin du CNTS pour une prise en charge et des conseils." },
+];

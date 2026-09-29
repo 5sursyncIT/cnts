@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { org } from "@/components/cnts/data";
 import { Download, Mail, Phone, FileText, Image as ImageIcon, ExternalLink } from "lucide-react";
-import { apiClient } from "@/lib/api-client";
-import { logger } from "@/lib/logger";
+import { getArticles, getResources } from "@/lib/cms";
 
 export const metadata = {
   title: "Espace Presse — SGI-CNTS",
@@ -11,36 +10,24 @@ export const metadata = {
 
 export const dynamic = 'force-dynamic';
 
-export default async function PressePage() {
-  let pressReleases: any[] = [];
-  let cmsResources: any[] = [];
-  
-  try {
-    // Récupération parallèle des communiqués et des ressources
-    const [releasesData, resourcesData] = await Promise.all([
-      apiClient.articles.list({ category: "COMMUNIQUE", published_only: true }),
-      apiClient.articles.list({ category: "RESSOURCE", published_only: true })
-    ]);
-    
-    pressReleases = releasesData;
-    cmsResources = resourcesData;
-  } catch (error) {
-    logger.error({ err: error }, "Failed to fetch press data");
-  }
+function formatSize(kb: number) {
+  return kb >= 1024 ? `${(kb / 1024).toFixed(1)} Mo` : `${Math.round(kb)} Ko`;
+}
 
-  // Transformation des ressources CMS pour l'affichage
-  // On utilise :
-  // - title -> Titre
-  // - tags[0] -> Type (PDF, ZIP, etc.)
-  // - excerpt -> Taille (ex: "2.5 MB")
-  // - image_url -> Lien de téléchargement
-  const resources = cmsResources.map(res => ({
+export default async function PressePage() {
+  // Communiqués = articles de la catégorie « Communiqué » ; ressources = médiathèque du CMS.
+  const [pressReleases, cmsResources] = await Promise.all([
+    getArticles({ category: "Communiqué" }).then((r) => r ?? []),
+    getResources().then((r) => r ?? []),
+  ]);
+
+  const resources = cmsResources.map((res) => ({
     title: res.title,
-    type: res.tags?.[0] || "DOC",
-    size: res.excerpt || "-",
-    link: res.image_url || "#",
-    icon: (res.tags?.[0]?.toUpperCase() === "ZIP" || res.tags?.[0]?.toUpperCase() === "IMAGE") 
-      ? <ImageIcon className="h-6 w-6 text-primary" /> 
+    type: res.ext,
+    size: res.sizeKb ? formatSize(res.sizeKb) : "-",
+    link: res.url,
+    icon: ["ZIP", "JPG", "JPEG", "PNG", "SVG", "WEBP"].includes(res.ext)
+      ? <ImageIcon className="h-6 w-6 text-primary" />
       : <FileText className="h-6 w-6 text-primary" />
   }));
 
@@ -75,7 +62,7 @@ export default async function PressePage() {
                 ) : (
                   pressReleases.map((pr, index) => (
                     <article key={pr.slug || index} className="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm hover:shadow-md transition-shadow">
-                      <div className="text-sm text-zinc-500 mb-2">{new Date(pr.published_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+                      <div className="text-sm text-zinc-500 mb-2">{new Date(pr.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
                       <h3 className="text-xl font-bold text-zinc-900 mb-2">
                         <Link href={`/actualites/${pr.slug}`} className="hover:text-primary transition-colors">
                           {pr.title}

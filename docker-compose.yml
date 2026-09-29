@@ -19,6 +19,9 @@ services:
       NODE_ENV: production
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://cnts.gouv.sn}
       BACKEND_URL: http://api:8000
+      # CMS Strapi : appels serveur via le réseau docker, médias via l'URL publique.
+      CMS_INTERNAL_URL: http://cms:1337
+      CMS_PUBLIC_URL: ${CMS_PUBLIC_URL:-https://cnts.gouv.sn/cms}
     ports:
       - "127.0.0.1:3000:3000"
     restart: always
@@ -62,6 +65,36 @@ services:
       - db
     restart: always
 
+  # CMS Strapi (contenu éditorial du portail) — https://cnts.gouv.sn/cms/admin
+  # Base `strapi` dédiée dans le même serveur Postgres (voir cms/README.md).
+  cms:
+    build:
+      context: ./cms
+      args:
+        PUBLIC_URL: ${CMS_PUBLIC_URL:-https://cnts.gouv.sn/cms}
+    environment:
+      NODE_ENV: production
+      PUBLIC_URL: ${CMS_PUBLIC_URL:-https://cnts.gouv.sn/cms}
+      DATABASE_CLIENT: postgres
+      DATABASE_HOST: db
+      DATABASE_PORT: 5432
+      DATABASE_NAME: ${CMS_DB_NAME:-strapi}
+      DATABASE_USERNAME: ${CMS_DB_USER:-strapi}
+      DATABASE_PASSWORD: ${CMS_DB_PASSWORD:?CMS_DB_PASSWORD requis (voir .env)}
+      APP_KEYS: ${CMS_APP_KEYS:?CMS_APP_KEYS requis (voir .env)}
+      API_TOKEN_SALT: ${CMS_API_TOKEN_SALT:?CMS_API_TOKEN_SALT requis (voir .env)}
+      ADMIN_JWT_SECRET: ${CMS_ADMIN_JWT_SECRET:?CMS_ADMIN_JWT_SECRET requis (voir .env)}
+      JWT_SECRET: ${CMS_JWT_SECRET:?CMS_JWT_SECRET requis (voir .env)}
+      TRANSFER_TOKEN_SALT: ${CMS_TRANSFER_TOKEN_SALT:?CMS_TRANSFER_TOKEN_SALT requis (voir .env)}
+      ENCRYPTION_KEY: ${CMS_ENCRYPTION_KEY:?CMS_ENCRYPTION_KEY requis (voir .env)}
+    ports:
+      - "127.0.0.1:1337:1337"
+    volumes:
+      - cms_uploads:/opt/app/public/uploads
+    depends_on:
+      - db
+    restart: always
+
   redis:
     image: redis:7-alpine
     ports:
@@ -98,3 +131,4 @@ services:
 
 volumes:
   postgres_data:
+  cms_uploads:

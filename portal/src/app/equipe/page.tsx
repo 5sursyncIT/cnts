@@ -1,6 +1,6 @@
 import { User, Award, Stethoscope } from "lucide-react";
-import { apiClient } from "@/lib/api-client";
-import { logger } from "@/lib/logger";
+import { equipe } from "@/components/cnts/data";
+import { getTeamMembers } from "@/lib/cms";
 
 export const metadata = {
   title: "Équipe médicale — SGI-CNTS"
@@ -8,65 +8,8 @@ export const metadata = {
 
 export const dynamic = "force-dynamic";
 
-type Practitioner = {
-  name: string;
-  role: string;
-  specialty?: string | null;
-  bio?: string | null;
-  photo_url?: string | null;
-};
-
-// Contenu de repli affiché tant qu'aucun membre n'a été saisi dans le CMS.
-const FALLBACK_TEAM: Practitioner[] = [
-  {
-    name: "Pr. Saliou Diop",
-    role: "Directeur Général",
-    specialty: "Hématologie",
-    bio: "Expert reconnu en transfusion sanguine, le Pr. Diop dirige le CNTS avec une vision axée sur la qualité et l'innovation."
-  },
-  {
-    name: "Dr. Aissatou Ndiaye",
-    role: "Responsable Laboratoire",
-    specialty: "Biologie Médicale",
-    bio: "Spécialiste en qualification biologique, elle supervise l'ensemble des analyses pour garantir la sécurité des dons."
-  },
-  {
-    name: "Dr. Mamadou Fall",
-    role: "Chef du service Collecte",
-    specialty: "Médecine Générale",
-    bio: "En charge de l'organisation des collectes mobiles et de l'accueil des donneurs au centre national."
-  },
-  {
-    name: "Mme. Fatou Cissé",
-    role: "Surveillante Générale",
-    specialty: "Soins Infirmiers",
-    bio: "Coordonne les équipes paramédicales et veille au bon déroulement des prélèvements."
-  },
-  {
-    name: "Dr. Moussa Sow",
-    role: "Responsable Distribution",
-    specialty: "Pharmacie",
-    bio: "Gère les stocks de produits sanguins et leur distribution aux hôpitaux partenaires."
-  },
-  {
-    name: "M. Ousmane Diallo",
-    role: "Responsable Qualité",
-    specialty: "Assurance Qualité",
-    bio: "Veille au respect des normes internationales et à l'amélioration continue des processus."
-  }
-];
-
 export default async function TeamPage() {
-  let team: Practitioner[] = FALLBACK_TEAM;
-
-  try {
-    const members = await apiClient.team.list({ published_only: true });
-    if (members && members.length > 0) {
-      team = members;
-    }
-  } catch (error) {
-    logger.error({ err: error }, "Failed to fetch team members");
-  }
+  const team = (await getTeamMembers()) ?? equipe;
 
   return (
     <main className="bg-zinc-50 min-h-screen">

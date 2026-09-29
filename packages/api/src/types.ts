@@ -591,77 +591,8 @@ export interface AnalyticsDashboard {
 }
 
 // ============================================================================
-// CONTENT MANAGEMENT (CMS)
+// CONTACT (formulaire du portail)
 // ============================================================================
-
-export type ArticleStatus = "DRAFT" | "REVIEW" | "PUBLISHED" | "ARCHIVED";
-
-export interface ArticleCreate {
-  title: string;
-  slug: string;
-  excerpt?: string;
-  content: string;
-  category: string;
-  image_url?: string;
-  status?: ArticleStatus;
-  tags?: string[];
-  is_published?: boolean;
-}
-
-export interface ArticleUpdate {
-  title?: string;
-  slug?: string;
-  excerpt?: string;
-  content?: string;
-  category?: string;
-  image_url?: string;
-  status?: ArticleStatus;
-  tags?: string[];
-  is_published?: boolean;
-}
-
-export interface Article {
-  id: UUID;
-  title: string;
-  slug: string;
-  excerpt: string | null;
-  content: string;
-  category: string;
-  image_url: string | null;
-  status: ArticleStatus;
-  tags: string[];
-  author_id: UUID | null;
-  published_at: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface FaqItemCreate {
-  question: string;
-  answer: string;
-  category?: string;
-  display_order?: number;
-  is_published?: boolean;
-}
-
-export interface FaqItemUpdate {
-  question?: string;
-  answer?: string;
-  category?: string;
-  display_order?: number;
-  is_published?: boolean;
-}
-
-export interface FaqItem {
-  id: UUID;
-  question: string;
-  answer: string;
-  category: string;
-  display_order: number;
-  is_published: boolean;
-  created_at: string;
-  updated_at: string;
-}
 
 export type ContactMessageStatus = "NOUVEAU" | "TRAITE" | "ARCHIVE";
 
@@ -683,75 +614,6 @@ export interface ContactMessage {
   subject: string;
   message: string;
   status: ContactMessageStatus;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface TeamMemberCreate {
-  name: string;
-  role: string;
-  specialty?: string | null;
-  bio?: string | null;
-  photo_url?: string | null;
-  display_order?: number;
-  is_published?: boolean;
-}
-
-export interface TeamMemberUpdate {
-  name?: string;
-  role?: string;
-  specialty?: string | null;
-  bio?: string | null;
-  photo_url?: string | null;
-  display_order?: number;
-  is_published?: boolean;
-}
-
-export interface TeamMember {
-  id: UUID;
-  name: string;
-  role: string;
-  specialty: string | null;
-  bio: string | null;
-  photo_url: string | null;
-  display_order: number;
-  is_published: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface PartnerCreate {
-  name: string;
-  description?: string | null;
-  category?: string;
-  type?: string | null;
-  logo_url?: string | null;
-  website_url?: string | null;
-  display_order?: number;
-  is_published?: boolean;
-}
-
-export interface PartnerUpdate {
-  name?: string;
-  description?: string | null;
-  category?: string;
-  type?: string | null;
-  logo_url?: string | null;
-  website_url?: string | null;
-  display_order?: number;
-  is_published?: boolean;
-}
-
-export interface Partner {
-  id: UUID;
-  name: string;
-  description: string | null;
-  category: string;
-  type: string | null;
-  logo_url: string | null;
-  website_url: string | null;
-  display_order: number;
-  is_published: boolean;
   created_at: string;
   updated_at: string;
 }

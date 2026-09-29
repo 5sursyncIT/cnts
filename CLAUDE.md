@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Demarrage rapide avec Docker
 ```bash
 cp .env.example .env
-docker compose up --build    # lance: db, api, redis, celery-worker, celery-beat, portal, web
+docker compose up --build    # lance: db, api, redis, celery-worker, celery-beat, portal, web, cms
 curl http://localhost:8000/api/health
 ```
 
@@ -115,6 +115,7 @@ alembic downgrade -1                              # annuler
 │   └── tests/                 # pytest + SQLite en memoire
 ├── web/               # Back Office (Next.js 16 + React 19, App Router)
 ├── portal/            # Portail Patient (Next.js 16 + React 19, App Router)
+├── cms/               # CMS Strapi 5 (contenu editorial du portail) — hors workspaces npm
 ├── mobile/            # App collecte (React Native / Expo, offline-first)
 └── packages/
     ├── api/           # @cnts/api - Client API type-safe + hooks React
@@ -152,6 +153,8 @@ Les deux apps : App Router, Server Components par defaut, cookies de session htt
 **Back Office (`web/`)** : Route group `(bo)` pour les pages authentifiees. Sections : dashboard, donneurs, dons, laboratoire, stock, distribution, hemovigilance, analytics, audit, cms, admin, monitoring, parametrage, collectes, facturation, qualite, production. Auth : `/login`, `/mfa`.
 
 **Portail Patient (`portal/`)** : Pages publiques (actualites, FAQ, services) + espace patient (`/espace-patient`). Route group `(app)` pour les pages patient. Playwright pour les tests e2e.
+
+**CMS (`cms/`)** : Strapi 5, service docker `cms`, admin sur `https://cnts.gouv.sn/cms/admin`, base Postgres `strapi` separee. Gere articles/communiques, FAQ, equipe, partenaires et ressources presse. Le portail le lit cote serveur via `portal/src/lib/cms.ts` (`CMS_INTERNAL_URL`), avec repli sur `portal/src/components/cnts/data.ts` si Strapi est vide ou injoignable. La page BO `/cms` ne fait que renvoyer vers l'admin Strapi. Voir `cms/README.md`.
 
 ### Mobile (`mobile/`)
 

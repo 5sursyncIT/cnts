@@ -1,0 +1,37 @@
+{
+  "kind": "collectionType",
+  "collectionName": "ressources",
+  "info": {
+    "singularName": "ressource",
+    "pluralName": "ressources",
+    "displayName": "Ressource presse",
+    "description": "Fichiers téléchargeables de la médiathèque de /presse (PDF, logos, dossiers)."
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true,
+      "maxLength": 200
+    },
+    "description": {
+      "type": "text"
+    },
+    "file": {
+      "type": "media",
+      "multiple": false,
+      "required": true,
+      "allowedTypes": [
+        "files",
+        "images"
+      ]
+    },
+    "order": {
+      "type": "integer",
+      "default": 0
+    }
+  }
+}
