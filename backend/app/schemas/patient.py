@@ -3,7 +3,6 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr
 
-
 # --- Patient / Donneur Schemas ---
 
 
@@ -92,3 +91,49 @@ class DocumentMedicalResponse(DocumentMedicalBase):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# --- Dons (vue patient) ---
+# Volontairement minimal : aucun statut de qualification ni résultat biologique n'est
+# exposé au donneur en ligne (un don écarté pourrait trahir un résultat de sérologie).
+
+
+class DonPatientResponse(BaseModel):
+    id: UUID
+    date_don: date
+    type_don: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# --- Carte donneur (vue patient) ---
+
+
+class PointsPatientResponse(BaseModel):
+    type_operation: str
+    points: int
+    description: str | None = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CartePatientResponse(BaseModel):
+    numero_carte: str
+    niveau: str
+    points: int
+    total_dons: int
+    date_premier_don: date | None = None
+    date_dernier_don: date | None = None
+    is_active: bool
+    historique: list[PointsPatientResponse] = []
+
+
+# --- Création de compte patient (liaison à un dossier donneur existant) ---
+
+
+class PatientRegisterIn(BaseModel):
+    cni: str
+    date_naissance: date
+    email: EmailStr
+    password: str

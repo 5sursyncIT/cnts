@@ -1,27 +1,21 @@
+// Squelette affiché pendant le chargement des données du donneur (style v2).
+const bloc = (h: number, extra: React.CSSProperties = {}) => (
+  <div style={{ height: h, borderRadius: "var(--r-lg)", background: "var(--surface-2)", animation: "snSkel 1.4s ease-in-out infinite", ...extra }} />
+);
+
 export default function Loading() {
   return (
-    <div className="space-y-6 animate-pulse p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="h-8 w-48 bg-zinc-200 rounded-md"></div>
-        <div className="h-10 w-32 bg-zinc-200 rounded-md"></div>
+    <div role="status" aria-label="Chargement de votre espace" style={{ display: "grid", gap: 20 }}>
+      <style>{`@keyframes snSkel{0%,100%{opacity:1}50%{opacity:.55}}`}</style>
+      <div className="two-col" style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 20 }}>
+        {bloc(230, { borderRadius: "var(--r-xl)" })}
+        {bloc(230)}
       </div>
-
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="p-6 rounded-xl border border-zinc-200 bg-white shadow-sm space-y-2">
-             <div className="h-4 w-24 bg-zinc-200 rounded-md"></div>
-             <div className="h-8 w-12 bg-zinc-200 rounded-md"></div>
-          </div>
-        ))}
-      </div>
-
-      {/* Main Content Area */}
-      <div className="grid gap-6 md:grid-cols-2">
-         <div className="h-64 bg-zinc-100 rounded-xl border border-zinc-200"></div>
-         <div className="h-64 bg-zinc-100 rounded-xl border border-zinc-200"></div>
+      <div className="grid-3" style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0,1fr))", gap: 16 }}>
+        {bloc(120)}
+        {bloc(120)}
+        {bloc(120)}
       </div>
     </div>
-  )
+  );
 }

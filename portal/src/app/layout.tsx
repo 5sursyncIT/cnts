@@ -5,6 +5,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { ConsentBanner } from "@/components/consent-banner";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
+import { RevealOnScroll } from "@/components/reveal-on-scroll";
 
 const publicSans = Public_Sans({
   variable: "--font-public-sans",
@@ -46,10 +47,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr">
-      <body
-        className={`${publicSans.variable} ${newsreader.variable} ${splineMono.variable} antialiased`}
-      >
+    // Variables de police sur <html> : --font-sans/--font-serif (définies sur :root) en dépendent.
+    <html lang="fr" className={`${publicSans.variable} ${newsreader.variable} ${splineMono.variable}`}>
+      <body className="antialiased">
         <a
           href="#contenu"
           className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:text-black"
@@ -61,6 +61,7 @@ export default function RootLayout({
         <SiteFooter />
         <ConsentBanner />
         <ServiceWorkerRegister />
+        <RevealOnScroll />
       </body>
     </html>
   );

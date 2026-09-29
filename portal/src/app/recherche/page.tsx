@@ -129,7 +129,7 @@ export default function RecherchePage() {
       </MaxWrap>
 
       {/* Appel à collaboration */}
-      <section style={{ background: "var(--red-900)", color: "#fff" }}>
+      <section className="cta-band">
         <div
           style={{
             maxWidth: 1180,

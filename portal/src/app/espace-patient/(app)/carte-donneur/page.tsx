@@ -1,235 +1,162 @@
-"use client";
+import { frDate } from "@/components/cnts/format";
+import { Icon } from "@/components/cnts/icon";
+import { Card, Logo, SectionTitle } from "@/components/cnts/primitives";
+import { patientGet, type Carte, type Profil } from "@/lib/backend";
 
-import Image from "next/image";
-import { useState, useEffect } from "react";
-import { CreditCard, Star, Droplet, Calendar, Award, Loader2 } from "lucide-react";
+export const metadata = { title: "Carte donneur — Espace patient" };
 
-interface CarteDonneur {
-  id: string;
-  numero_carte: string;
-  niveau: string;
-  points: number;
-  total_dons: number;
-  date_premier_don: string | null;
-  date_dernier_don: string | null;
-  is_active: boolean;
-  qr_code_data: string;
-}
-
-interface PointsHistorique {
-  id: string;
-  type_operation: string;
-  points: number;
-  description: string;
-  created_at: string;
-}
-
-const niveauConfig: Record<string, { label: string; couleur: string; bg: string; icon: string }> = {
-  BRONZE: { label: "Bronze", couleur: "text-orange-700", bg: "bg-orange-50 border-orange-200", icon: "🥉" },
-  ARGENT: { label: "Argent", couleur: "text-zinc-600", bg: "bg-zinc-100 border-zinc-300", icon: "🥈" },
-  OR: { label: "Or", couleur: "text-amber-700", bg: "bg-amber-50 border-amber-200", icon: "🥇" },
-  PLATINE: { label: "Platine", couleur: "text-purple-700", bg: "bg-purple-50 border-purple-200", icon: "💎" },
+const NIVEAUX = ["BRONZE", "ARGENT", "OR", "PLATINE"];
+const OPERATION: Record<string, string> = {
+  DON: "Don",
+  PARRAINAGE: "Parrainage",
+  BONUS_ANNIVERSAIRE: "Bonus anniversaire",
+  UTILISATION: "Utilisation",
 };
 
-export default function CarteDonneurPage() {
-  const [carte, setCarte] = useState<CarteDonneur | null>(null);
-  const [historique, setHistorique] = useState<PointsHistorique[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const res = await fetch("/api/backend/fidelisation/cartes?limit=1");
-        if (res.ok) {
-          const cartes = await res.json();
-          if (cartes.length > 0) {
-            setCarte(cartes[0]);
-            const histRes = await fetch(
-              `/api/backend/fidelisation/points/${cartes[0].id}?limit=10`
-            );
-            if (histRes.ok) {
-              setHistorique(await histRes.json());
-            }
-          }
-        }
-      } catch {
-        // silently fail
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchData();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
-      </div>
-    );
-  }
-
-  if (!carte) {
-    return (
-      <div className="py-12">
-        <div className="text-center">
-          <div className="w-64 h-48 relative mx-auto mb-6">
-            <Image src="/images/illustration-carte-donneur.svg" alt="Carte de donneur" fill className="object-contain" />
-          </div>
-          <h1 className="text-2xl font-bold text-zinc-900 mb-2">
-            Carte de donneur
-          </h1>
-          <p className="text-zinc-600 max-w-md mx-auto">
-            Votre carte de donneur sera disponible après votre premier don de
-            sang au CNTS. Prenez rendez-vous pour effectuer votre premier don !
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  const config = niveauConfig[carte.niveau] || niveauConfig.BRONZE;
+export default async function DonorCardPage() {
+  const [profil, carte] = await Promise.all([patientGet<Profil>("/api/me"), patientGet<Carte>("/api/me/carte")]);
+  const nom = profil ? `${profil.prenom} ${profil.nom}` : "";
+  const niveauIdx = carte ? Math.max(0, NIVEAUX.indexOf(carte.niveau.toUpperCase())) : -1;
 
   return (
-    <div className="py-6 space-y-8">
-      <h1 className="text-2xl font-bold text-zinc-900">Ma carte de donneur</h1>
-
-      {/* Carte visuelle */}
-      <div
-        className={`relative overflow-hidden rounded-2xl border-2 p-8 ${config.bg}`}
-      >
-        <div className="absolute top-4 right-4 text-4xl">{config.icon}</div>
-        <div className="space-y-6">
-          <div>
-            <p className="text-xs uppercase tracking-wider text-zinc-500">
-              Centre National de Transfusion Sanguine
-            </p>
-            <p className="text-2xl font-bold text-zinc-900 mt-1 tracking-widest">
-              {carte.numero_carte}
-            </p>
+    <div className="two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 28, alignItems: "start" }}>
+      <div style={{ display: "grid", gap: 18 }}>
+        {/* Carte numérique */}
+        <div
+          style={{
+            position: "relative",
+            overflow: "hidden",
+            borderRadius: "var(--r-lg)",
+            background: "linear-gradient(150deg, var(--red-900), var(--brand))",
+            color: "#fff",
+            padding: 26,
+            boxShadow: "var(--sh-lg)",
+            aspectRatio: "1.586 / 1",
+            display: "grid",
+            alignContent: "space-between",
+          }}
+        >
+          <div aria-hidden className="blob" style={{ width: 240, height: 240, right: -70, top: -90, background: "var(--red-700)", opacity: 0.7 }} />
+          <div aria-hidden className="blob" style={{ width: 120, height: 120, right: 90, bottom: -60, background: "var(--acc2)", opacity: 0.5 }} />
+          <div style={{ position: "relative", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div>
+              <div style={{ fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", fontWeight: 700, opacity: 0.8 }}>Carte de donneur</div>
+              <div style={{ fontSize: 13, opacity: 0.8 }}>CNTS Sénégal</div>
+            </div>
+            <Logo size={32} light showText={false} />
           </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div>
-              <p className="text-xs text-zinc-500">Niveau</p>
-              <p className={`font-bold text-lg ${config.couleur}`}>
-                {config.label}
-              </p>
+          <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 16 }}>
+            <div
+              style={{
+                width: 60,
+                height: 60,
+                borderRadius: 16,
+                background: "rgba(255,255,255,.16)",
+                border: "1px solid rgba(255,255,255,.3)",
+                display: "grid",
+                placeItems: "center",
+                fontSize: 22,
+                fontWeight: 800,
+              }}
+              title="Groupe sanguin"
+            >
+              {profil?.groupe_sanguin ?? "?"}
             </div>
-            <div>
-              <p className="text-xs text-zinc-500">Points</p>
-              <p className="font-bold text-lg text-zinc-900">{carte.points}</p>
-            </div>
-            <div>
-              <p className="text-xs text-zinc-500">Total dons</p>
-              <p className="font-bold text-lg text-zinc-900">
-                {carte.total_dons}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-zinc-500">Statut</p>
-              <p className="font-bold text-lg text-green-600">
-                {carte.is_active ? "Active" : "Inactive"}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex gap-6 text-sm text-zinc-600">
-            {carte.date_premier_don && (
-              <span className="flex items-center gap-1">
-                <Calendar className="h-4 w-4" />
-                Premier don :{" "}
-                {new Date(carte.date_premier_don).toLocaleDateString("fr-FR")}
-              </span>
-            )}
-            {carte.date_dernier_don && (
-              <span className="flex items-center gap-1">
-                <Droplet className="h-4 w-4" />
-                Dernier don :{" "}
-                {new Date(carte.date_dernier_don).toLocaleDateString("fr-FR")}
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Progression */}
-      <div className="bg-white rounded-xl border border-zinc-200 p-6">
-        <h2 className="font-bold text-zinc-900 mb-4 flex items-center gap-2">
-          <Award className="h-5 w-5 text-primary" />
-          Progression
-        </h2>
-        <div className="space-y-3">
-          {["BRONZE", "ARGENT", "OR", "PLATINE"].map((niveau) => {
-            const seuils: Record<string, number> = {
-              BRONZE: 0,
-              ARGENT: 200,
-              OR: 500,
-              PLATINE: 1000,
-            };
-            const nc = niveauConfig[niveau];
-            const atteint = carte.points >= seuils[niveau];
-            return (
-              <div key={niveau} className="flex items-center gap-3">
-                <span className="text-lg">{nc.icon}</span>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <span
-                      className={`text-sm font-medium ${atteint ? nc.couleur : "text-zinc-400"}`}
-                    >
-                      {nc.label}
-                    </span>
-                    <span className="text-xs text-zinc-500">
-                      {seuils[niveau]} pts
-                    </span>
-                  </div>
-                  <div className="w-full h-2 bg-zinc-100 rounded-full">
-                    <div
-                      className={`h-2 rounded-full transition-all ${atteint ? "bg-primary" : "bg-zinc-200"}`}
-                      style={{
-                        width: `${Math.min(100, (carte.points / seuils[niveau]) * 100 || 100)}%`,
-                      }}
-                    />
-                  </div>
-                </div>
+            <div style={{ minWidth: 0 }}>
+              <div className="font-serif" style={{ fontSize: 22, lineHeight: 1.15 }}>
+                {nom}
               </div>
-            );
-          })}
+              {carte?.date_premier_don && (
+                <div style={{ fontSize: 13, opacity: 0.75 }}>Donneur depuis {new Date(carte.date_premier_don).getFullYear()}</div>
+              )}
+            </div>
+          </div>
+          <div style={{ position: "relative", display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 12 }}>
+            <div>
+              <div style={{ fontSize: 10.5, letterSpacing: ".12em", textTransform: "uppercase", opacity: 0.65 }}>N° de carte</div>
+              <div className="font-mono" style={{ fontSize: 16, letterSpacing: ".06em" }}>
+                {carte?.numero_carte ?? "En attente"}
+              </div>
+            </div>
+            {carte && (
+              <span style={{ padding: "5px 12px", borderRadius: 999, background: "#fff", color: "var(--brand)", fontSize: 12, fontWeight: 800, letterSpacing: ".06em" }}>
+                {carte.niveau}
+              </span>
+            )}
+          </div>
         </div>
+        {!profil?.groupe_sanguin && (
+          <p style={{ fontSize: 13.5, color: "var(--ink-500)" }}>Votre groupe sanguin sera renseigné par le centre après votre premier don.</p>
+        )}
       </div>
 
-      {/* Historique des points */}
-      {historique.length > 0 && (
-        <div className="bg-white rounded-xl border border-zinc-200 p-6">
-          <h2 className="font-bold text-zinc-900 mb-4 flex items-center gap-2">
-            <Star className="h-5 w-5 text-amber-500" />
-            Historique des points
-          </h2>
-          <div className="space-y-3">
-            {historique.map((entry) => (
-              <div
-                key={entry.id}
-                className="flex items-center justify-between p-3 bg-zinc-50 rounded-lg"
-              >
-                <div>
-                  <p className="text-sm font-medium text-zinc-900">
-                    {entry.description || entry.type_operation}
-                  </p>
-                  <p className="text-xs text-zinc-500">
-                    {new Date(entry.created_at).toLocaleDateString("fr-FR")}
-                  </p>
-                </div>
-                <span
-                  className={`font-bold ${entry.points > 0 ? "text-green-600" : "text-red-600"}`}
-                >
-                  {entry.points > 0 ? "+" : ""}
-                  {entry.points} pts
+      <div style={{ display: "grid", gap: 22 }}>
+        {carte ? (
+          <>
+            <Card pad={24}>
+              <div className="kicker" style={{ marginBottom: 8 }}>
+                Fidélité
+              </div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+                <span className="font-serif" style={{ fontSize: 44, color: "var(--brand)", lineHeight: 1 }}>
+                  {carte.points}
                 </span>
+                <span style={{ fontWeight: 700 }}>points</span>
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+              <div style={{ display: "flex", gap: 6, marginTop: 18 }} aria-label={`Niveau ${carte.niveau}`}>
+                {NIVEAUX.map((n, i) => (
+                  <div key={n} style={{ flex: 1 }}>
+                    <div style={{ height: 8, borderRadius: 9, background: i <= niveauIdx ? "var(--brand)" : "var(--surface-3)" }} />
+                    <div style={{ fontSize: 11.5, marginTop: 6, fontWeight: i === niveauIdx ? 800 : 600, color: i === niveauIdx ? "var(--brand)" : "var(--ink-500)" }}>
+                      {n.charAt(0) + n.slice(1).toLowerCase()}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: "flex", gap: 20, marginTop: 18, fontSize: 13.5, color: "var(--ink-600)", flexWrap: "wrap" }}>
+                <span>
+                  <b style={{ color: "var(--ink-900)" }}>{carte.total_dons}</b> dons
+                </span>
+                {carte.date_dernier_don && <span>Dernier don : {frDate(carte.date_dernier_don)}</span>}
+              </div>
+            </Card>
+            <div>
+              <SectionTitle kicker="Mouvements" title="Historique des points" />
+              {carte.historique.length ? (
+                <div style={{ display: "grid", gap: 10 }}>
+                  {carte.historique.map((h, i) => (
+                    <Card key={i} pad={14}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 700, fontSize: 14.5 }}>{h.description ?? OPERATION[h.type_operation] ?? h.type_operation}</div>
+                          <div style={{ fontSize: 12.5, color: "var(--ink-500)" }}>{frDate(h.created_at)}</div>
+                        </div>
+                        <span style={{ fontWeight: 800, color: h.points >= 0 ? "var(--ok)" : "var(--crit)" }}>
+                          {h.points >= 0 ? "+" : ""}
+                          {h.points}
+                        </span>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <p style={{ color: "var(--ink-600)" }}>Aucun mouvement pour le moment.</p>
+              )}
+            </div>
+          </>
+        ) : (
+          <Card pad={26} style={{ display: "grid", gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <Icon name="gift" size={22} style={{ color: "var(--brand)" }} />
+              <h2 style={{ fontSize: 18, fontWeight: 700 }}>Votre carte n&apos;est pas encore émise</h2>
+            </div>
+            <p style={{ color: "var(--ink-600)", lineHeight: 1.55 }}>
+              La carte de donneur et son programme de fidélité sont activés par le centre lors d&apos;un don. Elle apparaîtra ici
+              automatiquement.
+            </p>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }

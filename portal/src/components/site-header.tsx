@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { Logo, Button } from "@/components/cnts/primitives";
 import { Icon } from "@/components/cnts/icon";
@@ -19,24 +19,34 @@ const NAV = [
   { href: "/contact", label: "Contact" },
 ];
 
+const UTIL_LINK = { color: "var(--ink-700)", textDecoration: "none", fontSize: 12.5, fontWeight: 600 } as const;
+
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
   const menuRef = useFocusTrap(open, () => setOpen(false));
+
+  useEffect(() => {
+    const f = () => setScrolled(window.scrollY > 20);
+    f();
+    window.addEventListener("scroll", f, { passive: true });
+    return () => window.removeEventListener("scroll", f);
+  }, []);
 
   const isActive = (path: string) =>
     path === "/" ? pathname === "/" : pathname === path || pathname.startsWith(path + "/");
 
   return (
-    <header style={{ position: "sticky", top: 0, zIndex: 50 }}>
-      {/* Utility bar */}
-      <div className="util-bar-wrap" style={{ background: "var(--night-900)", color: "rgba(255,255,255,.75)", fontSize: 12.5 }}>
+    <>
+      {/* Barre utilitaire (défile avec la page) */}
+      <div className="util-bar-wrap" style={{ background: "var(--surface-2)", color: "var(--ink-700)", fontSize: 12.5 }}>
         <div
           style={{
             maxWidth: 1180,
             margin: "0 auto",
             padding: "0 var(--gutter)",
-            height: 38,
+            height: 36,
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
@@ -58,121 +68,124 @@ export function SiteHeader() {
             </span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <Link href="/faq" style={{ color: "rgba(255,255,255,.75)", textDecoration: "none", fontSize: 12.5, fontWeight: 600 }}>
+            <Link href="/faq" style={UTIL_LINK}>
               FAQ
             </Link>
-            <Link href="/presse" style={{ color: "rgba(255,255,255,.75)", textDecoration: "none", fontSize: 12.5, fontWeight: 600 }}>
+            <Link href="/presse" style={UTIL_LINK}>
               Espace Presse
             </Link>
           </div>
         </div>
       </div>
 
-      {/* Main nav */}
-      <div
-        style={{
-          background: "rgba(255,255,255,.92)",
-          backdropFilter: "saturate(180%) blur(12px)",
-          WebkitBackdropFilter: "saturate(180%) blur(12px)",
-          borderBottom: "1px solid var(--line)",
-        }}
-      >
+      {/* Navigation principale : pilule flottante */}
+      <header style={{ position: "sticky", top: 0, zIndex: 50, padding: "12px var(--gutter) 0" }}>
         <div
           style={{
-            maxWidth: 1180,
+            maxWidth: 1240,
             margin: "0 auto",
-            padding: "0 var(--gutter)",
-            height: 66,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 18,
+            background: "color-mix(in oklab, var(--surface) 88%, transparent)",
+            backdropFilter: "saturate(180%) blur(14px)",
+            WebkitBackdropFilter: "saturate(180%) blur(14px)",
+            borderRadius: open ? 28 : 999,
+            border: "1px solid var(--line)",
+            boxShadow: scrolled ? "var(--sh-md)" : "none",
+            transition: "box-shadow .3s, border-radius .2s",
           }}
         >
-          <Link href="/" style={{ flexShrink: 0, textDecoration: "none" }}>
-            <Logo size={36} />
-          </Link>
-          <nav className="desktop-nav" style={{ display: "flex", alignItems: "center", gap: 1 }} aria-label="Navigation principale">
-            {NAV.map((n) => (
-              <Link
-                key={n.href}
-                href={n.href}
-                aria-current={isActive(n.href) ? "page" : undefined}
-                style={{
-                  padding: "8px 11px",
-                  borderRadius: "var(--r-sm)",
-                  fontSize: 14,
-                  fontFamily: "var(--font-sans)",
-                  whiteSpace: "nowrap",
-                  textDecoration: "none",
-                  fontWeight: isActive(n.href) ? 700 : 600,
-                  color: isActive(n.href) ? "var(--brand)" : "var(--ink-700)",
-                  transition: "color .15s",
-                }}
-              >
-                {n.label}
-              </Link>
-            ))}
-          </nav>
-          <div className="desktop-nav" style={{ flexShrink: 0 }}>
-            <Button size="sm" variant="primary" icon="idcard" href="/espace-patient">
-              Espace Patient
-            </Button>
-          </div>
-          <button
-            className="mobile-only"
-            onClick={() => setOpen(!open)}
-            aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}
-            aria-expanded={open}
-            aria-controls="mobile-menu"
-            style={{ display: "none", background: "none", border: "none", cursor: "pointer", color: "var(--ink-800)" }}
-          >
-            <Icon name={open ? "x" : "menu"} size={26} />
-          </button>
-        </div>
-
-        {open && (
           <div
-            ref={menuRef}
-            id="mobile-menu"
-            className="mobile-only"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Menu mobile"
             style={{
-              display: "none",
-              flexDirection: "column",
-              padding: "8px var(--gutter) 18px",
-              borderTop: "1px solid var(--line)",
-              background: "var(--surface)",
+              maxWidth: 1180,
+              margin: "0 auto",
+              padding: "0 10px 0 22px",
+              height: 64,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 14,
             }}
           >
-            {NAV.map((n) => (
-              <Link
-                key={n.href}
-                href={n.href}
-                onClick={() => setOpen(false)}
-                aria-current={isActive(n.href) ? "page" : undefined}
-                style={{
-                  padding: "12px 4px",
-                  fontSize: 16,
-                  fontWeight: 600,
-                  textDecoration: "none",
-                  color: isActive(n.href) ? "var(--brand)" : "var(--ink-800)",
-                  borderBottom: "1px solid var(--line-soft)",
-                }}
-              >
-                {n.label}
-              </Link>
-            ))}
-            <div style={{ marginTop: 14 }}>
-              <Button size="md" variant="primary" full icon="idcard" href="/espace-patient">
+            <Link href="/" style={{ flexShrink: 0, textDecoration: "none" }} aria-label="CNTS — Accueil">
+              <Logo size={36} />
+            </Link>
+            <nav className="desktop-nav" style={{ display: "flex", alignItems: "center", gap: 2 }} aria-label="Navigation principale">
+              {NAV.map((n) => (
+                <Link
+                  key={n.href}
+                  href={n.href}
+                  aria-current={isActive(n.href) ? "page" : undefined}
+                  className={"nav-link" + (isActive(n.href) ? " on" : "")}
+                >
+                  {n.label}
+                </Link>
+              ))}
+            </nav>
+            <div className="desktop-nav" style={{ flexShrink: 0 }}>
+              <Button size="sm" variant="primary" icon="idcard" href="/espace-patient">
                 Espace Patient
               </Button>
             </div>
+            <button
+              className="mobile-only"
+              onClick={() => setOpen(!open)}
+              aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}
+              aria-expanded={open}
+              aria-controls="mobile-menu"
+              style={{
+                display: "none",
+                width: 44,
+                height: 44,
+                borderRadius: 999,
+                background: "var(--tint)",
+                border: "none",
+                cursor: "pointer",
+                color: "var(--brand)",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Icon name={open ? "x" : "menu"} size={22} />
+            </button>
           </div>
-        )}
-      </div>
-    </header>
+
+          {open && (
+            <div
+              ref={menuRef}
+              id="mobile-menu"
+              className="mobile-only stag"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Menu mobile"
+              style={{ display: "none", flexDirection: "column", padding: "6px 18px 18px" }}
+            >
+              {NAV.map((n) => (
+                <Link
+                  key={n.href}
+                  href={n.href}
+                  onClick={() => setOpen(false)}
+                  aria-current={isActive(n.href) ? "page" : undefined}
+                  style={{
+                    padding: "12px 14px",
+                    borderRadius: 14,
+                    fontSize: 16,
+                    fontWeight: 600,
+                    textDecoration: "none",
+                    background: isActive(n.href) ? "var(--tint)" : "none",
+                    color: isActive(n.href) ? "var(--brand)" : "var(--ink-800)",
+                  }}
+                >
+                  {n.label}
+                </Link>
+              ))}
+              <div style={{ marginTop: 10 }}>
+                <Button size="md" variant="primary" full icon="idcard" href="/espace-patient">
+                  Espace Patient
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </header>
+    </>
   );
 }

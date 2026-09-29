@@ -91,8 +91,8 @@ export default function ConseilsPage() {
         <Card
           pad={28}
           style={{
-            background: "var(--red-900)",
-            borderColor: "var(--red-900)",
+            background: "var(--brand)",
+            borderColor: "var(--brand)",
             color: "#fff",
             display: "flex",
             alignItems: "center",

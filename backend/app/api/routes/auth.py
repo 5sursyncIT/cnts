@@ -5,13 +5,14 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.passwords import hash_recovery_code, verify_password
+from app.core.passwords import hash_password, hash_recovery_code, verify_password
+from app.core.security import hash_cni
 from app.core.tokens import sign_token, verify_token
 from app.core.totp import verify_totp
-from app.db.models import UserAccount, UserRecoveryCode
+from app.db.models import Donneur, UserAccount, UserRecoveryCode
 from app.db.session import get_db
 from app.schemas.auth import LoginIn, LoginOut, MfaVerifyIn, MfaVerifyOut
-
+from app.schemas.patient import PatientRegisterIn
 
 router = APIRouter(prefix="/auth")
 
@@ -41,6 +42,50 @@ def login(payload: LoginIn, db: Session = Depends(get_db)) -> LoginOut:
         ttl_seconds=8 * 60 * 60,
     )
     return LoginOut(mfa_required=False, access_token=access, user=user)
+
+
+# Message unique quand l'identité ne correspond pas : on ne révèle jamais si une CNI
+# est connue du CNTS ni laquelle des deux informations est fausse.
+IDENTITE_NON_RECONNUE = "Informations non reconnues. Vérifiez votre numéro de CNI et votre date de naissance."
+
+
+@router.post("/register-patient", status_code=201)
+def register_patient(payload: PatientRegisterIn, db: Session = Depends(get_db)) -> dict:
+    """
+    Crée un compte patient lié à un dossier donneur EXISTANT.
+
+    Le donneur prouve son identité avec son numéro de CNI (comparé au hash stocké)
+    et sa date de naissance. Aucun dossier n'est créé ici : un donneur inconnu du
+    CNTS ne peut pas ouvrir de compte.
+    """
+    if len(payload.password) < 8:
+        raise HTTPException(status_code=422, detail="Le mot de passe doit contenir au moins 8 caractères")
+
+    donneur = db.execute(
+        select(Donneur).where(
+            Donneur.cni_hash == hash_cni(payload.cni),
+            Donneur.deleted_at.is_(None),
+        )
+    ).scalar_one_or_none()
+    if donneur is None or donneur.date_naissance is None or donneur.date_naissance != payload.date_naissance:
+        raise HTTPException(status_code=400, detail=IDENTITE_NON_RECONNUE)
+
+    if donneur.user_id is not None:
+        raise HTTPException(
+            status_code=409,
+            detail="Un compte existe déjà pour ce dossier donneur. Connectez-vous ou contactez le CNTS.",
+        )
+
+    email = payload.email.lower()
+    if db.execute(select(UserAccount).where(func.lower(UserAccount.email) == email)).scalar_one_or_none():
+        raise HTTPException(status_code=409, detail="Cette adresse email est déjà utilisée.")
+
+    user = UserAccount(email=email, password_hash=hash_password(payload.password), role="PATIENT")
+    db.add(user)
+    db.flush()
+    donneur.user_id = user.id
+    db.commit()
+    return {"ok": True}
 
 
 @router.post("/mfa/verify", response_model=MfaVerifyOut)

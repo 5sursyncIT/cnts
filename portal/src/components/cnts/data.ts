@@ -24,6 +24,8 @@ export type Center = {
   area: string;
   hours: string;
   type: "fixe" | "mobile";
+  /** Siège national (repère distinct sur les cartes). */
+  siege?: boolean;
   lat: number;
   lng: number;
 };
@@ -32,7 +34,7 @@ export type Center = {
 // publiées sur le site officiel : elles seront ajoutées ici (ou via l'API
 // /collectes/calendrier) dès qu'elles sont annoncées.
 export const centers: Center[] = [
-  { id: "dakar-cnts", name: "CNTS — Siège national", city: "Dakar", area: "Avenue Cheikh Anta Diop, Fann-Résidence", hours: "Lun–Ven · 08h00–17h00 · Sam · 08h00–13h00", type: "fixe", lat: 14.692, lng: -17.462 },
+  { id: "dakar-cnts", name: "CNTS — Siège national", city: "Dakar", area: "Avenue Cheikh Anta Diop, Fann-Résidence", hours: "Lun–Ven · 08h00–17h00 · Sam · 08h00–13h00", type: "fixe", siege: true, lat: 14.692, lng: -17.462 },
   { id: "crts-kaolack", name: "CRTS de Kaolack", city: "Kaolack", area: "Centre Régional de Transfusion Sanguine (inauguré fin 2025)", hours: "Horaires : renseignez-vous auprès du CNTS", type: "fixe", lat: 14.146, lng: -16.073 },
 ];
 

@@ -4,10 +4,13 @@ import { useState, type CSSProperties } from "react";
 import { Button, Card, PageBanner } from "@/components/cnts/primitives";
 import { Icon } from "@/components/cnts/icon";
 import { org } from "@/components/cnts/data";
-import { SenegalMap, geoToSvg } from "@/components/cnts/senegal-map";
+import { SenegalMap, directionsUrl, EXTERNAL_BTN, type MapMarker } from "@/components/cnts/senegal-map";
 
 // Siège du CNTS — Avenue Cheikh Anta Diop, Fann-Résidence, Dakar
-const SIEGE = geoToSvg(-17.464, 14.688);
+const SIEGE = { lat: 14.688, lng: -17.464 };
+const SIEGE_MARKER: MapMarker[] = [
+  { id: "siege", ...SIEGE, kind: "siege", label: "Siège du CNTS", sub: "Fann-Résidence, Dakar" },
+];
 
 type FormState = {
   name: string;
@@ -155,28 +158,48 @@ export default function ContactPage() {
                 </div>
               </Card>
             ))}
-            <div
-              style={{
-                position: "relative",
-                width: "100%",
-                aspectRatio: "1000 / 736",
-                borderRadius: "var(--r-lg)",
-                border: "1px solid var(--line)",
-                background: "var(--surface-1)",
-                overflow: "hidden",
-                padding: 12,
-              }}
-            >
-              <SenegalMap activeRegion="SNDK">
-                <g transform={`translate(${SIEGE.x} ${SIEGE.y})`}>
-                  <title>Siège du CNTS — Dakar</title>
-                  <circle r={20} fill="var(--brand)" stroke="#fff" strokeWidth={4}>
-                    <animate attributeName="r" values="16;24;16" dur="1.8s" repeatCount="indefinite" />
-                  </circle>
-                  <circle r={6} fill="#fff" />
-                </g>
-              </SenegalMap>
-            </div>
+            <SenegalMap
+              tipOnSelect={false}
+              ariaLabel="Localisation du siège du CNTS à Dakar"
+              markers={SIEGE_MARKER}
+              selectedId="siege"
+              activeRegion="SNDK"
+              labels={false}
+              overlay={
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 12,
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    flexWrap: "wrap",
+                    padding: "12px 16px",
+                    borderTop: "1px solid var(--line)",
+                    background: "var(--surface)",
+                  }}
+                >
+                  <div style={{ fontSize: 13, color: "var(--ink-600)", lineHeight: 1.4, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, color: "var(--ink-900)", fontSize: 14 }}>Siège du CNTS</div>
+                    {org.address}
+                  </div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <a href={directionsUrl(SIEGE.lat, SIEGE.lng)} target="_blank" rel="noopener noreferrer" style={EXTERNAL_BTN}>
+                      <Icon name="pin" size={16} />
+                      Itinéraire
+                    </a>
+                    <a
+                      href={`https://www.openstreetmap.org/?mlat=${SIEGE.lat}&mlon=${SIEGE.lng}#map=17/${SIEGE.lat}/${SIEGE.lng}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ ...EXTERNAL_BTN, border: "1px solid transparent", background: "transparent" }}
+                    >
+                      <Icon name="globe" size={16} />
+                      Plan détaillé
+                    </a>
+                  </div>
+                </div>
+              }
+            />
           </div>
 
           {/* Form */}

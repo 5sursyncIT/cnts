@@ -2,7 +2,7 @@ import Image from "next/image";
 import { Button, Card, PageBanner, SectionTitle } from "@/components/cnts/primitives";
 import { Icon } from "@/components/cnts/icon";
 import { org } from "@/components/cnts/data";
-import { SenegalMap, geoToSvg, REGION_POINTS } from "@/components/cnts/senegal-map";
+import { NationalNetworkMap } from "@/components/cnts/national-network-map";
 
 export const metadata = {
   title: "Le CNTS — CNTS Sénégal",
@@ -150,66 +150,13 @@ export default function QuiSommesNousPage() {
           title="Un maillage national"
           sub={`${org.regions.length} régions couvertes par un réseau de banques régionales et de postes de collecte, coordonnés depuis le siège de Dakar.`}
         />
-        <div
-          className="two-col"
-          style={{ display: "grid", gridTemplateColumns: "1.05fr 0.95fr", gap: 30, alignItems: "center" }}
-        >
-          {/* Carte du Sénégal — régions couvertes */}
-          <div
-            style={{
-              position: "relative",
-              width: "100%",
-              aspectRatio: "1000 / 736",
-              borderRadius: "var(--r-lg)",
-              border: "1px solid var(--line)",
-              background: "var(--surface-1)",
-              overflow: "hidden",
-              padding: 12,
-            }}
-          >
-            <SenegalMap highlightAll>
-              {REGION_POINTS.map((p) => {
-                const { x, y } = geoToSvg(p.lng, p.lat);
-                return (
-                  <g key={p.id} transform={`translate(${x} ${y})`}>
-                    <title>{p.name}</title>
-                    <circle r={12} fill="var(--brand)" stroke="#fff" strokeWidth={3.5} />
-                    <circle r={4} fill="#fff" />
-                  </g>
-                );
-              })}
-            </SenegalMap>
+        <NationalNetworkMap regions={org.regions}>
+          <div style={{ width: "100%", marginTop: 8 }}>
+            <Button href="/qui-sommes-nous/organisation" variant="outline" iconRight="arrowR">
+              Organisation & réseau national
+            </Button>
           </div>
-
-          {/* Liste des régions */}
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignContent: "center" }}>
-            {org.regions.map((r) => (
-              <span
-                key={r}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "10px 16px",
-                  borderRadius: "var(--r-pill)",
-                  border: "1px solid var(--line)",
-                  background: "var(--surface)",
-                  fontSize: 14,
-                  fontWeight: 600,
-                  color: "var(--ink-700)",
-                }}
-              >
-                <Icon name="pin" size={15} style={{ color: "var(--brand)" }} />
-                {r}
-              </span>
-            ))}
-            <div style={{ width: "100%", marginTop: 8 }}>
-              <Button href="/qui-sommes-nous/organisation" variant="outline" iconRight="arrowR">
-                Organisation & réseau national
-              </Button>
-            </div>
-          </div>
-        </div>
+        </NationalNetworkMap>
       </MaxWrap>
 
       {/* Partenaires */}

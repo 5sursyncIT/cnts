@@ -137,7 +137,7 @@ export default function ParcoursDonneurPage() {
         </MaxWrap>
       </section>
 
-      <section style={{ background: "var(--red-900)", color: "#fff" }}>
+      <section className="cta-band">
         <div
           style={{
             maxWidth: 1180,

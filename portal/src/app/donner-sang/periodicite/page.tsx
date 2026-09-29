@@ -134,8 +134,8 @@ export default function PeriodicitePage() {
           pad={28}
           style={{
             marginTop: 44,
-            background: "var(--red-900)",
-            borderColor: "var(--red-900)",
+            background: "var(--brand)",
+            borderColor: "var(--brand)",
             color: "#fff",
             display: "flex",
             alignItems: "center",

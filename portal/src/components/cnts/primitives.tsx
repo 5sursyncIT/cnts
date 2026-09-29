@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Icon } from "./icon";
 
 /* ----------------------------- Logo ----------------------------- */
@@ -54,7 +54,8 @@ export function Logo({
 }
 
 /* ----------------------------- Button ----------------------------- */
-type ButtonVariant = "primary" | "deep" | "outline" | "ghost" | "light" | "danger";
+// Styles : classes .cn-btn (globals.css, thème v2 « Solaire »).
+type ButtonVariant = "primary" | "deep" | "outline" | "ghost" | "light" | "soft" | "danger";
 type ButtonSize = "sm" | "md" | "lg";
 
 export function Button({
@@ -82,76 +83,30 @@ export function Button({
   disabled?: boolean;
   style?: CSSProperties;
 }) {
-  const base: CSSProperties = {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    fontFamily: "var(--font-sans)",
-    fontWeight: 600,
-    cursor: disabled ? "not-allowed" : "pointer",
-    border: "1px solid transparent",
-    borderRadius: "var(--r-pill)",
-    whiteSpace: "nowrap",
-    textDecoration: "none",
-    transition: "transform .12s ease, background .15s ease, box-shadow .15s ease, color .15s",
-    width: full ? "100%" : "auto",
-    opacity: disabled ? 0.55 : 1,
-  };
-  const sizes: Record<ButtonSize, CSSProperties> = {
-    sm: { padding: "8px 14px", fontSize: 13 },
-    md: { padding: "11px 20px", fontSize: 14.5 },
-    lg: { padding: "15px 28px", fontSize: 16 },
-  };
-  const variants: Record<ButtonVariant, CSSProperties> = {
-    primary: { background: "var(--brand)", color: "#fff", boxShadow: "var(--sh-sm)" },
-    deep: { background: "var(--red-900)", color: "#fff" },
-    outline: { background: "var(--surface)", color: "var(--ink-900)", borderColor: "var(--line-strong)" },
-    ghost: { background: "transparent", color: "var(--ink-800)" },
-    light: { background: "rgba(255,255,255,.14)", color: "#fff", borderColor: "rgba(255,255,255,.28)" },
-    danger: { background: "var(--crit)", color: "#fff" },
-  };
-  const [h, setH] = useState(false);
-  const hoverStyles: Record<ButtonVariant, CSSProperties> = {
-    primary: { background: "var(--brand-strong)", transform: "translateY(-1px)", boxShadow: "var(--sh-md)" },
-    deep: { background: "var(--red-950)" },
-    outline: { borderColor: "var(--ink-400)", background: "var(--surface-1)" },
-    ghost: { background: "var(--surface-3)" },
-    light: { background: "rgba(255,255,255,.24)" },
-    danger: { background: "var(--red-700)" },
-  };
-  const hov = !disabled && h ? hoverStyles[variant] : {};
   const iconSize = size === "lg" ? 20 : 18;
-  const merged = { ...base, ...sizes[size], ...variants[variant], ...hov, ...style };
+  const className = `cn-btn ${variant} ${size}`;
+  const merged: CSSProperties = { width: full ? "100%" : undefined, ...style };
   const inner = (
     <>
       {icon && <Icon name={icon} size={iconSize} />}
       {children}
-      {iconRight && <Icon name={iconRight} size={iconSize} />}
+      {iconRight && (
+        <span className="ic-r">
+          <Icon name={iconRight} size={iconSize} />
+        </span>
+      )}
     </>
   );
 
   if (href && !disabled) {
     return (
-      <Link
-        href={href}
-        onMouseEnter={() => setH(true)}
-        onMouseLeave={() => setH(false)}
-        style={merged}
-      >
+      <Link href={href} className={className} style={merged}>
         {inner}
       </Link>
     );
   }
   return (
-    <button
-      type={type}
-      onClick={onClick}
-      disabled={disabled}
-      onMouseEnter={() => setH(true)}
-      onMouseLeave={() => setH(false)}
-      style={merged}
-    >
+    <button type={type} onClick={onClick} disabled={disabled} className={className} style={merged}>
       {inner}
     </button>
   );
@@ -173,39 +128,90 @@ export function Card({
   href?: string;
   onClick?: () => void;
 }) {
-  const [h, setH] = useState(false);
-  const interactive = hover || !!href || !!onClick;
-  const merged: CSSProperties = {
-    display: "block",
-    background: "var(--surface)",
-    border: "1px solid var(--line)",
-    borderRadius: "var(--r-lg)",
-    padding: pad,
-    boxShadow: h ? "var(--sh-md)" : "var(--sh-xs)",
-    transition: "box-shadow .18s ease, transform .18s ease, border-color .18s",
-    transform: h ? "translateY(-2px)" : "none",
-    borderColor: h ? "var(--line-strong)" : "var(--line)",
-    cursor: href || onClick ? "pointer" : "default",
-    textDecoration: "none",
-    color: "inherit",
-    ...style,
-  };
-  const handlers = {
-    onMouseEnter: () => interactive && setH(true),
-    onMouseLeave: () => interactive && setH(false),
-  };
+  const className = "cn-card" + (hover || href || onClick ? " hov" : "");
+  const merged: CSSProperties = { padding: pad, ...style };
   if (href) {
     return (
-      <Link href={href} style={merged} {...handlers}>
+      <Link href={href} className={className} style={merged}>
         {children}
       </Link>
     );
   }
   return (
-    <div onClick={onClick} style={merged} {...handlers}>
+    <div onClick={onClick} className={className} style={merged}>
       {children}
     </div>
   );
+}
+
+/* ------------------------- Icon bubble ------------------------- */
+export function IconBubble({
+  icon,
+  tone = "tint",
+  size = 52,
+}: {
+  icon: string;
+  tone?: "tint" | "sun" | "red";
+  size?: number;
+}) {
+  const t = {
+    tint: ["var(--tint)", "var(--brand)"],
+    sun: ["var(--acc2-soft)", "var(--acc2-ink)"],
+    red: ["var(--brand)", "#fff"],
+  }[tone];
+  return (
+    <div
+      className="cn-ico"
+      aria-hidden
+      style={{
+        width: size,
+        height: size,
+        borderRadius: 999,
+        background: t[0],
+        color: t[1],
+        display: "grid",
+        placeItems: "center",
+        flexShrink: 0,
+      }}
+    >
+      <Icon name={icon} size={Math.round(size * 0.44)} />
+    </div>
+  );
+}
+
+/* ------------------------- Count-up number ------------------------- */
+// Anime « 33 » ou « 100% » de 0 à la valeur quand le nombre entre à l'écran.
+// Les années (≥ 1000) et les valeurs non numériques restent statiques.
+export function CountUp({ value, dur = 1400 }: { value: string; dur?: number }) {
+  const m = String(value).match(/^(\d+)(.*)$/);
+  const animate = Boolean(m && +m[1] < 1000);
+  const [n, setN] = useState<number | null>(null);
+  const ref = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!animate || !m || !ref.current) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const target = +m[1];
+    let raf = 0;
+    let t0 = 0;
+    const io = new IntersectionObserver(([e]) => {
+      if (!e.isIntersecting) return;
+      io.disconnect();
+      const step = (t: number) => {
+        t0 = t0 || t;
+        const p = Math.min(1, (t - t0) / dur);
+        setN(Math.round(target * (1 - Math.pow(1 - p, 3))));
+        if (p < 1) raf = requestAnimationFrame(step);
+      };
+      setN(0);
+      raf = requestAnimationFrame(step);
+    });
+    io.observe(ref.current);
+    return () => {
+      io.disconnect();
+      cancelAnimationFrame(raf);
+    };
+  }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
+  return <span ref={ref}>{animate && m && n !== null ? n + m[2] : value}</span>;
 }
 
 /* ------------------------- Blood type chip ------------------------- */
@@ -218,12 +224,12 @@ export function BloodTag({
   size?: "sm" | "md" | "lg";
   tone?: "solid" | "soft" | "outline";
 }) {
-  const s = { sm: 30, md: 40, lg: 52 }[size];
+  const s = { sm: 32, md: 42, lg: 56 }[size];
   const fs = { sm: 12, md: 15, lg: 19 }[size];
   const tones: Record<string, CSSProperties> = {
-    solid: { background: "var(--red-600)", color: "#fff", border: "none" },
-    soft: { background: "var(--red-50)", color: "var(--red-700)", border: "1px solid var(--red-200)" },
-    outline: { background: "var(--surface)", color: "var(--red-700)", border: "1.5px solid var(--red-300)" },
+    solid: { background: "var(--brand)", color: "#fff" },
+    soft: { background: "var(--tint)", color: "var(--red-700)" },
+    outline: { background: "var(--surface)", color: "var(--red-700)", boxShadow: "inset 0 0 0 1.5px var(--red-300)" },
   };
   return (
     <span
@@ -233,7 +239,7 @@ export function BloodTag({
         justifyContent: "center",
         width: s,
         height: s,
-        borderRadius: 11,
+        borderRadius: 999,
         fontWeight: 800,
         fontSize: fs,
         fontFamily: "var(--font-sans)",
@@ -301,11 +307,10 @@ export function BloodBag({
           position: "relative",
           width: 46,
           height,
-          borderRadius: "10px 10px 13px 13px",
-          border: "1.5px solid var(--line-strong)",
+          borderRadius: "16px 16px 22px 22px",
           background: "var(--surface-2)",
           overflow: "hidden",
-          boxShadow: "inset 0 1px 3px rgba(0,0,0,.05)",
+          boxShadow: "inset 0 0 0 1.5px var(--line-strong)",
         }}
       >
         <div
@@ -315,22 +320,27 @@ export function BloodBag({
             right: 0,
             bottom: 0,
             height: `${pct}%`,
-            background: `linear-gradient(180deg, ${col}, color-mix(in oklab, ${col} 78%, black))`,
-            transition: "height .6s cubic-bezier(.2,.8,.2,1)",
+            background: col,
+            transformOrigin: "bottom",
+            animation: "fill 1.4s cubic-bezier(.2,.8,.2,1) both",
           }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            top: -1,
-            left: "50%",
-            transform: "translateX(-50%)",
-            width: 16,
-            height: 6,
-            background: "var(--line-strong)",
-            borderRadius: "0 0 4px 4px",
-          }}
-        />
+        >
+          <div
+            aria-hidden
+            style={{
+              position: "absolute",
+              top: -5,
+              left: 0,
+              width: "200%",
+              height: 10,
+              animation: "wave 2.4s linear infinite",
+              background: `radial-gradient(circle at 6px 10px, ${col} 6px, transparent 6.5px) 0 0/12px 10px repeat-x`,
+            }}
+          />
+        </div>
+        {status === "crit" && (
+          <div aria-hidden style={{ position: "absolute", inset: 0, borderRadius: "inherit", animation: "ring 1.8s infinite" }} />
+        )}
       </div>
       {label && <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-700)" }}>{label}</div>}
     </div>
@@ -350,53 +360,71 @@ export function PageBanner({
   tall?: boolean;
 }) {
   return (
-    <section
-      style={{
-        background: "linear-gradient(155deg, var(--red-950) 0%, var(--red-800) 75%, var(--red-700) 100%)",
-        color: "#fff",
-        position: "relative",
-        overflow: "hidden",
-      }}
-    >
-      <div
-        aria-hidden
-        style={{
-          position: "absolute",
-          inset: 0,
-          opacity: 0.5,
-          backgroundImage: "radial-gradient(circle at 90% 10%, rgba(255,255,255,.1), transparent 45%)",
-        }}
-      />
+    <section style={{ padding: "14px var(--gutter) 0" }}>
       <div
         style={{
-          maxWidth: 1180,
-          margin: "0 auto",
-          padding: tall ? "64px var(--gutter)" : "48px var(--gutter)",
           position: "relative",
+          overflow: "hidden",
+          maxWidth: 1280,
+          margin: "0 auto",
+          borderRadius: "var(--r-xl)",
+          background: "var(--surface-2)",
         }}
       >
-        {kicker && (
-          <div className="kicker" style={{ color: "var(--red-200)", marginBottom: 12 }}>
-            {kicker}
-          </div>
-        )}
-        <h1
-          className="font-serif"
-          style={{
-            fontSize: "clamp(30px, 4.4vw, 48px)",
-            fontWeight: 500,
-            letterSpacing: "-0.025em",
-            lineHeight: 1.08,
-            maxWidth: 860,
-          }}
+        <div aria-hidden className="blob" style={{ width: 360, height: 360, right: -80, top: -120, background: "var(--brand)", opacity: 0.9 }} />
+        <div
+          aria-hidden
+          className="blob"
+          style={{ width: 200, height: 200, right: 220, bottom: -110, background: "var(--acc2)", animationDelay: "-5s" }}
+        />
+        <div
+          className="stag"
+          style={{ position: "relative", maxWidth: 1180, margin: "0 auto", padding: tall ? "72px var(--gutter)" : "56px var(--gutter)" }}
         >
-          {title}
-        </h1>
-        {sub && (
-          <p style={{ marginTop: 16, fontSize: 17.5, lineHeight: 1.55, color: "rgba(255,255,255,.82)", maxWidth: 640 }}>
-            {sub}
-          </p>
-        )}
+          {kicker && (
+            <div>
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "6px 14px",
+                  borderRadius: 999,
+                  background: "var(--surface)",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  letterSpacing: ".12em",
+                  textTransform: "uppercase",
+                  color: "var(--brand)",
+                  marginBottom: 18,
+                  boxShadow: "var(--sh-xs)",
+                }}
+              >
+                <Icon name="drop" size={13} fill="current" stroke={0} />
+                {kicker}
+              </span>
+            </div>
+          )}
+          <h1
+            className="font-serif"
+            style={{
+              fontSize: "clamp(32px, 4.6vw, 54px)",
+              fontWeight: 500,
+              letterSpacing: "-0.025em",
+              lineHeight: 1.06,
+              maxWidth: 760,
+              color: "var(--ink-900)",
+              textWrap: "balance",
+            }}
+          >
+            {title}
+          </h1>
+          {sub && (
+            <p style={{ marginTop: 16, fontSize: 17.5, lineHeight: 1.55, color: "var(--ink-700)", maxWidth: 600, textWrap: "pretty" }}>
+              {sub}
+            </p>
+          )}
+        </div>
       </div>
     </section>
   );
@@ -421,29 +449,31 @@ export function SectionTitle({
         alignItems: "flex-end",
         justifyContent: "space-between",
         gap: 16,
-        marginBottom: 20,
+        marginBottom: 28,
         flexWrap: "wrap",
       }}
     >
       <div style={{ flex: "1 1 auto", minWidth: 0 }}>
         {kicker && (
-          <div className="kicker" style={{ marginBottom: 8 }}>
+          <div className="kicker" style={{ marginBottom: 10, display: "flex", alignItems: "center", gap: 8 }}>
+            <span aria-hidden style={{ width: 22, height: 3, borderRadius: 9, background: "var(--brand)" }} />
             {kicker}
           </div>
         )}
         <h2
           className="font-serif"
           style={{
-            fontSize: "clamp(24px, 3vw, 33px)",
-            fontWeight: 600,
+            fontSize: "clamp(26px, 3.2vw, 38px)",
+            fontWeight: 500,
             letterSpacing: "-0.02em",
             color: "var(--ink-900)",
             lineHeight: 1.1,
+            textWrap: "balance",
           }}
         >
           {title}
         </h2>
-        {sub && <p style={{ marginTop: 8, color: "var(--ink-600)", fontSize: 15.5, maxWidth: 620 }}>{sub}</p>}
+        {sub && <p style={{ marginTop: 10, color: "var(--ink-600)", fontSize: 16, maxWidth: 620, lineHeight: 1.55 }}>{sub}</p>}
       </div>
       {action}
     </div>
