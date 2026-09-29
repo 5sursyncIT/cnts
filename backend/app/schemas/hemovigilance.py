@@ -20,6 +20,11 @@ class ActeTransfusionnelOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class ActeTransfusionnelCreate(BaseModel):
+    poche_id: uuid.UUID
+    date_transfusion: dt.datetime
+
+
 class RappelActionCreate(BaseModel):
     validateur_id: uuid.UUID | None = None
     note: str | None = Field(default=None, max_length=2000)

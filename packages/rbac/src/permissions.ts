@@ -98,7 +98,7 @@ export const roles = {
     id: "role_medecin",
     name: "Médecin",
     permissions: [
-      perm("donneurs", "read"), perm("dons", "read"), perm("analyses", "read"),
+      perm("donneurs", "read"), perm("dons", "read"), perm("dons", "write"), perm("analyses", "read"),
       perm("liberation", "read"), perm("distribution", "read"), perm("hemovigilance", "read")
     ]
   } satisfies Role,

@@ -124,6 +124,7 @@ def get_current_user_optional(
 
 def require_auth_in_production(
     token: str | None = Depends(oauth2_scheme),
+    cookie_token: str | None = Depends(access_cookie_scheme),
     api_key: str | None = Depends(api_key_header),
     db: Session = Depends(get_db),
 ) -> UserAccount | None:
@@ -134,8 +135,9 @@ def require_auth_in_production(
     is_production = settings.env in ("prod", "production", "staging")
 
     # Try Bearer token first
-    if token:
-        payload = verify_token(token, secret=settings.auth_token_secret)
+    credential = token or cookie_token
+    if credential:
+        payload = verify_token(credential, secret=settings.auth_token_secret)
         if payload and payload.get("type") == "access":
             try:
                 user_id = uuid.UUID(str(payload.get("sub")))
@@ -195,3 +197,10 @@ def require_module(module: str) -> Callable[[UserAccount], UserAccount]:
         return user
 
     return dependency
+
+
+def require_liberation_validator(user: UserAccount = Depends(require_staff)) -> UserAccount:
+    """La lecture du laboratoire ne confère pas le droit de libérer un don."""
+    if (user.role or "").lower() not in {"admin", "biologiste"}:
+        raise HTTPException(status_code=403, detail="Validation biologique réservée au biologiste")
+    return user

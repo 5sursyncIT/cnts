@@ -26,6 +26,10 @@ def create_apherese(
     don = db.get(Don, payload.don_id)
     if don is None:
         raise HTTPException(status_code=404, detail="don introuvable")
+    if don.type_don not in {"PLASMAPHERESE", "CYTAPHERESE"} or payload.type_apherese != don.type_don:
+        raise HTTPException(status_code=422, detail="Type d'aphérèse incohérent avec le don")
+    if don.donneur_id != payload.donneur_id:
+        raise HTTPException(status_code=422, detail="Donneur incohérent avec le don")
     donneur = db.get(Donneur, payload.donneur_id)
     if donneur is None:
         raise HTTPException(status_code=404, detail="donneur introuvable")
@@ -86,6 +90,14 @@ def get_apherese(apherese_id: uuid.UUID, db: Session = Depends(get_db)) -> Proce
     procedure = db.get(ProcedureApherese, apherese_id)
     if procedure is None:
         raise HTTPException(status_code=404, detail="procedure apherese introuvable")
+    if payload.statut is not None and payload.statut not in {"EN_COURS", "TERMINE", "INTERROMPU"}:
+        raise HTTPException(status_code=422, detail="Statut d'aphérèse invalide")
+    if procedure.statut != "EN_COURS" and payload.statut not in {None, procedure.statut}:
+        raise HTTPException(status_code=409, detail="Procédure d'aphérèse déjà clôturée")
+    if payload.statut == "TERMINE" and (
+        payload.volume_preleve_ml or procedure.volume_preleve_ml or 0
+    ) <= 0:
+        raise HTTPException(status_code=422, detail="Volume prélevé requis pour terminer l'aphérèse")
     return procedure
 
 

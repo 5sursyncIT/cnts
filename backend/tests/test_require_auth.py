@@ -86,3 +86,30 @@ def test_module_permissions_are_enforced_by_api(client: TestClient, db_session, 
     assert client.get("/api/donneurs", headers=headers).status_code == 403
     assert client.get("/api/receveurs", headers=headers).status_code == 403
     assert client.get("/api/trace/events", headers=headers).status_code == 403
+
+
+def test_only_biologist_or_admin_can_release(client: TestClient, db_session, real_rbac):
+    don_id = uuid.uuid4()
+    technician = _token(db_session, "technicien_labo")
+    biologist = _token(db_session, "biologiste")
+    assert client.post(
+        f"/api/liberation/{don_id}/liberer",
+        headers={"Authorization": f"Bearer {technician}"},
+    ).status_code == 403
+    assert client.post(
+        f"/api/liberation/{don_id}/liberer",
+        headers={"Authorization": f"Bearer {biologist}"},
+    ).status_code == 404
+
+
+def test_mutation_accepts_backoffice_cookie_in_production(
+    db_session, real_rbac, monkeypatch
+):
+    token = _token(db_session, "ADMIN")
+    monkeypatch.setattr(settings, "env", "prod")
+    with TestClient(app, cookies={"cnts_access": token}) as client:
+        response = client.post("/api/poches", json={
+            "don_id": str(uuid.uuid4()), "type_produit": "ST",
+            "date_peremption": "2030-01-01", "emplacement_stock": "COLLECTE",
+        })
+    assert response.status_code == 404

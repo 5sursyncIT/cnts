@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import require_auth_in_production
+from app.audit.events import log_event
 from app.core.blood import validate_analyse_resultat
 from app.db.models import Analyse, Don, UserAccount
 from app.db.session import get_db
@@ -31,14 +32,17 @@ def create_analyse(
     - SYPHILIS: Test Syphilis
     """
     # Vérifier que le don existe
-    don = db.get(Don, payload.don_id)
+    don = db.execute(select(Don).where(Don.id == payload.don_id).with_for_update()).scalar_one_or_none()
     if don is None:
         raise HTTPException(status_code=404, detail="don not found")
+    if don.statut_qualification == "LIBERE":
+        raise HTTPException(status_code=409, detail="Analyse impossible après libération du don ; déclencher un rappel si nécessaire")
 
     # Vérifier si une analyse du même type existe déjà pour ce don
+    type_test = payload.type_test.strip().upper()
     existing = db.execute(
         select(Analyse).where(
-            Analyse.don_id == payload.don_id, Analyse.type_test == payload.type_test
+            Analyse.don_id == payload.don_id, Analyse.type_test == type_test
         )
     ).scalar_one_or_none()
 
@@ -50,12 +54,17 @@ def create_analyse(
 
     analyse = Analyse(
         don_id=payload.don_id,
-        type_test=payload.type_test.strip().upper(),
+        type_test=type_test,
         resultat=payload.resultat.strip().upper(),
         note=payload.note,
         validateur_id=payload.validateur_id,
     )
     db.add(analyse)
+    db.flush()
+    log_event(db, aggregate_type="don", aggregate_id=don.id,
+              event_type="analyse.creee",
+              payload={"analyse_id": str(analyse.id), "type_test": analyse.type_test,
+                       "resultat": analyse.resultat, "acteur_id": str(_user.id) if _user else None})
     db.commit()
     db.refresh(analyse)
     return analyse
@@ -94,6 +103,7 @@ def get_analyse(analyse_id: uuid.UUID, db: Session = Depends(get_db)) -> Analyse
     analyse = db.get(Analyse, analyse_id)
     if analyse is None:
         raise HTTPException(status_code=404, detail="analyse not found")
+
     return analyse
 
 
@@ -113,12 +123,23 @@ def update_analyse(
     if analyse is None:
         raise HTTPException(status_code=404, detail="analyse not found")
 
+    don = db.execute(select(Don).where(Don.id == analyse.don_id).with_for_update()).scalar_one()
+    if don.statut_qualification == "LIBERE":
+        raise HTTPException(status_code=409, detail="Analyse non modifiable après libération ; déclencher un rappel si nécessaire")
+
     validate_analyse_resultat(type_test=analyse.type_test, resultat=payload.resultat)
+    previous_result = analyse.resultat
     analyse.resultat = payload.resultat.strip().upper()
     if payload.note is not None:
         analyse.note = payload.note
     if payload.validateur_id is not None:
         analyse.validateur_id = payload.validateur_id
+
+    log_event(db, aggregate_type="don", aggregate_id=don.id,
+              event_type="analyse.modifiee",
+              payload={"analyse_id": str(analyse.id), "type_test": analyse.type_test,
+                       "ancien_resultat": previous_result, "resultat": analyse.resultat,
+                       "acteur_id": str(_user.id) if _user else None})
 
     db.commit()
     db.refresh(analyse)
@@ -136,5 +157,13 @@ def delete_analyse(
     if analyse is None:
         raise HTTPException(status_code=404, detail="analyse not found")
 
+    don = db.execute(select(Don).where(Don.id == analyse.don_id).with_for_update()).scalar_one()
+    if don.statut_qualification == "LIBERE":
+        raise HTTPException(status_code=409, detail="Analyse non supprimable après libération ; déclencher un rappel si nécessaire")
+
+    log_event(db, aggregate_type="don", aggregate_id=don.id,
+              event_type="analyse.supprimee",
+              payload={"analyse_id": str(analyse.id), "type_test": analyse.type_test,
+                       "resultat": analyse.resultat, "acteur_id": str(_user.id) if _user else None})
     db.delete(analyse)
     db.commit()

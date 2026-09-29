@@ -4,6 +4,10 @@ import datetime as dt
 
 import pytest
 from fastapi.testclient import TestClient
+from app.api.deps import require_auth_in_production
+from app.db.models import UserAccount
+from app.main import app
+import uuid
 
 
 @pytest.fixture
@@ -68,16 +72,22 @@ def test_don_enforce_eligibilite_et_override(client: TestClient, donneur: dict):
         "/api/dons", json={"donneur_id": did, "date_don": today, "type_don": "SANG_TOTAL"}
     )
     assert blocked.status_code == 409
-    # Override médical explicite -> accepté.
-    assert client.post(
-        "/api/dons",
-        json={
-            "donneur_id": did,
-            "date_don": today,
-            "type_don": "SANG_TOTAL",
-            "ignorer_eligibilite": True,
-        },
-    ).status_code == 201
+    # Dérogation sans motif ou sans acteur médical authentifié -> refusée.
+    payload = {
+        "donneur_id": did, "date_don": today, "type_don": "SANG_TOTAL",
+        "ignorer_eligibilite": True,
+    }
+    assert client.post("/api/dons", json=payload).status_code == 422
+    payload["motif_derogation"] = "Décision médicale documentée"
+    assert client.post("/api/dons", json=payload).status_code == 403
+    app.dependency_overrides[require_auth_in_production] = lambda: UserAccount(
+        id=uuid.uuid4(), email="medecin@cnts.local", password_hash="x",
+        is_active=True, role="MEDECIN",
+    )
+    try:
+        assert client.post("/api/dons", json=payload).status_code == 201
+    finally:
+        app.dependency_overrides.pop(require_auth_in_production, None)
 
 
 def test_dernier_don_ne_regresse_pas(client: TestClient, donneur: dict):
@@ -88,15 +98,15 @@ def test_dernier_don_ne_regresse_pas(client: TestClient, donneur: dict):
         json={"donneur_id": did, "date_don": str(today), "type_don": "SANG_TOTAL"},
     )
     # Saisie rétroactive d'un don plus ancien : ne doit pas écraser dernier_don.
-    client.post(
+    response = client.post(
         "/api/dons",
         json={
             "donneur_id": did,
             "date_don": "2020-01-01",
             "type_don": "SANG_TOTAL",
-            "ignorer_eligibilite": True,
         },
     )
+    assert response.status_code == 201
     fiche = client.get(f"/api/donneurs/{did}").json()
     assert fiche["dernier_don"] == str(today)
 

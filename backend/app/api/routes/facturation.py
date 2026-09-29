@@ -1,4 +1,5 @@
 import uuid
+from collections import Counter
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
@@ -6,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import require_auth_in_production
 from app.audit.events import log_event
-from app.db.models import Facture, Hopital, LigneFacture, Paiement, Tarif, UserAccount
+from app.db.models import Commande, Facture, Hopital, LigneCommande, LigneFacture, Paiement, Tarif, UserAccount
 from app.db.session import get_db
 from app.schemas.facturation import (
     FactureCreate,
@@ -78,6 +79,30 @@ def create_facture(
     hopital = db.get(Hopital, payload.hopital_id)
     if hopital is None:
         raise HTTPException(status_code=404, detail="hopital introuvable")
+    if payload.commande_id is not None:
+        commande = db.execute(
+            select(Commande).where(Commande.id == payload.commande_id).with_for_update()
+        ).scalar_one_or_none()
+        if commande is None:
+            raise HTTPException(status_code=404, detail="commande introuvable")
+        if commande.hopital_id != payload.hopital_id or commande.statut != "SERVIE":
+            raise HTTPException(status_code=409, detail="commande non servie ou hôpital incohérent")
+        if db.execute(select(Facture.id).where(
+            Facture.commande_id == payload.commande_id, Facture.statut != "ANNULEE"
+        )).scalar_one_or_none() is not None:
+            raise HTTPException(status_code=409, detail="commande déjà facturée")
+        expected = Counter()
+        for product, quantity in db.execute(
+            select(LigneCommande.type_produit, LigneCommande.quantite).where(
+                LigneCommande.commande_id == commande.id
+            )
+        ).all():
+            expected[product] += quantity
+        billed = Counter()
+        for line in payload.lignes:
+            billed[line.type_produit] += line.quantite
+        if billed != expected:
+            raise HTTPException(status_code=409, detail="lignes facturées incohérentes avec la commande servie")
 
     montant_ht = sum(item.quantite * item.prix_unitaire_fcfa for item in payload.lignes)
 
@@ -141,6 +166,19 @@ def get_facture(facture_id: uuid.UUID, db: Session = Depends(get_db)) -> Facture
     return facture
 
 
+@router.get("/paiements", response_model=list[PaiementOut])
+def list_paiements(
+    facture_id: uuid.UUID | None = Query(default=None),
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=200, ge=1, le=500),
+    db: Session = Depends(get_db),
+) -> list[Paiement]:
+    stmt = select(Paiement)
+    if facture_id is not None:
+        stmt = stmt.where(Paiement.facture_id == facture_id)
+    return list(db.execute(stmt.order_by(Paiement.created_at.desc()).offset(offset).limit(limit)).scalars())
+
+
 # ── Paiements ────────────────────────────────
 
 
@@ -150,11 +188,21 @@ def create_paiement(
     db: Session = Depends(get_db),
     _user: UserAccount | None = Depends(require_auth_in_production),
 ) -> Paiement:
-    facture = db.get(Facture, payload.facture_id)
+    facture = db.execute(
+        select(Facture).where(Facture.id == payload.facture_id).with_for_update()
+    ).scalar_one_or_none()
     if facture is None:
         raise HTTPException(status_code=404, detail="facture introuvable")
     if facture.statut == "ANNULEE":
         raise HTTPException(status_code=409, detail="facture annulee, paiement impossible")
+
+    total_avant = db.execute(
+        select(func.coalesce(func.sum(Paiement.montant_fcfa), 0)).where(
+            Paiement.facture_id == facture.id
+        )
+    ).scalar_one()
+    if total_avant + payload.montant_fcfa > facture.montant_ttc_fcfa:
+        raise HTTPException(status_code=409, detail="paiement supérieur au solde de la facture")
 
     paiement = Paiement(**payload.model_dump())
     db.add(paiement)
@@ -190,7 +238,9 @@ def create_paiement(
 def statistiques_facturation(db: Session = Depends(get_db)) -> dict:
     total_factures = db.execute(select(func.count(Facture.id))).scalar() or 0
     montant_total = db.execute(
-        select(func.coalesce(func.sum(Facture.montant_ttc_fcfa), 0))
+        select(func.coalesce(func.sum(Facture.montant_ttc_fcfa), 0)).where(
+            Facture.statut != "ANNULEE"
+        )
     ).scalar()
     total_paye = db.execute(select(func.coalesce(func.sum(Paiement.montant_fcfa), 0))).scalar()
     impayees = (

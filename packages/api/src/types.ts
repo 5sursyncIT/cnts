@@ -110,6 +110,8 @@ export interface DonCreate extends IdempotencyPayload {
   donneur_id: UUID;
   date_don: string; // ISO date
   type_don: string;
+  ignorer_eligibilite?: boolean;
+  motif_derogation?: string;
 }
 
 export interface Don {
@@ -189,7 +191,7 @@ export interface Poche {
   volume_ml: number | null;
   date_peremption: string;
   emplacement_stock: string;
-  statut_stock: "EN_STOCK" | "FRACTIONNEE" | "RESERVEE" | "DISTRIBUEE" | "DETRUITE";
+  statut_stock: "EN_STOCK" | "FRACTIONNEE" | "RESERVEE" | "DISTRIBUEE" | "DETRUITE" | "RAPPELEE";
   statut_distribution: "NON_DISTRIBUABLE" | "DISPONIBLE" | "RESERVE" | "DISTRIBUE";
   created_at: string;
 }

@@ -4,10 +4,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.api.deps import require_auth_in_production
+from app.api.deps import require_liberation_validator
 from app.audit.events import log_event
 from app.core.blood import groupe_from_analyses
-from app.db.models import Analyse, Don, Hopital, Poche, UserAccount
+from app.core.recalls import poche_sous_rappel
+from app.db.models import Analyse, Don, Hopital, Poche, ProcedureApherese, UserAccount
 from app.db.session import get_db
 from app.schemas.analyses import AnalyseOut, LiberationBiologiqueOut
 
@@ -99,6 +100,27 @@ def verifier_liberation(
             analyses=analyses_out,
         )
 
+    poches = list(db.execute(select(Poche).where(Poche.don_id == don.id)).scalars())
+    if not poches:
+        return LiberationBiologiqueOut(
+            don_id=don.id, din=don.din, statut_qualification=don.statut_qualification,
+            liberable=False, raison="Aucun produit collecté pour ce don", analyses=analyses_out,
+        )
+    if don.type_don in {"PLASMAPHERESE", "CYTAPHERESE"}:
+        procedure = db.execute(
+            select(ProcedureApherese).where(ProcedureApherese.don_id == don.id)
+        ).scalar_one_or_none()
+        if procedure is None or procedure.statut != "TERMINE":
+            return LiberationBiologiqueOut(
+                don_id=don.id, din=don.din, statut_qualification=don.statut_qualification,
+                liberable=False, raison="Procédure d'aphérèse non terminée", analyses=analyses_out,
+            )
+    if any(poche_sous_rappel(db, poche) for poche in poches):
+        return LiberationBiologiqueOut(
+            don_id=don.id, din=don.din, statut_qualification=don.statut_qualification,
+            liberable=False, raison="Produit sous rappel actif", analyses=analyses_out,
+        )
+
     # Tous les tests sont négatifs, le don est libérable
     return LiberationBiologiqueOut(
         don_id=don.id,
@@ -114,7 +136,7 @@ def verifier_liberation(
 def liberer_don(
     don_id: uuid.UUID,
     db: Session = Depends(get_db),
-    _user: UserAccount | None = Depends(require_auth_in_production),
+    _user: UserAccount = Depends(require_liberation_validator),
 ) -> LiberationBiologiqueOut:
     """
     Effectuer la libération biologique d'un don.
@@ -127,7 +149,7 @@ def liberer_don(
     tous les tests obligatoires sont négatifs.
     """
     # Vérifier d'abord si le don est libérable
-    stmt = select(Don).where(Don.id == don_id).options(selectinload(Don.analyses))
+    stmt = select(Don).where(Don.id == don_id).options(selectinload(Don.analyses)).with_for_update()
     don = db.execute(stmt).scalar_one_or_none()
 
     if don is None:
@@ -161,7 +183,7 @@ def liberer_don(
 
     released_poches: list[Poche] = []
     for poche in poches:
-        if poche.statut_distribution == "NON_DISTRIBUABLE":
+        if poche.statut_distribution == "NON_DISTRIBUABLE" and poche.statut_stock == "EN_STOCK":
             poche.statut_distribution = "DISPONIBLE"
             released_poches.append(poche)
         if groupe_sanguin is not None:

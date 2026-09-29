@@ -6,6 +6,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
     JSON,
     String,
@@ -231,7 +232,7 @@ class Reservation(Base):
     __tablename__ = "reservations"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    poche_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("poches.id"), unique=True, index=True)
+    poche_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("poches.id"), index=True)
     commande_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("commandes.id"), index=True)
     ligne_commande_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("ligne_commandes.id"),
@@ -250,6 +251,15 @@ class Reservation(Base):
         DateTime(timezone=True), nullable=True, index=True
     )
     released_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+Index(
+    "uq_reservations_active_poche_id",
+    Reservation.poche_id,
+    unique=True,
+    postgresql_where=text("released_at IS NULL"),
+    sqlite_where=text("released_at IS NULL"),
+)
 
 
 class Receveur(Base):

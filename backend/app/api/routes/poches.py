@@ -8,8 +8,9 @@ from sqlalchemy.orm import Session, joinedload
 from app.api.deps import require_auth_in_production
 from app.audit.events import log_event
 from app.core.blood import normalize_groupe_sanguin
+from app.core.recalls import hors_rappel_actif, poche_sous_rappel
 from app.core.isbt128.generator import generate_datamatrix_content
-from app.db.models import Don, Hopital, Poche, UserAccount
+from app.db.models import Don, Hopital, Poche, ProcedureApherese, UserAccount
 from app.db.session import get_db
 from app.schemas.etiquettes import EtiquetteProduitOut
 from app.schemas.poches import (
@@ -51,7 +52,13 @@ def list_poches_disponibles(
     limit: int = Query(default=200, le=500),
     db: Session = Depends(get_db),
 ) -> list[Poche]:
-    stmt = select(Poche).where(Poche.statut_distribution == "DISPONIBLE")
+    stmt = (
+        select(Poche).join(Don, Don.id == Poche.don_id)
+        .where(Poche.statut_distribution == "DISPONIBLE",
+               Poche.statut_stock == "EN_STOCK",
+               Poche.date_peremption >= dt.date.today(),
+               Don.statut_qualification == "LIBERE", hors_rappel_actif())
+    )
     if type_produit is not None:
         stmt = stmt.where(Poche.type_produit == type_produit)
     if groupe_sanguin is not None:
@@ -79,15 +86,59 @@ def create_poche(
     don = db.get(Don, payload.don_id)
     if don is None:
         raise HTTPException(status_code=404, detail="don not found")
+    source = None
+    if don.type_don == "SANG_TOTAL":
+        if payload.type_produit == "ST":
+            raise HTTPException(status_code=409, detail="Une poche ST existe déjà pour ce don")
+        source = db.execute(
+            select(Poche).where(Poche.don_id == don.id, Poche.type_produit == "ST")
+            .order_by(Poche.created_at.asc()).limit(1).with_for_update()
+        ).scalar_one_or_none()
+        if source is None:
+            raise HTTPException(status_code=409, detail="Poche source ST introuvable")
+        if source.statut_stock not in {"EN_STOCK", "FRACTIONNEE"} or poche_sous_rappel(db, source):
+            raise HTTPException(status_code=409, detail="Poche source indisponible ou rappelée")
+    if payload.date_peremption < dt.date.today():
+        raise HTTPException(status_code=422, detail="Produit déjà périmé")
+    if don.type_don in {"PLASMAPHERESE", "CYTAPHERESE"}:
+        procedure = db.execute(
+            select(ProcedureApherese).where(ProcedureApherese.don_id == don.id)
+        ).scalar_one_or_none()
+        if procedure is None or procedure.statut != "TERMINE":
+            raise HTTPException(status_code=409, detail="Procédure d'aphérèse non terminée")
+        allowed = {"PFC"} if don.type_don == "PLASMAPHERESE" else {"CGR", "CP"}
+        if payload.type_produit not in allowed:
+            raise HTTPException(status_code=422, detail="Produit incohérent avec le type d'aphérèse")
+        if payload.volume_ml is None:
+            raise HTTPException(status_code=422, detail="Volume réel du produit d'aphérèse requis")
 
     poche = Poche(
         don_id=payload.don_id,
+        source_poche_id=source.id if source else None,
         type_produit=payload.type_produit,
+        groupe_sanguin=source.groupe_sanguin if source else None,
+        lot=source.lot if source else None,
+        volume_ml=payload.volume_ml,
         date_peremption=payload.date_peremption,
         emplacement_stock=payload.emplacement_stock,
         statut_distribution="NON_DISTRIBUABLE",
     )
+    related = list(db.execute(select(Poche).where(Poche.don_id == don.id)).scalars())
+    sibling_recalled = any(poche_sous_rappel(db, other) for other in related)
+    if source is not None:
+        source.statut_stock = "FRACTIONNEE"
+        source.statut_distribution = "NON_DISTRIBUABLE"
+        source.emplacement_stock = "FRACTIONNEMENT"
     db.add(poche)
+    db.flush()
+    if sibling_recalled or poche_sous_rappel(db, poche):
+        poche.statut_stock = "RAPPELEE"
+        poche.emplacement_stock = "QUARANTAINE"
+    log_event(db, aggregate_type="poche", aggregate_id=poche.id,
+              event_type="poche.creee",
+              payload={"don_id": str(don.id), "source_poche_id": str(source.id) if source else None,
+                       "type_produit": poche.type_produit,
+                       "acteur_id": str(_user.id) if _user else None})
     db.commit()
     db.refresh(poche)
     return poche
@@ -288,25 +339,49 @@ def update_poche(
     ATTENTION: Le changement de statut vers DISPONIBLE doit normalement
     passer par l'endpoint de libération biologique.
     """
-    poche = db.get(Poche, poche_id)
+    poche = db.execute(
+        select(Poche).where(Poche.id == poche_id).with_for_update()
+    ).scalar_one_or_none()
     if poche is None:
         raise HTTPException(status_code=404, detail="poche not found")
+    if poche.statut_distribution in {"RESERVE", "DISTRIBUE"} and (
+        payload.groupe_sanguin is not None or payload.lot is not None
+        or payload.code_produit_isbt is not None or payload.division is not None
+    ):
+        raise HTTPException(status_code=409, detail="Identité d'une poche réservée ou distribuée non modifiable")
 
     if payload.emplacement_stock is not None:
         poche.emplacement_stock = payload.emplacement_stock
 
     if payload.groupe_sanguin is not None:
+        don = db.get(Don, poche.don_id)
+        if don is not None and don.statut_qualification == "LIBERE":
+            raise HTTPException(status_code=409, detail="Groupe sanguin figé après libération biologique")
         poche.groupe_sanguin = normalize_groupe_sanguin(payload.groupe_sanguin)
 
     if payload.code_produit_isbt is not None:
         poche.code_produit_isbt = payload.code_produit_isbt.strip() or None
     if payload.lot is not None:
-        poche.lot = payload.lot.strip() or None
+        new_lot = payload.lot.strip() or None
+        don = db.get(Don, poche.don_id)
+        if new_lot != poche.lot and (
+            poche.statut_stock == "RAPPELEE"
+            or (don is not None and don.statut_qualification == "LIBERE" and poche.lot)
+        ):
+            raise HTTPException(status_code=409, detail="Lot figé après libération ou rappel")
+        poche.lot = new_lot
+        db.flush()
+        if poche_sous_rappel(db, poche):
+            poche.statut_distribution = "NON_DISTRIBUABLE"
+            poche.statut_stock = "RAPPELEE"
+            poche.emplacement_stock = "QUARANTAINE"
     if payload.division is not None:
         poche.division = payload.division
 
     previous_status = poche.statut_distribution
     if payload.statut_distribution is not None:
+        if previous_status in {"RESERVE", "DISTRIBUE"}:
+            raise HTTPException(status_code=409, detail="Statut contrôlé par le workflow de distribution")
         if payload.statut_distribution in {"RESERVE", "DISTRIBUE"}:
             raise HTTPException(
                 status_code=422,
@@ -316,11 +391,24 @@ def update_poche(
         don = None
         if payload.statut_distribution == "DISPONIBLE":
             don = db.get(Don, poche.don_id)
-            if don and don.statut_qualification != "LIBERE":
+            if don is None or don.statut_qualification != "LIBERE":
                 raise HTTPException(
                     status_code=422,
                     detail="Impossible de rendre une poche DISPONIBLE si le don n'est pas LIBERE",
                 )
+            if poche_sous_rappel(db, poche):
+                raise HTTPException(status_code=409, detail="Poche sous rappel actif")
+            if db.execute(select(Poche.id).where(
+                Poche.source_poche_id == poche.id
+            )).scalar_one_or_none() is not None:
+                raise HTTPException(status_code=409, detail="Poche source déjà fractionnée")
+            if poche.date_peremption < dt.date.today():
+                raise HTTPException(status_code=409, detail="Poche périmée")
+            if poche.statut_stock not in {"EN_STOCK", "RAPPELEE"}:
+                raise HTTPException(status_code=409, detail="Poche hors du stock distribuable")
+            if poche.statut_stock == "RAPPELEE":
+                poche.statut_stock = "EN_STOCK"
+                poche.emplacement_stock = "STOCK"
         poche.statut_distribution = payload.statut_distribution
         if payload.statut_distribution == "DISPONIBLE" and previous_status != "DISPONIBLE":
             din = don.din if don else None
@@ -338,6 +426,11 @@ def update_poche(
             )
             _notify_hopitaux_poche_disponible(db, poche=poche, din=din)
 
+    if payload.model_fields_set:
+        log_event(db, aggregate_type="poche", aggregate_id=poche.id,
+                  event_type="poche.modifiee",
+                  payload={"champs": sorted(payload.model_fields_set),
+                           "acteur_id": str(_user.id) if _user else None})
     db.commit()
     db.refresh(poche)
     return poche

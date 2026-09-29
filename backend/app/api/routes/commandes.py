@@ -13,8 +13,8 @@ from app.core.blood import (
     requires_abo_compatibility,
     requires_crossmatch,
 )
+from app.core.recalls import hors_rappel_actif, poche_sous_rappel
 from app.db.models import (
-    ActeTransfusionnel,
     Commande,
     CrossMatch,
     Don,
@@ -112,6 +112,7 @@ def _reserve_one_poche(
             Poche.type_produit == type_produit,
             Don.statut_qualification == "LIBERE",
             Poche.date_peremption >= dt.date.today(),
+            hors_rappel_actif(),
         )
         .order_by(Poche.date_peremption.asc(), Poche.created_at.asc())
         .limit(1)
@@ -553,7 +554,9 @@ def servir_commande(
         raise HTTPException(status_code=409, detail="aucune poche réservée")
 
     pocket_ids = [r.poche_id for r in reservations]
-    poches = list(db.execute(select(Poche).where(Poche.id.in_(pocket_ids))).scalars())
+    poches = list(db.execute(
+        select(Poche).where(Poche.id.in_(pocket_ids)).with_for_update()
+    ).scalars())
     poches_by_id = {p.id: p for p in poches}
 
     receveur_ids = {r.receveur_id for r in reservations if r.receveur_id is not None}
@@ -568,6 +571,8 @@ def servir_commande(
             raise HTTPException(status_code=409, detail="poche réservée introuvable")
         if p.statut_distribution != "RESERVE":
             raise HTTPException(status_code=409, detail="poche non réservée")
+        if poche_sous_rappel(db, p):
+            raise HTTPException(status_code=409, detail="poche sous rappel actif")
 
         if p.date_peremption < dt.date.today():
             raise HTTPException(status_code=409, detail="poche périmée")
@@ -617,15 +622,6 @@ def servir_commande(
         p.statut_stock = "DISTRIBUEE"
         p.emplacement_stock = "SORTIE"
         r.released_at = now
-        db.add(
-            ActeTransfusionnel(
-                poche_id=p.id,
-                commande_id=commande.id,
-                hopital_id=commande.hopital_id,
-                receveur_id=r.receveur_id,
-                date_transfusion=now,
-            )
-        )
 
     commande.statut = "SERVIE"
     db.commit()

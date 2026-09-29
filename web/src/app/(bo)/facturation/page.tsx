@@ -30,13 +30,13 @@ interface Tarif {
 interface Facture {
   id: string;
   numero: string;
-  commande_id: string;
+  commande_id: string | null;
   hopital_id: string;
   date_facture: string;
   montant_ht_fcfa: number;
   montant_ttc_fcfa: number;
   statut: "EMISE" | "ENVOYEE" | "PAYEE_PARTIELLEMENT" | "PAYEE" | "ANNULEE";
-  date_echeance: string;
+  date_echeance: string | null;
   created_at: string;
 }
 
@@ -45,16 +45,17 @@ interface Paiement {
   facture_id: string;
   montant_fcfa: number;
   mode_paiement: "VIREMENT" | "CHEQUE" | "ESPECES" | "MOBILE_MONEY";
-  reference: string;
+  reference: string | null;
   date_paiement: string;
   created_at: string;
+  facture_numero?: string;
 }
 
 interface Statistiques {
-  total_facture_fcfa: number;
-  total_impaye_count: number;
-  total_encaisse_fcfa: number;
-  taux_recouvrement: number;
+  montant_total_fcfa: number;
+  factures_impayees: number;
+  total_paye_fcfa: number;
+  montant_impaye_fcfa: number;
 }
 
 // --- Helpers ---
@@ -107,6 +108,11 @@ export default function FacturationPage() {
   const [factures, setFactures] = useState<Facture[]>([]);
   const [tarifs, setTarifs] = useState<Tarif[]>([]);
   const [paiements, setPaiements] = useState<Paiement[]>([]);
+  const [hopitaux, setHopitaux] = useState<{ id: string; nom: string }[]>([]);
+  const [form, setForm] = useState<TabKey | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [selectedFacture, setSelectedFacture] = useState<Facture | null>(null);
 
   // Loading states
   const [loadingStats, setLoadingStats] = useState(true);
@@ -177,35 +183,9 @@ export default function FacturationPage() {
     setLoadingPaiements(true);
     setErrorPaiements(null);
     try {
-      // Fetch all factures first to get paiements from each
-      const res = await fetch(
-        `${API}/facturation/factures?offset=0&limit=200`
-      );
+      const res = await fetch(`${API}/facturation/paiements?offset=0&limit=200`);
       if (!res.ok) throw new Error(`Erreur ${res.status}`);
-      const allFactures: Facture[] = await res.json();
-      // Collect paiements from facture details
-      const allPaiements: Paiement[] = [];
-      for (const f of allFactures) {
-        try {
-          const detailRes = await fetch(
-            `${API}/facturation/factures/${f.id}`
-          );
-          if (detailRes.ok) {
-            const detail = await detailRes.json();
-            if (detail.paiements) {
-              allPaiements.push(
-                ...detail.paiements.map((p: Paiement) => ({
-                  ...p,
-                  facture_numero: f.numero,
-                }))
-              );
-            }
-          }
-        } catch {
-          // skip individual facture errors
-        }
-      }
-      setPaiements(allPaiements);
+      setPaiements(await res.json());
     } catch (err: unknown) {
       setErrorPaiements(
         err instanceof Error ? err.message : "Erreur inconnue"
@@ -232,6 +212,53 @@ export default function FacturationPage() {
   useEffect(() => {
     if (activeTab === "paiements") fetchPaiements();
   }, [activeTab, fetchPaiements]);
+
+  useEffect(() => {
+    fetch(`${API}/hopitaux?limit=200`).then((res) => res.ok ? res.json() : [])
+      .then(setHopitaux).catch(() => setHopitaux([]));
+  }, []);
+
+  const submitForm = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!form) return;
+    setSaving(true);
+    setFormError(null);
+    const values = Object.fromEntries(new FormData(event.currentTarget));
+    const body = form === "factures" ? {
+      numero: String(values.numero).trim(),
+      hopital_id: String(values.hopital_id),
+      commande_id: values.commande_id || null,
+      date_facture: String(values.date_facture),
+      lignes: [{ type_produit: String(values.type_produit).trim().toUpperCase(),
+        quantite: Number(values.quantite), prix_unitaire_fcfa: Number(values.prix_unitaire_fcfa) }],
+    } : form === "tarifs" ? {
+      type_produit: String(values.type_produit).trim().toUpperCase(),
+      prix_unitaire_fcfa: Number(values.prix_unitaire_fcfa),
+      date_debut: String(values.date_debut),
+    } : {
+      facture_id: String(values.facture_id),
+      montant_fcfa: Number(values.montant_fcfa),
+      mode_paiement: String(values.mode_paiement),
+      reference: String(values.reference || "").trim() || null,
+      date_paiement: String(values.date_paiement),
+    };
+    const path = form === "factures" ? "factures" : form === "tarifs" ? "tarifs" : "paiements";
+    try {
+      const response = await fetch(`${API}/facturation/${path}`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(typeof error.detail === "string" ? error.detail : `Erreur ${response.status}`);
+      }
+      setForm(null);
+      await Promise.all([fetchStats(), fetchFactures(), fetchTarifs(), fetchPaiements()]);
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : "Enregistrement impossible");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   // --- Tabs config ---
 
@@ -270,7 +297,7 @@ export default function FacturationPage() {
             <div className="text-sm text-red-600">Erreur</div>
           ) : (
             <div className="text-xl font-bold text-gray-900">
-              {formatFCFA(stats?.total_facture_fcfa ?? 0)}
+              {formatFCFA(stats?.montant_total_fcfa ?? 0)}
             </div>
           )}
         </div>
@@ -290,7 +317,7 @@ export default function FacturationPage() {
             <div className="text-sm text-red-600">Erreur</div>
           ) : (
             <div className="text-xl font-bold text-gray-900">
-              {stats?.total_impaye_count ?? 0}
+              {stats?.factures_impayees ?? 0}
             </div>
           )}
         </div>
@@ -310,7 +337,7 @@ export default function FacturationPage() {
             <div className="text-sm text-red-600">Erreur</div>
           ) : (
             <div className="text-xl font-bold text-gray-900">
-              {formatFCFA(stats?.total_encaisse_fcfa ?? 0)}
+              {formatFCFA(stats?.total_paye_fcfa ?? 0)}
             </div>
           )}
         </div>
@@ -330,7 +357,9 @@ export default function FacturationPage() {
             <div className="text-sm text-red-600">Erreur</div>
           ) : (
             <div className="text-xl font-bold text-gray-900">
-              {(stats?.taux_recouvrement ?? 0).toFixed(1)} %
+              {stats?.montant_total_fcfa
+                ? ((stats.total_paye_fcfa / stats.montant_total_fcfa) * 100).toFixed(1)
+                : "0.0"} %
             </div>
           )}
         </div>
@@ -359,6 +388,93 @@ export default function FacturationPage() {
           })}
         </nav>
       </div>
+
+      {form && (
+        <form onSubmit={submitForm} className="mb-6 rounded-lg bg-white p-5 shadow space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-gray-900">
+              {form === "factures" ? "Nouvelle facture" : form === "tarifs" ? "Nouveau tarif" : "Nouveau paiement"}
+            </h2>
+            <button type="button" onClick={() => setForm(null)} className="text-gray-700 hover:underline">Fermer</button>
+          </div>
+          {form === "factures" && <div className="grid gap-3 sm:grid-cols-2">
+            <label htmlFor="facture-numero" className="text-sm text-gray-800">Numéro de facture
+              <input id="facture-numero" name="numero" required maxLength={32} className="mt-1 w-full rounded border p-2" />
+            </label>
+            <label htmlFor="facture-hopital" className="text-sm text-gray-800">Hôpital
+              <select id="facture-hopital" name="hopital_id" required className="mt-1 w-full rounded border p-2" defaultValue="">
+                <option value="" disabled>Sélectionner</option>
+                {hopitaux.map((h) => <option key={h.id} value={h.id}>{h.nom}</option>)}
+              </select>
+            </label>
+            <label htmlFor="facture-commande" className="text-sm text-gray-800">Commande servie (ID, facultatif)
+              <input id="facture-commande" name="commande_id" className="mt-1 w-full rounded border p-2" />
+            </label>
+            <label htmlFor="facture-date" className="text-sm text-gray-800">Date de facture
+              <input id="facture-date" name="date_facture" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} className="mt-1 w-full rounded border p-2" />
+            </label>
+            <label htmlFor="facture-produit" className="text-sm text-gray-800">Produit
+              <select id="facture-produit" name="type_produit" required className="mt-1 w-full rounded border p-2">
+                {(["ST", "CGR", "PFC", "CP"] as const).map((p) => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </label>
+            <label htmlFor="facture-quantite" className="text-sm text-gray-800">Quantité
+              <input id="facture-quantite" name="quantite" type="number" min="1" required defaultValue="1" className="mt-1 w-full rounded border p-2" />
+            </label>
+            <label htmlFor="facture-prix" className="text-sm text-gray-800">Prix unitaire (FCFA)
+              <input id="facture-prix" name="prix_unitaire_fcfa" type="number" min="0" required className="mt-1 w-full rounded border p-2" />
+            </label>
+          </div>}
+          {form === "tarifs" && <div className="grid gap-3 sm:grid-cols-3">
+            <label htmlFor="tarif-produit" className="text-sm text-gray-800">Produit
+              <select id="tarif-produit" name="type_produit" required className="mt-1 w-full rounded border p-2">
+                {(["ST", "CGR", "PFC", "CP"] as const).map((p) => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </label>
+            <label htmlFor="tarif-prix" className="text-sm text-gray-800">Prix unitaire (FCFA)
+              <input id="tarif-prix" name="prix_unitaire_fcfa" type="number" min="0" required className="mt-1 w-full rounded border p-2" />
+            </label>
+            <label htmlFor="tarif-date" className="text-sm text-gray-800">Date de début
+              <input id="tarif-date" name="date_debut" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} className="mt-1 w-full rounded border p-2" />
+            </label>
+          </div>}
+          {form === "paiements" && <div className="grid gap-3 sm:grid-cols-2">
+            <label htmlFor="paiement-facture" className="text-sm text-gray-800">Facture
+              <select id="paiement-facture" name="facture_id" required className="mt-1 w-full rounded border p-2" defaultValue="">
+                <option value="" disabled>Sélectionner</option>
+                {factures.filter((f) => f.statut !== "PAYEE" && f.statut !== "ANNULEE")
+                  .map((f) => <option key={f.id} value={f.id}>{f.numero}</option>)}
+              </select>
+            </label>
+            <label htmlFor="paiement-montant" className="text-sm text-gray-800">Montant (FCFA)
+              <input id="paiement-montant" name="montant_fcfa" type="number" min="1" required className="mt-1 w-full rounded border p-2" />
+            </label>
+            <label htmlFor="paiement-mode" className="text-sm text-gray-800">Mode
+              <select id="paiement-mode" name="mode_paiement" className="mt-1 w-full rounded border p-2">
+                {Object.entries(MODE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              </select>
+            </label>
+            <label htmlFor="paiement-reference" className="text-sm text-gray-800">Référence
+              <input id="paiement-reference" name="reference" className="mt-1 w-full rounded border p-2" />
+            </label>
+            <label htmlFor="paiement-date" className="text-sm text-gray-800">Date de paiement
+              <input id="paiement-date" name="date_paiement" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} className="mt-1 w-full rounded border p-2" />
+            </label>
+          </div>}
+          {formError && <p role="alert" className="text-sm text-red-700">{formError}</p>}
+          <button disabled={saving} className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-50">
+            {saving ? "Enregistrement..." : "Enregistrer"}
+          </button>
+        </form>
+      )}
+
+      {selectedFacture && <div className="mb-6 rounded-lg bg-white p-5 shadow text-sm text-gray-800">
+        <button onClick={() => setSelectedFacture(null)} className="float-right text-blue-700 hover:underline">Fermer</button>
+        <h2 className="mb-2 text-lg font-semibold">Facture {selectedFacture.numero}</h2>
+        <p>Hôpital : {hopitaux.find((h) => h.id === selectedFacture.hopital_id)?.nom || selectedFacture.hopital_id}</p>
+        <p>Commande : {selectedFacture.commande_id || "Sans commande"}</p>
+        <p>Montant : {formatFCFA(selectedFacture.montant_ttc_fcfa)} — {STATUT_LABELS[selectedFacture.statut]}</p>
+      </div>}
 
       {/* --- Factures Tab --- */}
       {activeTab === "factures" && (
@@ -393,7 +509,7 @@ export default function FacturationPage() {
                 <RefreshCw className="h-4 w-4" />
               </button>
             </div>
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition flex items-center gap-2">
+            <button onClick={() => { setForm("factures"); setFormError(null); }} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition flex items-center gap-2">
               <Plus className="h-4 w-4" />
               Nouvelle Facture
             </button>
@@ -480,10 +596,10 @@ export default function FacturationPage() {
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                          {formatDate(facture.date_echeance)}
+                          {facture.date_echeance ? formatDate(facture.date_echeance) : "-"}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button className="text-blue-700 hover:text-blue-900 font-semibold hover:underline">
+                          <button onClick={() => setSelectedFacture(facture)} className="text-blue-700 hover:text-blue-900 font-semibold hover:underline">
                             Voir
                           </button>
                         </td>
@@ -515,7 +631,7 @@ export default function FacturationPage() {
             >
               <RefreshCw className="h-4 w-4" />
             </button>
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition flex items-center gap-2">
+            <button onClick={() => { setForm("tarifs"); setFormError(null); }} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition flex items-center gap-2">
               <Plus className="h-4 w-4" />
               Nouveau Tarif
             </button>
@@ -629,7 +745,7 @@ export default function FacturationPage() {
             >
               <RefreshCw className="h-4 w-4" />
             </button>
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition flex items-center gap-2">
+            <button onClick={() => { setForm("paiements"); setFormError(null); }} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition flex items-center gap-2">
               <Plus className="h-4 w-4" />
               Nouveau Paiement
             </button>
@@ -695,8 +811,7 @@ export default function FacturationPage() {
                           className="hover:bg-gray-50 transition"
                         >
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {(paiement as Paiement & { facture_numero?: string })
-                              .facture_numero || paiement.facture_id}
+                            {factures.find((f) => f.id === paiement.facture_id)?.numero || paiement.facture_id}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 text-right">
                             {formatFCFA(paiement.montant_fcfa)}

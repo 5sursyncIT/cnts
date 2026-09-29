@@ -15,6 +15,7 @@ class PocheCreate(BaseModel):
     )
     date_peremption: dt.date
     emplacement_stock: str = Field(min_length=1, max_length=64)
+    volume_ml: int | None = Field(default=None, gt=0, le=2000)
 
 
 class PocheUpdate(BaseModel):
@@ -36,13 +37,16 @@ class PocheOut(BaseModel):
 
     id: uuid.UUID
     don_id: uuid.UUID
+    source_poche_id: uuid.UUID | None = None
     type_produit: str
     groupe_sanguin: str | None = None
     code_produit_isbt: str | None = None
     lot: str | None = None
     division: int | None = None
+    volume_ml: int | None = None
     date_peremption: dt.date
     emplacement_stock: str
+    statut_stock: str
     statut_distribution: str
     created_at: dt.datetime
 

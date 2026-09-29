@@ -9,7 +9,7 @@ from fastapi.responses import PlainTextResponse
 from sqlalchemy import String, cast, func, or_, select
 from sqlalchemy.orm import Session
 
-from app.api.deps import require_auth_in_production
+from app.api.deps import require_auth_in_production, require_staff
 from app.audit.events import TraceEvent, log_event
 from app.core.sync_cursor import decode_cursor, encode_cursor
 from app.db.models import (
@@ -25,6 +25,7 @@ from app.db.models import (
 from app.db.session import get_db
 from app.schemas.hemovigilance import (
     ActeTransfusionnelOut,
+    ActeTransfusionnelCreate,
     ImpactRappelOut,
     PartenaireFluxOut,
     PartenaireEventOut,
@@ -69,7 +70,93 @@ def _log_rappel_action(
     )
 
 
+def _poches_cibles(db: Session, rappel: RappelLot, *, lock: bool = False) -> list[Poche]:
+    stmt = select(Poche).join(Don, Don.id == Poche.don_id)
+    if rappel.type_cible == "DIN":
+        stmt = stmt.where(Don.din == rappel.valeur_cible)
+    elif rappel.type_cible == "LOT":
+        stmt = stmt.where(Poche.lot == rappel.valeur_cible)
+    else:
+        raise HTTPException(status_code=409, detail="type_cible invalide")
+    if lock:
+        stmt = stmt.with_for_update()
+    poches = list(db.execute(stmt).scalars())
+    seen = {p.id for p in poches}
+    frontier = set(seen)
+    while frontier:
+        children = list(db.execute(
+            select(Poche).where(Poche.source_poche_id.in_(frontier))
+        ).scalars())
+        frontier = {p.id for p in children if p.id not in seen}
+        poches.extend(p for p in children if p.id not in seen)
+        seen.update(frontier)
+    return poches
+
+
+def _isoler_poches_rappellees(db: Session, rappel: RappelLot) -> None:
+    """Isoler le stock et annuler les réservations des commandes affectées."""
+    poches = _poches_cibles(db, rappel, lock=True)
+    ids = [p.id for p in poches]
+    commandes = set(
+        db.execute(
+            select(Reservation.commande_id).where(
+                Reservation.poche_id.in_(ids), Reservation.released_at.is_(None)
+            )
+        ).scalars()
+    ) if ids else set()
+
+    now = _now_utc()
+    if commandes:
+        reservations = list(
+            db.execute(
+                select(Reservation).where(
+                    Reservation.commande_id.in_(commandes), Reservation.released_at.is_(None)
+                )
+            ).scalars()
+        )
+        reserved_poches = {
+            p.id: p for p in db.execute(
+                select(Poche).where(Poche.id.in_([r.poche_id for r in reservations]))
+            ).scalars()
+        }
+        recalled_ids = set(ids)
+        for reservation in reservations:
+            reservation.released_at = now
+            poche = reserved_poches.get(reservation.poche_id)
+            if poche and poche.id not in recalled_ids and poche.statut_distribution == "RESERVE":
+                poche.statut_distribution = "DISPONIBLE"
+                poche.statut_stock = "EN_STOCK"
+                poche.emplacement_stock = "STOCK"
+        for commande_id in commandes:
+            commande = db.get(Commande, commande_id)
+            if commande and commande.statut == "VALIDEE":
+                commande.statut = "BROUILLON"
+                log_event(db, aggregate_type="commande", aggregate_id=commande.id,
+                          event_type="commande.reservations_annulees_rappel",
+                          payload={"rappel_id": str(rappel.id)})
+
+    for poche in poches:
+        if poche.statut_distribution in {"DISPONIBLE", "RESERVE", "NON_DISTRIBUABLE"}:
+            poche.statut_distribution = "NON_DISTRIBUABLE"
+            poche.statut_stock = "RAPPELEE"
+            poche.emplacement_stock = "QUARANTAINE"
+            log_event(db, aggregate_type="poche", aggregate_id=poche.id,
+                      event_type="poche.rappellee",
+                      payload={"rappel_id": str(rappel.id), "poche_id": str(poche.id)})
+
+
 def _compute_impacts(db: Session, *, rappel: RappelLot, limit: int) -> list[ImpactRappelOut]:
+    ids = [p.id for p in _poches_cibles(db, rappel)]
+    if not ids:
+        return []
+    latest_reservation = (
+        select(Reservation.id)
+        .where(Reservation.poche_id == Poche.id)
+        .order_by(Reservation.date_reservation.desc(), Reservation.id.desc())
+        .limit(1)
+        .correlate(Poche)
+        .scalar_subquery()
+    )
     stmt = (
         select(
             Poche.id,
@@ -87,20 +174,14 @@ def _compute_impacts(db: Session, *, rappel: RappelLot, limit: int) -> list[Impa
             Commande.hopital_id.label("hopital_reservation_id"),
         )
         .join(Don, Don.id == Poche.don_id)
+        .where(Poche.id.in_(ids))
         .outerjoin(ActeTransfusionnel, ActeTransfusionnel.poche_id == Poche.id)
         .outerjoin(
             Reservation,
-            (Reservation.poche_id == Poche.id) & (Reservation.released_at.is_(None)),
+            Reservation.id == latest_reservation,
         )
         .outerjoin(Commande, Commande.id == Reservation.commande_id)
     )
-    if rappel.type_cible == "DIN":
-        stmt = stmt.where(Don.din == rappel.valeur_cible)
-    elif rappel.type_cible == "LOT":
-        stmt = stmt.where(Poche.lot == rappel.valeur_cible)
-    else:
-        raise HTTPException(status_code=409, detail="type_cible invalide")
-
     stmt = stmt.order_by(Poche.created_at.desc()).limit(limit)
     rows = list(db.execute(stmt).all())
 
@@ -172,6 +253,68 @@ def list_transfusions(
     return out
 
 
+@router.post("/transfusions", response_model=ActeTransfusionnelOut, status_code=201)
+def confirmer_transfusion(
+    payload: ActeTransfusionnelCreate,
+    db: Session = Depends(get_db),
+    _user: UserAccount = Depends(require_staff),
+) -> ActeTransfusionnelOut:
+    """Confirmer l'administration réelle d'une poche déjà livrée."""
+    if (_user.role or "").lower() not in {"admin", "medecin"}:
+        raise HTTPException(status_code=403, detail="Confirmation réservée au médecin")
+    poche = db.execute(
+        select(Poche).where(Poche.id == payload.poche_id).with_for_update()
+    ).scalar_one_or_none()
+    if poche is None:
+        raise HTTPException(status_code=404, detail="poche introuvable")
+    if poche.statut_distribution != "DISTRIBUE":
+        raise HTTPException(status_code=409, detail="poche non distribuée")
+    if db.execute(select(ActeTransfusionnel.id).where(
+        ActeTransfusionnel.poche_id == poche.id
+    )).scalar_one_or_none() is not None:
+        raise HTTPException(status_code=409, detail="transfusion déjà confirmée")
+    reservation = db.execute(
+        select(Reservation).join(Commande, Commande.id == Reservation.commande_id)
+        .where(Reservation.poche_id == poche.id, Commande.statut == "SERVIE")
+        .order_by(Reservation.date_reservation.desc()).limit(1)
+    ).scalar_one_or_none()
+    if reservation is None or reservation.receveur_id is None:
+        raise HTTPException(status_code=409, detail="réservation ou receveur introuvable")
+    commande = db.get(Commande, reservation.commande_id)
+    if commande is None or commande.statut != "SERVIE":
+        raise HTTPException(status_code=409, detail="commande non livrée")
+    date_transfusion = payload.date_transfusion
+    if date_transfusion.tzinfo is None:
+        raise HTTPException(status_code=422, detail="Fuseau horaire requis")
+    if date_transfusion > _now_utc():
+        raise HTTPException(status_code=422, detail="Date de transfusion future")
+    if reservation.released_at is not None:
+        delivered_at = reservation.released_at
+        if delivered_at.tzinfo is None:
+            delivered_at = delivered_at.replace(tzinfo=dt.timezone.utc)
+        if date_transfusion < delivered_at:
+            raise HTTPException(status_code=422, detail="Transfusion antérieure à la livraison")
+    acte = ActeTransfusionnel(
+        poche_id=poche.id, commande_id=commande.id, hopital_id=commande.hopital_id,
+        receveur_id=reservation.receveur_id, date_transfusion=date_transfusion,
+        validateur_id=_user.id,
+    )
+    db.add(acte)
+    db.flush()
+    log_event(db, aggregate_type="poche", aggregate_id=poche.id,
+              event_type="transfusion.confirmee",
+              payload={"acte_id": str(acte.id), "commande_id": str(commande.id),
+                       "receveur_id": str(reservation.receveur_id)})
+    db.commit()
+    db.refresh(acte)
+    don = db.get(Don, poche.don_id)
+    out = ActeTransfusionnelOut.model_validate(acte)
+    out.din = don.din if don else None
+    out.type_produit = poche.type_produit
+    out.lot = poche.lot
+    return out
+
+
 @router.post("/rappels", response_model=RappelOut, status_code=201)
 def create_rappel(
     payload: RappelCreate,
@@ -185,11 +328,11 @@ def create_rappel(
         statut="OUVERT",
     )
     db.add(row)
-    db.commit()
-    db.refresh(row)
-
+    db.flush()
+    _isoler_poches_rappellees(db, row)
     _log_rappel_action(db, rappel=row, action="CREER", validateur_id=None, note=row.motif)
     db.commit()
+    db.refresh(row)
     return row
 
 
@@ -214,6 +357,8 @@ def create_rappel_auto(
         .first()
     )
     if existing is not None:
+        _isoler_poches_rappellees(db, existing)
+        db.commit()
         return existing
 
     now = _now_utc()
@@ -225,12 +370,12 @@ def create_rappel_auto(
         notified_at=now,
     )
     db.add(row)
-    db.commit()
-    db.refresh(row)
-
+    db.flush()
+    _isoler_poches_rappellees(db, row)
     _log_rappel_action(db, rappel=row, action="CREER", validateur_id=None, note=payload.motif)
     _log_rappel_action(db, rappel=row, action="NOTIFIER", validateur_id=None, note=payload.source)
     db.commit()
+    db.refresh(row)
     return row
 
 

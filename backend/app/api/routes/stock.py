@@ -10,6 +10,7 @@ from app.api.deps import require_auth_in_production
 from app.audit.events import log_event
 from app.core.config import settings
 from app.core.idempotency import get_idempotent_response, store_idempotent_response
+from app.core.recalls import poche_sous_rappel
 from app.db.models import (
     ColdChainReading,
     ColdChainStorage,
@@ -120,6 +121,7 @@ def _do_fractionnement(
             source_poche_id=source.id,
             type_produit=comp.type_produit,
             groupe_sanguin=source.groupe_sanguin,
+            lot=source.lot,
             volume_ml=volume,
             date_peremption=_peremption_produit(
                 db, type_produit=comp.type_produit, date_don=don.date_don
@@ -142,6 +144,7 @@ def _do_fractionnement(
         perte_ml = int(source.volume_ml - total_volume)
 
     source.statut_stock = "FRACTIONNEE"
+    source.statut_distribution = "NON_DISTRIBUABLE"
     source.emplacement_stock = "FRACTIONNEMENT"
 
     db.commit()
@@ -226,6 +229,8 @@ def fractionner(
         raise HTTPException(status_code=409, detail="seul ST est fractionnable")
     if source.statut_stock != "EN_STOCK":
         raise HTTPException(status_code=409, detail="poche source non disponible")
+    if poche_sous_rappel(db, source):
+        raise HTTPException(status_code=409, detail="poche source sous rappel actif")
 
     don = db.get(Don, source.don_id)
     if don is None:
@@ -390,6 +395,8 @@ def fractionner_depuis_recette(
         raise HTTPException(status_code=409, detail="type source incompatible avec la recette")
     if source.statut_stock != "EN_STOCK":
         raise HTTPException(status_code=409, detail="poche source non disponible")
+    if poche_sous_rappel(db, source):
+        raise HTTPException(status_code=409, detail="poche source sous rappel actif")
 
     don = db.get(Don, source.don_id)
     if don is None:
