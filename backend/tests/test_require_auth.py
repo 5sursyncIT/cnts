@@ -77,3 +77,12 @@ def test_users_management_requires_admin(client: TestClient, db_session, real_rb
     admin = _token(db_session, "ADMIN")
     assert client.get("/api/users", headers={"Authorization": f"Bearer {staff}"}).status_code == 403
     assert client.get("/api/users", headers={"Authorization": f"Bearer {admin}"}).status_code == 200
+
+
+def test_module_permissions_are_enforced_by_api(client: TestClient, db_session, real_rbac):
+    stock_token = _token(db_session, "agent_stock")
+    headers = {"Authorization": f"Bearer {stock_token}"}
+    assert client.get("/api/poches", headers=headers).status_code == 200
+    assert client.get("/api/donneurs", headers=headers).status_code == 403
+    assert client.get("/api/receveurs", headers=headers).status_code == 403
+    assert client.get("/api/trace/events", headers=headers).status_code == 403

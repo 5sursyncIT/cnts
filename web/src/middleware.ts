@@ -25,19 +25,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // MFA désactivé par défaut tant que le flux MFA backend n'est pas finalisé.
-  // Définir BACKOFFICE_DISABLE_MFA="0" pour l'exiger une fois le flux complet.
-  const disableMfa = process.env.BACKOFFICE_DISABLE_MFA !== "0";
-  if (!disableMfa && !session.mfa && pathname !== "/mfa") {
-    const url = request.nextUrl.clone();
-    url.pathname = "/mfa";
-    return NextResponse.redirect(url);
-  }
-
   return NextResponse.next();
 }
 
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"]
 };
-

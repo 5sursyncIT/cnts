@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.api.deps import require_staff
+from app.api.deps import require_module
 from app.audit.events import log_event
 from app.db.models import CampagneCollecte, InscriptionCollecte, UserAccount
 from app.db.session import get_db
@@ -17,13 +17,14 @@ from app.schemas.collectes import (
 )
 
 router = APIRouter(prefix="/collectes")
+require_collectes = require_module("collectes")
 
 
 @router.post("", response_model=CampagneCollecteOut, status_code=201)
 def create_campagne(
     payload: CampagneCollecteCreate,
     db: Session = Depends(get_db),
-    _user: UserAccount = Depends(require_staff),
+    _user: UserAccount = Depends(require_collectes),
 ) -> CampagneCollecte:
     existing = db.execute(
         select(CampagneCollecte).where(CampagneCollecte.code == payload.code)
@@ -47,7 +48,7 @@ def create_campagne(
     return campagne
 
 
-@router.get("", response_model=list[CampagneCollecteOut], dependencies=[Depends(require_staff)])
+@router.get("", response_model=list[CampagneCollecteOut], dependencies=[Depends(require_collectes)])
 def list_campagnes(
     type_campagne: str | None = Query(default=None),
     statut: str | None = Query(default=None),
@@ -79,7 +80,7 @@ def calendrier_collectes(
     return list(db.execute(stmt).scalars())
 
 
-@router.get("/{campagne_id}", response_model=CampagneCollecteOut, dependencies=[Depends(require_staff)])
+@router.get("/{campagne_id}", response_model=CampagneCollecteOut, dependencies=[Depends(require_collectes)])
 def get_campagne(campagne_id: uuid.UUID, db: Session = Depends(get_db)) -> CampagneCollecte:
     campagne = db.get(CampagneCollecte, campagne_id)
     if campagne is None:
@@ -92,7 +93,7 @@ def update_campagne(
     campagne_id: uuid.UUID,
     payload: CampagneCollecteUpdate,
     db: Session = Depends(get_db),
-    _user: UserAccount = Depends(require_staff),
+    _user: UserAccount = Depends(require_collectes),
 ) -> CampagneCollecte:
     campagne = db.get(CampagneCollecte, campagne_id)
     if campagne is None:
@@ -117,7 +118,7 @@ def update_campagne(
 def demarrer_campagne(
     campagne_id: uuid.UUID,
     db: Session = Depends(get_db),
-    _user: UserAccount = Depends(require_staff),
+    _user: UserAccount = Depends(require_collectes),
 ) -> CampagneCollecte:
     campagne = db.get(CampagneCollecte, campagne_id)
     if campagne is None:
@@ -144,7 +145,7 @@ def demarrer_campagne(
 def terminer_campagne(
     campagne_id: uuid.UUID,
     db: Session = Depends(get_db),
-    _user: UserAccount = Depends(require_staff),
+    _user: UserAccount = Depends(require_collectes),
 ) -> CampagneCollecte:
     campagne = db.get(CampagneCollecte, campagne_id)
     if campagne is None:
@@ -167,7 +168,7 @@ def terminer_campagne(
     return campagne
 
 
-@router.get("/{campagne_id}/bilan", dependencies=[Depends(require_staff)])
+@router.get("/{campagne_id}/bilan", dependencies=[Depends(require_collectes)])
 def bilan_campagne(campagne_id: uuid.UUID, db: Session = Depends(get_db)) -> dict:
     campagne = db.execute(
         select(CampagneCollecte)
@@ -223,7 +224,7 @@ def create_inscription(
     return inscription
 
 
-@router.get("/{campagne_id}/inscriptions", response_model=list[InscriptionCollecteOut], dependencies=[Depends(require_staff)])
+@router.get("/{campagne_id}/inscriptions", response_model=list[InscriptionCollecteOut], dependencies=[Depends(require_collectes)])
 def list_inscriptions(
     campagne_id: uuid.UUID,
     statut: str | None = Query(default=None),

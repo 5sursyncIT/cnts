@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { accessCookieName, sessionCookieName, verifySessionToken } from "@/lib/auth/session";
 
-const backendBaseUrl = (process.env.BACKOFFICE_API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000")
+const backendBaseUrl = (process.env.BACKOFFICE_API_BASE_URL ?? `${process.env.BACKEND_API_URL ?? "http://127.0.0.1:8000"}/api`)
   .replace(/\/+$/, "");
 
 // En-têtes hop-by-hop à ne jamais recopier tels quels d'une réponse à l'autre :

@@ -32,6 +32,9 @@ export async function POST(request: Request) {
 
     const data = await res.json();
     const { mfa_required, access_token, user } = data;
+    if (!mfa_required && (typeof access_token !== "string" || !user?.id || !user?.email || !user?.role || user.role.toUpperCase() === "PATIENT")) {
+      return NextResponse.redirect(new URL("/admin/login?error=1", APP_URL));
+    }
 
     const cookieStore = await cookies();
     cookieStore.delete(sessionCookieName);
@@ -40,9 +43,10 @@ export async function POST(request: Request) {
 
     // MFA Flow
     if (mfa_required) {
-      // Not fully verified/implemented for frontend flow with backend challenge yet
-      // But for now, let's handle the direct login case majorly
-      const preAuthToken = await signPreAuth({ email: email }, 5 * 60);
+      if (typeof data.challenge_token !== "string") {
+        throw new Error("Missing MFA challenge from backend");
+      }
+      const preAuthToken = await signPreAuth({ email: email, challengeToken: data.challenge_token }, 5 * 60);
       cookieStore.set(preAuthCookieName, preAuthToken, {
         httpOnly: true,
         sameSite: "lax",
@@ -54,7 +58,7 @@ export async function POST(request: Request) {
       return NextResponse.redirect(new URL(`/admin/mfa?next=${encodeURIComponent(safeNext)}`, APP_URL));
     }
 
-    // Direct Login (No MFA or MFA passed implicitly if disabled)
+    // Direct login when the backend does not require MFA.
     // Map Backend User to Session User
     const sessionToken = await signSession(
       {
@@ -62,7 +66,7 @@ export async function POST(request: Request) {
         email: user.email,
         displayName: user.email.split("@")[0], // Use part of email as display name since backend doesn't have name
         roleIds: [user.role], // Assuming backend role string matches frontend role ID
-        mfa: user.mfa_enabled
+        mfa: false
       },
       8 * 60 * 60
     );

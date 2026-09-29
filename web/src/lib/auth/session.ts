@@ -17,8 +17,11 @@ export const sessionCookieName = "cnts_bo_session";
 export const accessCookieName = "cnts_access";
 
 function getSecretKey() {
-  const secret = process.env.BACKOFFICE_SESSION_SECRET ?? "dev-only-change-me";
-  return new TextEncoder().encode(secret);
+  const secret = process.env.BACKOFFICE_SESSION_SECRET;
+  if (process.env.NODE_ENV === "production" && (!secret || secret.length < 32)) {
+    throw new Error("BACKOFFICE_SESSION_SECRET must contain at least 32 characters in production");
+  }
+  return new TextEncoder().encode(secret ?? "dev-only-change-me");
 }
 
 export async function signSession(session: BackOfficeSession, ttlSeconds: number): Promise<string> {
@@ -56,4 +59,3 @@ export async function verifySessionToken(token: string): Promise<BackOfficeSessi
     return null;
   }
 }
-

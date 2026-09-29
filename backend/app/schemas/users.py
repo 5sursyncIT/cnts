@@ -32,6 +32,8 @@ class UserCreate(BaseModel):
             "technicien_labo",
             "agent_distribution",
             "agent_accueil",
+            "agent_stock",
+            "MEDECIN",
             "PATIENT",
         }
         if v not in valid_roles:
@@ -68,6 +70,8 @@ class UserUpdate(BaseModel):
             "technicien_labo",
             "agent_distribution",
             "agent_accueil",
+            "agent_stock",
+            "MEDECIN",
             "PATIENT",
         }
         if v not in valid_roles:

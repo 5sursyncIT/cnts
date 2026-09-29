@@ -28,7 +28,10 @@ def login(payload: LoginIn, db: Session = Depends(get_db)) -> LoginOut:
     ):
         raise HTTPException(status_code=401, detail="identifiants invalides")
 
-    if user.mfa_enabled and user.mfa_secret:
+    if user.mfa_enabled and not user.mfa_secret:
+        raise HTTPException(status_code=403, detail="mfa_not_configured")
+
+    if user.mfa_enabled:
         challenge = sign_token(
             {"sub": str(user.id), "type": "mfa_challenge"},
             secret=settings.auth_token_secret,
@@ -130,4 +133,4 @@ def mfa_verify(payload: MfaVerifyIn, db: Session = Depends(get_db)) -> MfaVerify
         ttl_seconds=8 * 60 * 60,
     )
     db.commit()
-    return MfaVerifyOut(access_token=access)
+    return MfaVerifyOut(access_token=access, user=user)

@@ -11,6 +11,14 @@ export async function getCurrentUser(): Promise<User | null> {
 
   const resolvedRoles = session.roleIds
     .map((id) => {
+      const legacyRoleKeys: Record<string, keyof typeof roles> = {
+        agent_stock: "agentStock",
+        technicien_labo: "technicienLabo",
+        agent_distribution: "agentDistribution",
+        agent_accueil: "agentAccueil",
+        MEDECIN: "medecin",
+      };
+      if (legacyRoleKeys[id]) return roles[legacyRoleKeys[id]];
       // 1. Essayer de trouver par ID de rôle (ex: "role_admin")
       const foundById = Object.values(roles).find((r) => r.id === id);
       if (foundById) return foundById;
@@ -28,4 +36,3 @@ export async function getCurrentUser(): Promise<User | null> {
     isMfaEnabled: true
   };
 }
-

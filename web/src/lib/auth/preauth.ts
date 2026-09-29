@@ -2,13 +2,17 @@ import { jwtVerify, SignJWT } from "jose";
 
 export type BackOfficePreAuth = {
   email: string;
+  challengeToken: string;
 };
 
 export const preAuthCookieName = "cnts_bo_preauth";
 
 function getSecretKey() {
-  const secret = process.env.BACKOFFICE_PREAUTH_SECRET ?? "dev-only-change-me";
-  return new TextEncoder().encode(secret);
+  const secret = process.env.BACKOFFICE_PREAUTH_SECRET;
+  if (process.env.NODE_ENV === "production" && (!secret || secret.length < 32)) {
+    throw new Error("BACKOFFICE_PREAUTH_SECRET must contain at least 32 characters in production");
+  }
+  return new TextEncoder().encode(secret ?? "dev-only-change-me");
 }
 
 export async function signPreAuth(preAuth: BackOfficePreAuth, ttlSeconds: number): Promise<string> {
@@ -24,10 +28,10 @@ export async function verifyPreAuthToken(token: string): Promise<BackOfficePreAu
   try {
     const { payload } = await jwtVerify(token, getSecretKey());
     const email = payload.email;
-    if (typeof email !== "string") return null;
-    return { email };
+    const challengeToken = payload.challengeToken;
+    if (typeof email !== "string" || typeof challengeToken !== "string") return null;
+    return { email, challengeToken };
   } catch {
     return null;
   }
 }
-

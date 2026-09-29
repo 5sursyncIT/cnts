@@ -27,6 +27,7 @@ class MfaVerifyIn(BaseModel):
 
 class MfaVerifyOut(BaseModel):
     access_token: str
+    user: UserOut
 
 
 class AdminDisable2faIn(BaseModel):

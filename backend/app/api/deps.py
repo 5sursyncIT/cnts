@@ -1,4 +1,5 @@
 import uuid
+from collections.abc import Callable
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, APIKeyHeader, APIKeyCookie
@@ -20,6 +21,20 @@ access_cookie_scheme = APIKeyCookie(name="cnts_access", auto_error=False)
 # Rôles considérés comme "personnel" (tout sauf un compte patient).
 PATIENT_ROLE = "PATIENT"
 ADMIN_ROLE = "ADMIN"
+
+# Server-side authorisation is deliberately independent from the navigation
+# displayed by the Next.js app.  Hiding a link is not an access control.
+MODULE_ROLES: dict[str, frozenset[str]] = {
+    "donneurs": frozenset({"admin", "agent_accueil", "technicien_labo", "biologiste", "medecin"}),
+    "dons": frozenset({"admin", "agent_accueil", "technicien_labo", "biologiste", "medecin"}),
+    "laboratoire": frozenset({"admin", "technicien_labo", "biologiste", "medecin"}),
+    "stock": frozenset({"admin", "agent_stock", "technicien_labo", "biologiste", "agent_distribution"}),
+    "distribution": frozenset({"admin", "agent_distribution", "technicien_labo", "biologiste", "medecin"}),
+    "hemovigilance": frozenset({"admin", "technicien_labo", "biologiste", "agent_distribution", "medecin"}),
+    "collectes": frozenset({"admin", "agent_accueil"}),
+    "analytics": frozenset({"admin", "biologiste"}),
+    "administration": frozenset({"admin"}),
+}
 
 
 def _resolve_user(db: Session, token: str | None) -> UserAccount | None:
@@ -165,3 +180,18 @@ def require_admin(user: UserAccount = Depends(get_current_user)) -> UserAccount:
             detail="Action réservée aux administrateurs",
         )
     return user
+
+
+def require_module(module: str) -> Callable[[UserAccount], UserAccount]:
+    """Return a dependency that enforces the module's allowed staff roles."""
+    allowed_roles = MODULE_ROLES[module]
+
+    def dependency(user: UserAccount = Depends(require_staff)) -> UserAccount:
+        if (user.role or "").lower() not in allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Accès non autorisé au module {module}",
+            )
+        return user
+
+    return dependency

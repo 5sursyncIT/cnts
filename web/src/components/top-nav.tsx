@@ -78,7 +78,7 @@ export function TopNav(props: { user: User }) {
 
         <div className="flex items-center gap-3">
           <span className="hidden text-sm text-zinc-600 md:inline">{props.user.displayName}</span>
-          <form action="/api/auth/logout" method="post">
+          <form action="/admin/api/auth/logout" method="post">
             <button
               type="submit"
               className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-900 hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-900/20"
@@ -91,4 +91,3 @@ export function TopNav(props: { user: User }) {
     </header>
   );
 }
-

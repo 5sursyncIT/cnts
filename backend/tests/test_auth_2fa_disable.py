@@ -54,6 +54,7 @@ def test_disable_2fa_is_effective_and_irreversible(client: TestClient, db_sessio
     )
     assert ok_res.status_code == 200
     assert "access_token" in ok_res.json()
+    assert ok_res.json()["user"]["email"] == "agent@cnts.local"
 
     disable_res = client.post(
         f"/api/admin/auth/2fa/disable/{user_id}",

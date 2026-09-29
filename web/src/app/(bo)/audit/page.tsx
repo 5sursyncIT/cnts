@@ -1,8 +1,29 @@
 import { hasPermission, perm } from "@cnts/rbac";
+import { cookies } from "next/headers";
 
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { logAuditEvent } from "@/lib/audit/log";
-import { listAuditEvents } from "@/lib/audit/store";
+import { accessCookieName } from "@/lib/auth/session";
+
+type PersistedAuditEvent = {
+  id: string;
+  created_at: string;
+  event_type: string;
+  aggregate_type: string;
+  aggregate_id: string;
+  payload: Record<string, unknown>;
+};
+
+async function getPersistedAuditEvents(): Promise<PersistedAuditEvent[]> {
+  const token = (await cookies()).get(accessCookieName)?.value;
+  if (!token) return [];
+  const backendUrl = process.env.BACKEND_API_URL || "http://127.0.0.1:8000";
+  const response = await fetch(`${backendUrl}/api/trace/events?limit=80`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store"
+  });
+  return response.ok ? await response.json() : [];
+}
 
 export default async function AuditPage() {
   const user = await getCurrentUser();
@@ -21,13 +42,13 @@ export default async function AuditPage() {
     );
   }
 
-  const events = listAuditEvents(80);
+  const events = await getPersistedAuditEvents();
   logAuditEvent({ actorEmail: user.email, action: "audit.view" });
 
   return (
     <main>
       <h1 className="text-2xl font-semibold">Logs & audit</h1>
-      <p className="mt-1 text-sm text-zinc-600">Aperçu local des actions utilisateur côté Back Office.</p>
+      <p className="mt-1 text-sm text-zinc-600">Événements persistés de traçabilité métier.</p>
 
       <section className="mt-6 overflow-auto rounded-xl border border-zinc-200 bg-white shadow-sm">
         <table className="w-full border-collapse text-left text-sm">
@@ -49,11 +70,11 @@ export default async function AuditPage() {
           </thead>
           <tbody>
             {events.map((e, idx) => (
-              <tr key={`${e.ts}-${idx}`} className="border-b border-zinc-100">
-                <td className="px-4 py-2 font-mono text-xs text-zinc-700">{e.ts}</td>
-                <td className="px-4 py-2 text-zinc-800">{e.actorEmail ?? "—"}</td>
-                <td className="px-4 py-2 text-zinc-800">{e.action}</td>
-                <td className="px-4 py-2 text-zinc-800">{e.target ?? "—"}</td>
+              <tr key={e.id ?? idx} className="border-b border-zinc-100">
+                <td className="px-4 py-2 font-mono text-xs text-zinc-700">{e.created_at}</td>
+                <td className="px-4 py-2 text-zinc-800">{String(e.payload?.actor_email ?? e.payload?.admin_email ?? "—")}</td>
+                <td className="px-4 py-2 text-zinc-800">{e.event_type}</td>
+                <td className="px-4 py-2 text-zinc-800">{e.aggregate_type}:{e.aggregate_id}</td>
               </tr>
             ))}
             {events.length === 0 ? (

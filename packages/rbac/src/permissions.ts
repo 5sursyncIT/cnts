@@ -69,6 +69,39 @@ export const roles = {
     name: "Agent Stock",
     permissions: [perm("stock", "read"), perm("stock", "write")]
   } satisfies Role,
+  technicienLabo: {
+    id: "role_technicien_labo",
+    name: "Technicien de laboratoire",
+    permissions: [
+      perm("donneurs", "read"), perm("dons", "read"), perm("dons", "write"),
+      perm("analyses", "read"), perm("analyses", "write"), perm("liberation", "read"),
+      perm("stock", "read"), perm("stock", "write")
+    ]
+  } satisfies Role,
+  agentDistribution: {
+    id: "role_agent_distribution",
+    name: "Agent de distribution",
+    permissions: [
+      perm("stock", "read"), perm("distribution", "read"), perm("distribution", "write"),
+      perm("hemovigilance", "read"), perm("hemovigilance", "write")
+    ]
+  } satisfies Role,
+  agentAccueil: {
+    id: "role_agent_accueil",
+    name: "Agent d'accueil",
+    permissions: [
+      perm("donneurs", "read"), perm("donneurs", "write"), perm("dons", "read"),
+      perm("dons", "write"), perm("collectes", "read"), perm("collectes", "write")
+    ]
+  } satisfies Role,
+  medecin: {
+    id: "role_medecin",
+    name: "Médecin",
+    permissions: [
+      perm("donneurs", "read"), perm("dons", "read"), perm("analyses", "read"),
+      perm("liberation", "read"), perm("distribution", "read"), perm("hemovigilance", "read")
+    ]
+  } satisfies Role,
   biologiste: {
     id: "role_biologiste",
     name: "Biologiste",
@@ -88,4 +121,3 @@ export const roles = {
     ]
   } satisfies Role
 };
-
