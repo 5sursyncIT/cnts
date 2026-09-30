@@ -12,8 +12,8 @@ import {
 } from "@/components/cnts/primitives";
 import { frDate } from "@/components/cnts/format";
 import { Icon } from "@/components/cnts/icon";
-import { stock, org, news } from "@/components/cnts/data";
-import { getArticles } from "@/lib/cms";
+import { stock, org, news, type StockBarometer } from "@/components/cnts/data";
+import { getArticles, getStockBarometer } from "@/lib/cms";
 
 export const metadata = {
   title: "Accueil — CNTS Sénégal",
@@ -82,8 +82,9 @@ function Marquee() {
   );
 }
 
-function Barometer() {
-  const crit = stock.filter((s) => s.status === "crit").length;
+function Barometer({ data }: { data: StockBarometer }) {
+  const levels = data.levels;
+  const crit = levels.filter((s) => s.status === "crit").length;
   return (
     <Card pad={28} style={{ height: "100%" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 22, flexWrap: "wrap" }}>
@@ -95,10 +96,10 @@ function Barometer() {
             Niveau des réserves par groupe
           </h3>
         </div>
-        <StatusPill status={crit ? "crit" : "ok"}>{crit ? `${crit} groupes critiques` : "Réserves stables"}</StatusPill>
+        <StatusPill status={crit ? "crit" : "ok"}>{crit ? `${crit} groupe${crit > 1 ? "s" : ""} critique${crit > 1 ? "s" : ""}` : "Réserves stables"}</StatusPill>
       </div>
       <div className="baro-grid" style={{ display: "grid", gridTemplateColumns: "repeat(8, minmax(0,1fr))", gap: 8 }}>
-        {stock.map((s, i) => (
+        {levels.map((s, i) => (
           <div
             key={s.type}
             style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, animation: `rise .7s ${i * 0.06}s both` }}
@@ -137,8 +138,25 @@ function Barometer() {
           Je donne mon sang
         </Button>
       </div>
+      {data.message && (
+        <p
+          role="status"
+          style={{
+            marginTop: 14,
+            padding: "10px 14px",
+            borderRadius: "var(--r-md)",
+            background: "var(--crit-bg)",
+            color: "var(--red-800)",
+            fontSize: 13.5,
+            fontWeight: 600,
+          }}
+        >
+          {data.message}
+        </p>
+      )}
       <p style={{ marginTop: 14, fontSize: 12, color: "var(--ink-500)" }}>
-        Niveaux indicatifs. Pour connaître les besoins du jour, contactez le CNTS au {org.phone}.
+        {data.updatedOn ? `Mis à jour le ${frDate(data.updatedOn)} · ` : "Niveaux indicatifs. "}
+        Réserves exprimées en jours de consommation. Pour connaître les besoins du jour, contactez le CNTS au {org.phone}.
       </p>
     </Card>
   );
@@ -147,7 +165,10 @@ function Barometer() {
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const latest = ((await getArticles({ limit: 3 })) ?? news).slice(0, 3);
+  const [articles, barometer] = await Promise.all([getArticles({ limit: 3 }), getStockBarometer()]);
+  const latest = (articles ?? news).slice(0, 3);
+  // Baromètre : saisi chaque semaine dans le CMS ; repli sur les niveaux indicatifs.
+  const stockData: StockBarometer = barometer ?? { levels: stock.map(({ type, days, status }) => ({ type, days, status })) };
   return (
     <div>
       {/* HERO */}
@@ -319,7 +340,7 @@ export default async function HomePage() {
         className="two-col"
         style={{ ...W, paddingTop: 48, paddingBottom: 48, display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 24, alignItems: "stretch" }}
       >
-        <Barometer />
+        <Barometer data={stockData} />
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           {quick.map(([ic, t, sub, href, tone]) => (
             <Card key={t} pad={18} hover href={href}>

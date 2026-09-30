@@ -249,6 +249,9 @@ h1, h2, h3, h4, p { margin: 0; }
   container-type: inline-size;
 }
 .sn-map .sn-region { transition: fill .18s ease; }
+/* Carte du réseau : collée pendant le défilement de la liste, sauf en une colonne. */
+.reseau-map-sticky { position: sticky; top: 90px; }
+@media (max-width: 1000px) { .reseau-map-sticky { position: static; } }
 .sn-map .sn-label {
   font: 600 17px var(--font-sans);
   fill: var(--ink-600);

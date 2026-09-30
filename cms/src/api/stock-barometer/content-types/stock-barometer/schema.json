@@ -1,0 +1,86 @@
+{
+  "kind": "singleType",
+  "collectionName": "stock_barometers",
+  "info": {
+    "singularName": "stock-barometer",
+    "pluralName": "stock-barometers",
+    "displayName": "Baromètre des stocks",
+    "description": "Niveau des réserves par groupe sanguin (en jours de consommation) affiché sur la page d'accueil. À mettre à jour chaque semaine en attendant le branchement sur le back-office."
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "date_mise_a_jour": {
+      "type": "date",
+      "required": true
+    },
+    "o_pos": {
+      "type": "float",
+      "required": true,
+      "min": 0,
+      "max": 60
+    },
+    "a_pos": {
+      "type": "float",
+      "required": true,
+      "min": 0,
+      "max": 60
+    },
+    "b_pos": {
+      "type": "float",
+      "required": true,
+      "min": 0,
+      "max": 60
+    },
+    "ab_pos": {
+      "type": "float",
+      "required": true,
+      "min": 0,
+      "max": 60
+    },
+    "o_neg": {
+      "type": "float",
+      "required": true,
+      "min": 0,
+      "max": 60
+    },
+    "a_neg": {
+      "type": "float",
+      "required": true,
+      "min": 0,
+      "max": 60
+    },
+    "b_neg": {
+      "type": "float",
+      "required": true,
+      "min": 0,
+      "max": 60
+    },
+    "ab_neg": {
+      "type": "float",
+      "required": true,
+      "min": 0,
+      "max": 60
+    },
+    "seuil_critique": {
+      "type": "float",
+      "required": true,
+      "default": 2,
+      "min": 0,
+      "max": 30
+    },
+    "seuil_baisse": {
+      "type": "float",
+      "required": true,
+      "default": 3.5,
+      "min": 0,
+      "max": 30
+    },
+    "message": {
+      "type": "string",
+      "maxLength": 200
+    }
+  }
+}

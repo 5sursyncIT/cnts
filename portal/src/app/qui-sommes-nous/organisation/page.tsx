@@ -3,6 +3,9 @@ import type { ReactNode } from "react";
 import { Card, PageBanner, SectionTitle } from "@/components/cnts/primitives";
 import { Icon } from "@/components/cnts/icon";
 import { org, organisation, reseau } from "@/components/cnts/data";
+import { ReseauMap } from "@/components/cnts/reseau-map";
+import { getStructures } from "@/lib/cms";
+import { STRUCTURES } from "@/components/cnts/structures";
 
 export const metadata = {
   title: "Organisation & réseau — CNTS Sénégal",
@@ -34,7 +37,11 @@ function IconTile({ name, mb = 16 }: { name: string; mb?: number }) {
   );
 }
 
-export default function OrganisationPage() {
+export const dynamic = "force-dynamic";
+
+export default async function OrganisationPage() {
+  // Structures de la carte : CMS Strapi, sinon cartographie Excel embarquée.
+  const structures = (await getStructures()) ?? STRUCTURES;
   return (
     <div>
       <PageBanner
@@ -189,25 +196,7 @@ export default function OrganisationPage() {
           title="Réseau national des structures de sang"
           sub={reseau.intro}
         />
-        <div
-          style={{
-            position: "relative",
-            width: "100%",
-            aspectRatio: "1003 / 709",
-            borderRadius: "var(--r-lg)",
-            border: "1px solid var(--line)",
-            background: "var(--surface)",
-            overflow: "hidden",
-          }}
-        >
-          <Image
-            src={reseau.map}
-            alt={`Carte du réseau national des ${org.structures} structures de transfusion sanguine du Sénégal`}
-            fill
-            sizes="(max-width: 1180px) 100vw, 1180px"
-            style={{ objectFit: "contain" }}
-          />
-        </div>
+        <ReseauMap structures={structures} />
 
         <div
           className="grid-3"

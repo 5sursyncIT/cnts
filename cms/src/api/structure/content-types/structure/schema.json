@@ -1,0 +1,64 @@
+{
+  "kind": "collectionType",
+  "collectionName": "structures",
+  "info": {
+    "singularName": "structure",
+    "pluralName": "structures",
+    "displayName": "Structure (carte du réseau)",
+    "description": "Structures de transfusion sanguine affichées sur les cartes du portail (réseau national, collectes). La région est déduite automatiquement des coordonnées GPS. Type : siege = siège national, crts = centre régional, banque = banque de sang, pts = poste de transfusion, depot = dépôt de sang."
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true,
+      "maxLength": 200
+    },
+    "kind": {
+      "type": "enumeration",
+      "required": true,
+      "default": "banque",
+      "enum": ["siege", "crts", "banque", "pts", "depot"]
+    },
+    "commune": {
+      "type": "string",
+      "required": true,
+      "maxLength": 120
+    },
+    "departement": {
+      "type": "string",
+      "maxLength": 120
+    },
+    "hote": {
+      "type": "string",
+      "maxLength": 120
+    },
+    "adresse": {
+      "type": "string",
+      "maxLength": 250
+    },
+    "repere": {
+      "type": "string",
+      "maxLength": 250
+    },
+    "horaires": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "latitude": {
+      "type": "float",
+      "required": true,
+      "min": 12,
+      "max": 17
+    },
+    "longitude": {
+      "type": "float",
+      "required": true,
+      "min": -18,
+      "max": -11
+    }
+  }
+}

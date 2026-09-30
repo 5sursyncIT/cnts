@@ -3,6 +3,8 @@ import { Button, Card, PageBanner, SectionTitle } from "@/components/cnts/primit
 import { Icon } from "@/components/cnts/icon";
 import { org } from "@/components/cnts/data";
 import { NationalNetworkMap } from "@/components/cnts/national-network-map";
+import { getStructures } from "@/lib/cms";
+import { STRUCTURES } from "@/components/cnts/structures";
 
 export const metadata = {
   title: "Le CNTS — CNTS Sénégal",
@@ -14,7 +16,11 @@ function MaxWrap({ children, w = 1180 }: { children: React.ReactNode; w?: number
   return <div style={{ maxWidth: w, margin: "0 auto", padding: "var(--gutter)" }}>{children}</div>;
 }
 
-export default function QuiSommesNousPage() {
+export const dynamic = "force-dynamic";
+
+export default async function QuiSommesNousPage() {
+  // Structures de la carte : CMS Strapi, sinon cartographie Excel embarquée.
+  const structures = (await getStructures()) ?? STRUCTURES;
   return (
     <div>
       <PageBanner
@@ -150,7 +156,7 @@ export default function QuiSommesNousPage() {
           title="Un maillage national"
           sub={`${org.regions.length} régions couvertes par un réseau de banques régionales et de postes de collecte, coordonnés depuis le siège de Dakar.`}
         />
-        <NationalNetworkMap regions={org.regions}>
+        <NationalNetworkMap regions={org.regions} structures={structures}>
           <div style={{ width: "100%", marginTop: 8 }}>
             <Button href="/qui-sommes-nous/organisation" variant="outline" iconRight="arrowR">
               Organisation & réseau national

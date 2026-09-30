@@ -1,8 +1,10 @@
-import Image from "next/image";
 import type { ReactNode } from "react";
 import { Button, Card, PageBanner, SectionTitle } from "@/components/cnts/primitives";
 import { Icon } from "@/components/cnts/icon";
 import { ppcd, products, reseau } from "@/components/cnts/data";
+import { ReseauMap } from "@/components/cnts/reseau-map";
+import { getStructures } from "@/lib/cms";
+import { STRUCTURES } from "@/components/cnts/structures";
 
 export const metadata = {
   title: "Produits sanguins (PPCD) — CNTS Sénégal",
@@ -14,7 +16,11 @@ function MaxWrap({ children, w = 1180 }: { children: ReactNode; w?: number }) {
   return <div style={{ maxWidth: w, margin: "0 auto", padding: "var(--gutter)" }}>{children}</div>;
 }
 
-export default function ProduitsSanguinsPage() {
+export const dynamic = "force-dynamic";
+
+export default async function ProduitsSanguinsPage() {
+  // Structures de la carte : CMS Strapi, sinon cartographie Excel embarquée.
+  const structures = (await getStructures()) ?? STRUCTURES;
   return (
     <div>
       <PageBanner
@@ -181,11 +187,7 @@ export default function ProduitsSanguinsPage() {
                 Découvrir le réseau
               </Button>
             </div>
-            <div
-              style={{ height: 340, borderRadius: "var(--r-lg)", position: "relative", overflow: "hidden", border: "1px solid var(--line)", background: "var(--surface)" }}
-            >
-              <Image src={reseau.map} alt="Carte du réseau transfusionnel du CNTS" fill style={{ objectFit: "contain" }} />
-            </div>
+            <ReseauMap compact structures={structures} />
           </div>
         </MaxWrap>
       </section>

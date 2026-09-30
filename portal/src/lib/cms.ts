@@ -4,7 +4,10 @@
 // injoignable ou vide : les pages retombent alors sur le contenu de repli de
 // `components/cnts/data.ts`, de sorte que le portail reste utilisable même
 // quand Strapi est arrêté.
-import type { NewsItem, PartnerItem, TeamItem, FaqItem } from "@/components/cnts/data";
+import type { NewsItem, PartnerItem, TeamItem, FaqItem, StockBarometer } from "@/components/cnts/data";
+import { stockStatus } from "../components/cnts/data";
+import type { Structure, StructureKind } from "@/components/cnts/structures";
+import { regionOf } from "../components/cnts/senegal-geo";
 import { logger } from "./logger";
 
 // URL interne (réseau docker) utilisée pour les appels serveur → Strapi.
@@ -150,4 +153,77 @@ export async function getResources(): Promise<CmsResource[] | null> {
         sizeKb: r.file!.size,
       })) ?? null
   );
+}
+
+type StrapiStructure = {
+  documentId: string;
+  name: string;
+  kind: StructureKind;
+  commune: string;
+  departement?: string | null;
+  hote?: string | null;
+  adresse?: string | null;
+  repere?: string | null;
+  horaires?: string | null;
+  latitude: number | string;
+  longitude: number | string;
+};
+
+/** Structures de la carte du réseau (la région est déduite des coordonnées GPS). */
+export async function getStructures(): Promise<Structure[] | null> {
+  const data = await cmsFind<StrapiStructure>("structures", { sort: "name:asc", "pagination[pageSize]": "500" });
+  if (!data) return null;
+  const out: Structure[] = [];
+  for (const s of data) {
+    const lat = Number(s.latitude);
+    const lng = Number(s.longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+    out.push({
+      id: s.documentId,
+      name: s.name,
+      kind: s.kind,
+      region: regionOf(lng, lat),
+      commune: s.commune,
+      departement: s.departement || s.commune,
+      hote: s.hote ?? "",
+      adresse: s.adresse || undefined,
+      repere: s.repere || undefined,
+      horaires: s.horaires || undefined,
+      lat,
+      lng,
+    });
+  }
+  return out.length ? out : null;
+}
+
+// Champs du type unique « Baromètre des stocks » → groupe sanguin, dans l'ordre d'affichage.
+const STOCK_FIELDS: [string, string][] = [
+  ["o_pos", "O+"], ["a_pos", "A+"], ["b_pos", "B+"], ["ab_pos", "AB+"],
+  ["o_neg", "O-"], ["a_neg", "A-"], ["b_neg", "B-"], ["ab_neg", "AB-"],
+];
+
+/** Niveaux des réserves par groupe, saisis chaque semaine dans le CMS. */
+export async function getStockBarometer(): Promise<StockBarometer | null> {
+  const url = `${CMS_INTERNAL_URL}/api/stock-barometer`;
+  try {
+    const res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(TIMEOUT_MS) });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const d = ((await res.json()) as { data?: Record<string, unknown> | null }).data;
+    if (!d) return null;
+    const crit = Number(d.seuil_critique ?? 2);
+    const baisse = Number(d.seuil_baisse ?? 3.5);
+    const levels = STOCK_FIELDS.map(([field, type]) => {
+      const days = Number(d[field]);
+      return { type, days, status: stockStatus(days, crit, baisse) };
+    });
+    if (levels.some((l) => !Number.isFinite(l.days))) return null;
+    return {
+      levels,
+      updatedOn: typeof d.date_mise_a_jour === "string" ? d.date_mise_a_jour : undefined,
+      message: typeof d.message === "string" && d.message.trim() ? d.message.trim() : undefined,
+    };
+  } catch (error) {
+    logger.warn({ err: error, collection: "stock-barometer" }, "CMS indisponible, contenu de repli utilisé");
+    return null;
+  }
 }

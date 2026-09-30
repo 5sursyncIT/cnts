@@ -2,19 +2,25 @@
 
 import { useMemo, useState } from "react";
 import { Icon } from "@/components/cnts/icon";
-import { centers } from "@/components/cnts/data";
-import { SenegalMap, MapLegend, REGION_POINTS, regionOf, KIND_LABEL, type MapMarker } from "@/components/cnts/senegal-map";
+import { SenegalMap, MapLegend, REGION_POINTS, type MapMarker } from "@/components/cnts/senegal-map";
+import { STRUCTURES, STRUCTURE_KIND_LABEL, structuresByRegion, summarize, type Structure } from "@/components/cnts/structures";
 
-// Structures connues par région (siège, CRTS) — les autres régions sont rattachées au réseau national.
-const CENTER_BY_REGION = Object.fromEntries(centers.map((c) => [regionOf(c.lng, c.lat), c]));
+export function NationalNetworkMap({
+  regions,
+  structures = STRUCTURES,
+  children,
+}: {
+  regions: string[];
+  /** Structures du réseau (CMS côté serveur ; repli : cartographie Excel). */
+  structures?: Structure[];
+  children?: React.ReactNode;
+}) {
+  const BY_REGION = useMemo(() => structuresByRegion(structures), [structures]);
+  const noteFor = (id: string) => {
+    const list = BY_REGION[id];
+    return list?.length ? summarize(list) : "Région couverte par le réseau national";
+  };
 
-function noteFor(id: string) {
-  const c = CENTER_BY_REGION[id];
-  if (!c) return "Région couverte par le réseau national";
-  return c.siege ? KIND_LABEL.siege + " du CNTS" : c.name;
-}
-
-export function NationalNetworkMap({ regions, children }: { regions: string[]; children?: React.ReactNode }) {
   const [hovered, setHovered] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
 
@@ -22,17 +28,21 @@ export function NationalNetworkMap({ regions, children }: { regions: string[]; c
 
   const markers: MapMarker[] = useMemo(
     () =>
-      REGION_POINTS.map((p) => {
-        const c = CENTER_BY_REGION[p.id];
-        return c
-          ? { id: p.id, lng: c.lng, lat: c.lat, kind: c.siege ? "siege" : "crts", label: p.name, sub: noteFor(p.id) }
-          : { id: p.id, lng: p.lng, lat: p.lat, kind: "region", label: p.name, sub: noteFor(p.id) };
-      }),
-    [],
+      structures.map((s) => ({
+        id: s.id,
+        lng: s.lng,
+        lat: s.lat,
+        kind: s.kind,
+        label: s.name,
+        sub: `${STRUCTURE_KIND_LABEL[s.kind]} · ${s.commune}`,
+      })),
+    [structures],
   );
+  const regionOfMarker = useMemo(() => Object.fromEntries(structures.map((s) => [s.id, s.region])), [structures]);
 
   const toggle = (id: string) => setSelected((s) => (s === id ? null : id));
-  const focus = hovered ?? selected;
+  const [hoveredMarker, setHoveredMarker] = useState<string | null>(null);
+  const focus = hovered ?? (hoveredMarker ? regionOfMarker[hoveredMarker] : null) ?? selected;
 
   return (
     <div className="two-col" style={{ display: "grid", gridTemplateColumns: "1.05fr 0.95fr", gap: 30, alignItems: "center" }}>
@@ -41,17 +51,16 @@ export function NationalNetworkMap({ regions, children }: { regions: string[]; c
           ariaLabel="Carte des régions couvertes par le réseau du CNTS"
           highlightAll
           markers={markers}
-          selectedId={selected}
-          hoveredId={hovered}
-          onSelect={toggle}
-          onHover={setHovered}
+          hoveredId={hoveredMarker}
+          onSelect={(id) => toggle(regionOfMarker[id])}
+          onHover={setHoveredMarker}
           activeRegion={focus}
           hoveredRegion={hovered}
           onRegionHover={setHovered}
           onRegionSelect={toggle}
           regionNote={noteFor}
         />
-        <MapLegend kinds={["siege", "crts", "region"]} style={{ marginTop: 10 }} />
+        <MapLegend kinds={["siege", "crts", "banque", "pts", "depot"]} style={{ marginTop: 10 }} />
       </div>
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignContent: "center" }}>
@@ -59,7 +68,7 @@ export function NationalNetworkMap({ regions, children }: { regions: string[]; c
           const id = idByName[name];
           const on = id === selected;
           const hov = id === hovered;
-          const hasCenter = Boolean(id && CENTER_BY_REGION[id]);
+          const count = id ? (BY_REGION[id]?.length ?? 0) : 0;
           return (
             <button
               key={name}
@@ -85,8 +94,9 @@ export function NationalNetworkMap({ regions, children }: { regions: string[]; c
                 transition: "background .15s, border-color .15s, color .15s",
               }}
             >
-              <Icon name={hasCenter ? "drop" : "pin"} size={15} style={{ color: on ? "#fff" : "var(--brand)" }} />
+              <Icon name={count ? "drop" : "pin"} size={15} style={{ color: on ? "#fff" : "var(--brand)" }} />
               {name}
+              {count > 0 && <span style={{ fontSize: 12, fontWeight: 700, opacity: on ? 0.85 : 0.55 }}>{count}</span>}
             </button>
           );
         })}

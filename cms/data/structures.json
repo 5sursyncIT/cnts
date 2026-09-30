@@ -1,0 +1,313 @@
+[
+  {
+    "name": "CNTS — Siège national",
+    "kind": "siege",
+    "commune": "Fann",
+    "departement": "Dakar",
+    "hote": "Centre National de Transfusion Sanguine",
+    "adresse": "Avenue Cheikh Anta Diop, Fann-Résidence",
+    "horaires": "Lun–Ven · 08h00–17h00 · Sam · 08h00–13h00",
+    "latitude": 14.6957,
+    "longitude": -17.4657
+  },
+  {
+    "name": "Centre Hospitalier National Cheikh Ahmadoul Khadim",
+    "kind": "banque",
+    "commune": "Touba",
+    "departement": "Mbacké",
+    "hote": "Hôpital",
+    "latitude": 14.922855,
+    "longitude": -15.931234
+  },
+  {
+    "name": "Centre hospitalier national Matlaboul Fawzeyni de Touba",
+    "kind": "banque",
+    "commune": "Touba Mosquée",
+    "departement": "Mbacké",
+    "hote": "Hôpital",
+    "adresse": "Dianatou Mahwa",
+    "repere": "Lekku Fi",
+    "latitude": 14.864865,
+    "longitude": -15.901537
+  },
+  {
+    "name": "Centre hospitalier régional Henrich Lubke de Diourbel",
+    "kind": "banque",
+    "commune": "Diourbel",
+    "departement": "Diourbel",
+    "hote": "Hôpital",
+    "adresse": "Thierno Kandji",
+    "repere": "Stade de football",
+    "latitude": 14.6428,
+    "longitude": -16.232031
+  },
+  {
+    "name": "Poste de transfusion sanguine de Roi Baudouin",
+    "kind": "banque",
+    "commune": "Sam Notaire",
+    "departement": "Guédiawaye",
+    "hote": "Hôpital",
+    "adresse": "Sam Notaire",
+    "repere": "Médina Gounass",
+    "latitude": 14.774849,
+    "longitude": -17.383391
+  },
+  {
+    "name": "PTS de l’Hôpital Dalal Jamm",
+    "kind": "pts",
+    "commune": "Golf Sud",
+    "departement": "Guédiawaye",
+    "hote": "Hôpital",
+    "adresse": "Golf Sud (Cité Aliou Sow)",
+    "latitude": 14.771973,
+    "longitude": -17.408179
+  },
+  {
+    "name": "Poste de transfusion sanguine de Rufisque",
+    "kind": "pts",
+    "commune": "Rufisque Est",
+    "departement": "Rufisque",
+    "hote": "PTS",
+    "adresse": "Keury Kao",
+    "repere": "District sanitaire",
+    "latitude": 14.712182,
+    "longitude": -17.272083
+  },
+  {
+    "name": "CHAMFS Fatick",
+    "kind": "banque",
+    "commune": "Fatick",
+    "departement": "Fatick",
+    "hote": "Hôpital",
+    "adresse": "Darell",
+    "repere": "SENELEC",
+    "latitude": 14.344805,
+    "longitude": -16.414456
+  },
+  {
+    "name": "Centre de santé Sokone",
+    "kind": "banque",
+    "commune": "Sokone",
+    "departement": "Foundiougne",
+    "hote": "Centre de santé",
+    "adresse": "Diamaguene Centre",
+    "repere": "La Poste Finances",
+    "latitude": 13.878617,
+    "longitude": -16.368639
+  },
+  {
+    "name": "Centre de santé Gossas",
+    "kind": "depot",
+    "commune": "Gossas",
+    "departement": "Gossas",
+    "hote": "Centre de santé",
+    "adresse": "Keur Khar",
+    "repere": "Route Diourbel–Kaolack",
+    "latitude": 14.500031,
+    "longitude": -16.077391
+  },
+  {
+    "name": "Centre de santé de Koungheul",
+    "kind": "banque",
+    "commune": "Koungheul",
+    "departement": "Koungheul",
+    "hote": "Centre de santé",
+    "adresse": "Koungheul Ville",
+    "repere": "Camp des sapeurs-pompiers",
+    "latitude": 13.981773,
+    "longitude": -14.791787
+  },
+  {
+    "name": "Centre hospitalier régional de Kolda",
+    "kind": "banque",
+    "commune": "Kolda",
+    "departement": "Kolda",
+    "hote": "Hôpital",
+    "adresse": "Sare Moussa",
+    "repere": "Près du Conseil départemental",
+    "latitude": 12.884736,
+    "longitude": -14.919264
+  },
+  {
+    "name": "Centre hospitalier régional Amath Dansokho de Kédougou",
+    "kind": "banque",
+    "commune": "Dimboli",
+    "departement": "Kédougou",
+    "hote": "Hôpital",
+    "latitude": 12.538338,
+    "longitude": -12.150819
+  },
+  {
+    "name": "CRTS de Kaolack",
+    "kind": "crts",
+    "commune": "Kaolack",
+    "departement": "Kaolack",
+    "hote": "CRTS",
+    "adresse": "Léona",
+    "repere": "Hôpital El Hadji Ibrahima Niass",
+    "latitude": 14.141561,
+    "longitude": -16.07623
+  },
+  {
+    "name": "Centre de santé de Nioro",
+    "kind": "pts",
+    "commune": "Nioro",
+    "departement": "Nioro",
+    "hote": "Centre de santé",
+    "adresse": "Nouroulaye",
+    "repere": "Près du marché central",
+    "latitude": 13.742447,
+    "longitude": -15.779316
+  },
+  {
+    "name": "CHRASM/Louga",
+    "kind": "banque",
+    "commune": "Louga",
+    "departement": "Louga",
+    "hote": "Hôpital",
+    "adresse": "Grand Louga",
+    "repere": "Hôtel Kawsara",
+    "latitude": 15.616768,
+    "longitude": -16.236447
+  },
+  {
+    "name": "Hôpital Magatte LO de Linguère",
+    "kind": "banque",
+    "commune": "Linguère",
+    "departement": "Linguère",
+    "hote": "Hôpital",
+    "adresse": "Quartier Thiélly Nord",
+    "repere": "À côté du Trésor public et du tribunal",
+    "latitude": 15.400598,
+    "longitude": -15.112576
+  },
+  {
+    "name": "CRTS de Matam",
+    "kind": "crts",
+    "commune": "Matam",
+    "departement": "Matam",
+    "hote": "CRTS",
+    "adresse": "Tantadji",
+    "repere": "Direction régionale de la santé",
+    "latitude": 15.660078,
+    "longitude": -13.263137
+  },
+  {
+    "name": "Centre Hospitalier Régional de Ourossogui",
+    "kind": "banque",
+    "commune": "Ourossogui",
+    "departement": "Matam",
+    "hote": "Hôpital",
+    "adresse": "Moderne 3",
+    "repere": "32ᵉ Bataillon",
+    "latitude": 15.603478,
+    "longitude": -13.329812
+  },
+  {
+    "name": "Centre hospitalier régional Amadou Tidiane Ba de Sédhiou",
+    "kind": "banque",
+    "commune": "Sédhiou",
+    "departement": "Sédhiou",
+    "hote": "Hôpital",
+    "adresse": "Bambali, km 1 route de Marsassoum",
+    "latitude": 12.706091,
+    "longitude": -15.580301
+  },
+  {
+    "name": "Banque de sang de Saint-Louis",
+    "kind": "banque",
+    "commune": "Saint-Louis",
+    "departement": "Saint-Louis",
+    "hote": "Banque de sang",
+    "adresse": "Corniche Sor",
+    "repere": "Sen'Eau de Saint-Louis",
+    "latitude": 16.025333,
+    "longitude": -16.489342
+  },
+  {
+    "name": "Centre de santé Bakel",
+    "kind": "banque",
+    "commune": "Bakel",
+    "departement": "Bakel",
+    "hote": "Centre de santé",
+    "adresse": "HLM Bakel",
+    "repere": "Camp des sapeurs-pompiers",
+    "latitude": 14.915087,
+    "longitude": -12.457409
+  },
+  {
+    "name": "Centre hospitalier régional de Tambacounda",
+    "kind": "banque",
+    "commune": "Tambacounda",
+    "departement": "Tambacounda",
+    "hote": "Hôpital",
+    "adresse": "Diallo Bougou",
+    "repere": "Camp militaire, en face de l'armée de l'air",
+    "latitude": 13.753039,
+    "longitude": -13.672984
+  },
+  {
+    "name": "Centre Hospitalier Mame Abdou Aziz de Tivaouane",
+    "kind": "banque",
+    "commune": "Tivaouane",
+    "departement": "Tivaouane",
+    "hote": "Hôpital",
+    "adresse": "Ainoumasy",
+    "latitude": 14.945129,
+    "longitude": -16.825397
+  },
+  {
+    "name": "Centre Hospitalier Régional de Thiès",
+    "kind": "banque",
+    "commune": "Thiès",
+    "departement": "Thiès",
+    "hote": "Hôpital",
+    "adresse": "Avenue Malick Sy Prolongée",
+    "repere": "Pharmacie Serigne Saliou Mbacké et SGS",
+    "latitude": 14.781095,
+    "longitude": -16.924215
+  },
+  {
+    "name": "Centre hospitalier Thierno Mouhamadoul Mansour BARRO",
+    "kind": "banque",
+    "commune": "Mbour",
+    "departement": "Mbour",
+    "hote": "Hôpital",
+    "adresse": "Grand Mbour",
+    "repere": "ENDA",
+    "latitude": 14.422443,
+    "longitude": -16.985765
+  },
+  {
+    "name": "Centre de santé Fiacre Coly de Khombole",
+    "kind": "depot",
+    "commune": "Khombole",
+    "departement": "Thiès",
+    "hote": "Centre de santé",
+    "adresse": "Keur Macodou",
+    "repere": "Route nationale, angle Touba Toul",
+    "latitude": 14.761145,
+    "longitude": -16.683578
+  },
+  {
+    "name": "Centre Hospitalier Régional de Ziguinchor",
+    "kind": "banque",
+    "commune": "Ziguinchor",
+    "departement": "Ziguinchor",
+    "hote": "Hôpital",
+    "adresse": "HLM NEMA",
+    "repere": "Aéroport de Ziguinchor",
+    "latitude": 12.55764,
+    "longitude": -16.282479
+  },
+  {
+    "name": "Service hématologie banque de sang de Ziguinchor",
+    "kind": "banque",
+    "commune": "Ziguinchor",
+    "departement": "Ziguinchor",
+    "hote": "Hôpital",
+    "adresse": "Kadior",
+    "latitude": 12.569576,
+    "longitude": -16.276522
+  }
+]

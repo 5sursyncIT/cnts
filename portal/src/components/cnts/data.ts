@@ -6,6 +6,24 @@ export const BLOOD = ["O+", "A+", "B+", "AB+", "O-", "A-", "B-", "AB-"] as const
 
 export type StockStatus = "ok" | "warn" | "crit";
 
+export type StockLevel = { type: string; days: number; status: StockStatus };
+
+/** Baromètre des stocks (page d'accueil) — saisi chaque semaine dans le CMS (lib/cms.ts). */
+export type StockBarometer = {
+  levels: StockLevel[];
+  /** Date de mise à jour (AAAA-MM-JJ) ; absente pour les valeurs de repli. */
+  updatedOn?: string;
+  message?: string;
+};
+
+/** Statut d'un groupe à partir du nombre de jours de réserve et des seuils. */
+export function stockStatus(days: number, seuilCritique = 2, seuilBaisse = 3.5): StockStatus {
+  if (days < seuilCritique) return "crit";
+  if (days < seuilBaisse) return "warn";
+  return "ok";
+}
+
+// Valeurs de repli (CMS injoignable) : niveaux indicatifs, non datés.
 export const stock: { type: string; units: number; days: number; status: StockStatus }[] = [
   { type: "O+", units: 412, days: 5.2, status: "ok" },
   { type: "A+", units: 268, days: 3.1, status: "warn" },
@@ -26,17 +44,16 @@ export type Center = {
   type: "fixe" | "mobile";
   /** Siège national (repère distinct sur les cartes). */
   siege?: boolean;
+  /** Réservation en ligne possible (lieu proposé dans le formulaire de rendez-vous). */
+  rdv?: boolean;
   lat: number;
   lng: number;
 };
 
-// Lieux de don confirmés par cnts.gouv.sn. Les collectes mobiles ne sont pas
-// publiées sur le site officiel : elles seront ajoutées ici (ou via l'API
-// /collectes/calendrier) dès qu'elles sont annoncées.
-export const centers: Center[] = [
-  { id: "dakar-cnts", name: "CNTS — Siège national", city: "Dakar", area: "Avenue Cheikh Anta Diop, Fann-Résidence", hours: "Lun–Ven · 08h00–17h00 · Sam · 08h00–13h00", type: "fixe", siege: true, lat: 14.692, lng: -17.462 },
-  { id: "crts-kaolack", name: "CRTS de Kaolack", city: "Kaolack", area: "Centre Régional de Transfusion Sanguine (inauguré fin 2025)", hours: "Horaires : renseignez-vous auprès du CNTS", type: "fixe", lat: 14.146, lng: -16.073 },
-];
+// Collectes mobiles annoncées (aucune pour l'instant : elles ne sont pas publiées sur le
+// site officiel). Les centres fixes (siège, CRTS) viennent de la carte du réseau
+// (collection « Structure » du CMS) — voir app/collectes/page.tsx.
+export const centers: Center[] = [];
 
 export const donor = {
   name: "Aminata Diallo",
@@ -195,7 +212,7 @@ export const reseau = {
     },
   ],
   expansion:
-    "Le maillage territorial est en pleine expansion : après l'inauguration du CRTS de Kaolack fin 2025, les centres de Matam et de Louga viendront prochainement compléter le dispositif, dans le cadre d'une politique de décentralisation qui vise sept CRTS à l'horizon 2028.",
+    "Le maillage territorial est en pleine expansion : après l'inauguration du CRTS de Kaolack fin 2025 et la mise en service du CRTS de Matam, désormais fonctionnel, le centre de Louga viendra très prochainement compléter le dispositif, dans le cadre d'une politique de décentralisation qui vise sept CRTS à l'horizon 2028.",
 };
 
 // Textes de référence (page « Le CNTS » de cnts.gouv.sn)
