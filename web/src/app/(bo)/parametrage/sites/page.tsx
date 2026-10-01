@@ -1,16 +1,29 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
+import { Building2, Pencil, Plus, RefreshCw, MapPin } from "lucide-react";
 import {
-  Building2,
-  Plus,
-  RefreshCw,
-  X,
-  MapPin,
-  Phone,
-  Mail,
-  User,
-} from "lucide-react";
+  Alert,
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  ErrorState,
+  Field,
+  Input,
+  LoadingState,
+  Modal,
+  PageHeader,
+  Select,
+  Table,
+  TBody,
+  THead,
+  Td,
+  Th,
+  Tr,
+  type BadgeTone,
+} from "@/components/ui";
 
 const API = "/api";
 
@@ -56,6 +69,19 @@ const REGIONS_SENEGAL = [
   "Thies",
   "Ziguinchor",
 ];
+
+// Valeurs stockées inchangées ; libellés affichés avec les accents.
+const REGION_LABELS: Record<string, string> = {
+  Kedougou: "Kédougou",
+  Sedhiou: "Sédhiou",
+  Thies: "Thiès",
+};
+
+const TYPE_SITE: Record<Site["type_site"], { label: string; tone: BadgeTone }> = {
+  CENTRAL: { label: "Central", tone: "danger" },
+  REGIONAL: { label: "Régional", tone: "info" },
+  POSTE: { label: "Poste de collecte", tone: "neutral" },
+};
 
 const emptyForm: SiteForm = {
   code: "",
@@ -160,6 +186,7 @@ export default function SitesPage() {
         throw new Error(body.detail || `Erreur ${res.status}`);
       }
 
+      toast.success(editingSite ? "Site mis à jour" : "Site créé");
       await fetchSites();
       handleClose();
     } catch (err: any) {
@@ -169,364 +196,219 @@ export default function SitesPage() {
     }
   };
 
-  const getTypeBadge = (type: string) => {
-    switch (type) {
-      case "CENTRAL":
-        return "bg-red-100 text-red-900";
-      case "REGIONAL":
-        return "bg-blue-100 text-blue-900";
-      case "POSTE":
-        return "bg-gray-100 text-gray-900";
-      default:
-        return "bg-gray-100 text-gray-900";
-    }
-  };
+  const formId = "site-form";
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Building2 className="w-6 h-6 text-blue-600" />
-            Sites &amp; Centres
-          </h1>
-          <p className="text-gray-700 mt-1">
-            Gestion des sites de transfusion sanguine du CNTS
-          </p>
-        </div>
-        <button
-          onClick={handleOpenCreate}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          Nouveau Site
-        </button>
-      </div>
-
-      {/* Loading */}
-      {loading && (
-        <div className="bg-white rounded-lg shadow p-8 text-center text-gray-700">
-          Chargement...
-        </div>
-      )}
-
-      {/* Error */}
-      {error && !loading && (
-        <div className="bg-white rounded-lg shadow p-8 text-center">
-          <div className="text-red-600 mb-2">Erreur de chargement</div>
-          <div className="text-sm text-gray-800">{error}</div>
-          <button
-            onClick={fetchSites}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-          >
-            Reessayer
-          </button>
-        </div>
-      )}
-
-      {/* Table */}
-      {!loading && !error && (
-        <>
-          {sites.length === 0 ? (
-            <div className="bg-white rounded-lg shadow p-8 text-center text-gray-700">
-              Aucun site enregistre
-            </div>
-          ) : (
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        Code
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        Nom
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        Type
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        Region
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        Responsable
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        Statut
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {sites.map((site) => (
-                      <tr
-                        key={site.id}
-                        className="hover:bg-gray-50 transition"
-                      >
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
-                          {site.code}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">
-                            {site.nom}
-                          </div>
-                          {site.adresse && (
-                            <div className="text-xs text-gray-700 flex items-center gap-1 mt-0.5">
-                              <MapPin className="w-3 h-3" />
-                              {site.adresse}
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={`px-2 py-1 text-xs font-semibold rounded-full ${getTypeBadge(site.type_site)}`}
-                          >
-                            {site.type_site}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                          {site.region || "-"}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                          {site.responsable_nom || "-"}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                              site.is_active
-                                ? "bg-green-100 text-green-900"
-                                : "bg-gray-100 text-gray-900"
-                            }`}
-                          >
-                            {site.is_active ? "Actif" : "Inactif"}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button
-                            onClick={() => handleOpenEdit(site)}
-                            className="text-blue-700 hover:text-blue-900 font-semibold hover:underline"
-                          >
-                            Modifier
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* Footer count */}
-          <div className="mt-4 flex justify-between items-center">
-            <div className="text-sm text-gray-800">
-              {sites.length} site(s) affiche(s)
-            </div>
-            <button
+    <div className="space-y-6">
+      <PageHeader
+        title="Sites et centres"
+        description="Sites de transfusion sanguine du CNTS."
+        actions={
+          <>
+            <Button
+              variant="secondary"
               onClick={fetchSites}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition flex items-center gap-2 text-sm"
+              disabled={loading}
+              icon={<RefreshCw className="h-4 w-4" aria-hidden="true" />}
             >
-              <RefreshCw className="w-4 h-4" />
               Actualiser
-            </button>
-          </div>
-        </>
-      )}
+            </Button>
+            <Button onClick={handleOpenCreate} icon={<Plus className="h-4 w-4" aria-hidden="true" />}>
+              Nouveau site
+            </Button>
+          </>
+        }
+      />
 
-      {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-gray-900">
-                {editingSite ? "Modifier le site" : "Nouveau site"}
-              </h2>
-              <button
-                onClick={handleClose}
-                className="text-gray-400 hover:text-gray-700"
-              >
-                <X className="w-5 h-5" />
-              </button>
+      <Card>
+        {loading && <LoadingState />}
+
+        {error && !loading && <ErrorState message={error} onRetry={fetchSites} />}
+
+        {!loading && !error && sites.length === 0 && (
+          <EmptyState
+            icon={<Building2 className="h-6 w-6" aria-hidden="true" />}
+            title="Aucun site enregistré"
+            description="Ajoutez le centre national, les centres régionaux et les postes de collecte."
+            action={
+              <Button onClick={handleOpenCreate} icon={<Plus className="h-4 w-4" aria-hidden="true" />}>
+                Nouveau site
+              </Button>
+            }
+          />
+        )}
+
+        {!loading && !error && sites.length > 0 && (
+          <>
+            <Table>
+              <THead>
+                <tr>
+                  <Th>Code</Th>
+                  <Th>Nom</Th>
+                  <Th>Type</Th>
+                  <Th>Région</Th>
+                  <Th>Responsable</Th>
+                  <Th>Statut</Th>
+                  <Th align="right"><span className="sr-only">Actions</span></Th>
+                </tr>
+              </THead>
+              <TBody>
+                {sites.map((site) => (
+                  <Tr key={site.id}>
+                    <Td className="whitespace-nowrap font-mono text-gray-900">{site.code}</Td>
+                    <Td>
+                      <div className="font-medium text-gray-900">{site.nom}</div>
+                      {site.adresse && (
+                        <div className="mt-0.5 flex items-center gap-1 text-xs text-gray-600">
+                          <MapPin className="h-3 w-3 shrink-0" aria-hidden="true" />
+                          {site.adresse}
+                        </div>
+                      )}
+                    </Td>
+                    <Td>
+                      <Badge tone={TYPE_SITE[site.type_site]?.tone ?? "neutral"}>
+                        {TYPE_SITE[site.type_site]?.label ?? site.type_site}
+                      </Badge>
+                    </Td>
+                    <Td className="whitespace-nowrap">
+                      {site.region ? REGION_LABELS[site.region] ?? site.region : "—"}
+                    </Td>
+                    <Td className="whitespace-nowrap">{site.responsable_nom || "—"}</Td>
+                    <Td>
+                      <Badge tone={site.is_active ? "success" : "neutral"} dot>
+                        {site.is_active ? "Actif" : "Inactif"}
+                      </Badge>
+                    </Td>
+                    <Td align="right">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEdit(site)}
+                        className="inline-flex items-center gap-1 font-medium text-blue-700 hover:underline"
+                      >
+                        <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+                        Modifier<span className="sr-only"> le site {site.nom}</span>
+                      </button>
+                    </Td>
+                  </Tr>
+                ))}
+              </TBody>
+            </Table>
+            <div className="border-t border-gray-100 px-4 py-3 text-sm text-gray-600">
+              {sites.length} site(s) affiché(s)
             </div>
+          </>
+        )}
+      </Card>
 
-            {formError && (
-              <div className="bg-red-50 text-red-600 p-3 rounded mb-4 text-sm">
-                {formError}
-              </div>
-            )}
+      <Modal
+        open={showModal}
+        onClose={handleClose}
+        title={editingSite ? "Modifier le site" : "Nouveau site"}
+        size="lg"
+        footer={
+          <>
+            <Button variant="secondary" onClick={handleClose} disabled={submitting}>
+              Annuler
+            </Button>
+            <Button type="submit" form={formId} loading={submitting}>
+              Enregistrer
+            </Button>
+          </>
+        }
+      >
+        {formError && (
+          <Alert tone="danger" className="mb-4">
+            {formError}
+          </Alert>
+        )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Code *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.code}
-                    onChange={(e) =>
-                      setFormData({ ...formData, code: e.target.value })
-                    }
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                    placeholder="Ex: CNTS-DKR"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Type de site *
-                  </label>
-                  <select
-                    required
-                    value={formData.type_site}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        type_site: e.target.value as
-                          | "CENTRAL"
-                          | "REGIONAL"
-                          | "POSTE",
-                      })
-                    }
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                  >
-                    <option value="CENTRAL">Central</option>
-                    <option value="REGIONAL">Regional</option>
-                    <option value="POSTE">Poste de collecte</option>
-                  </select>
-                </div>
-              </div>
+        <form id={formId} onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2">
+          <Field label="Code" required>
+            <Input
+              type="text"
+              value={formData.code}
+              onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+              placeholder="ex. CNTS-DKR"
+              className="font-mono"
+            />
+          </Field>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nom de l'etablissement *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.nom}
-                  onChange={(e) =>
-                    setFormData({ ...formData, nom: e.target.value })
-                  }
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                  placeholder="Ex: Centre National de Transfusion Sanguine"
-                />
-              </div>
+          <Field label="Type de site" required>
+            <Select
+              value={formData.type_site}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  type_site: e.target.value as "CENTRAL" | "REGIONAL" | "POSTE",
+                })
+              }
+            >
+              <option value="CENTRAL">Central</option>
+              <option value="REGIONAL">Régional</option>
+              <option value="POSTE">Poste de collecte</option>
+            </Select>
+          </Field>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  <MapPin className="w-3.5 h-3.5 inline mr-1" />
-                  Region
-                </label>
-                <select
-                  value={formData.region}
-                  onChange={(e) =>
-                    setFormData({ ...formData, region: e.target.value })
-                  }
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                >
-                  <option value="">-- Selectionner --</option>
-                  {REGIONS_SENEGAL.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
-              </div>
+          <Field label="Nom de l’établissement" required className="sm:col-span-2">
+            <Input
+              type="text"
+              value={formData.nom}
+              onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
+              placeholder="ex. Centre national de transfusion sanguine"
+            />
+          </Field>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  <MapPin className="w-3.5 h-3.5 inline mr-1" />
-                  Adresse
-                </label>
-                <input
-                  type="text"
-                  value={formData.adresse}
-                  onChange={(e) =>
-                    setFormData({ ...formData, adresse: e.target.value })
-                  }
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                  placeholder="Adresse complete"
-                />
-              </div>
+          <Field label="Région">
+            <Select
+              value={formData.region}
+              onChange={(e) => setFormData({ ...formData, region: e.target.value })}
+            >
+              <option value="">— Sélectionner —</option>
+              {REGIONS_SENEGAL.map((r) => (
+                <option key={r} value={r}>
+                  {REGION_LABELS[r] ?? r}
+                </option>
+              ))}
+            </Select>
+          </Field>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    <Phone className="w-3.5 h-3.5 inline mr-1" />
-                    Telephone
-                  </label>
-                  <input
-                    type="tel"
-                    value={formData.telephone}
-                    onChange={(e) =>
-                      setFormData({ ...formData, telephone: e.target.value })
-                    }
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                    placeholder="+221 33 ..."
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    <Mail className="w-3.5 h-3.5 inline mr-1" />
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) =>
-                      setFormData({ ...formData, email: e.target.value })
-                    }
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                    placeholder="contact@site.sn"
-                  />
-                </div>
-              </div>
+          <Field label="Adresse">
+            <Input
+              type="text"
+              value={formData.adresse}
+              onChange={(e) => setFormData({ ...formData, adresse: e.target.value })}
+              placeholder="Adresse complète"
+            />
+          </Field>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  <User className="w-3.5 h-3.5 inline mr-1" />
-                  Responsable
-                </label>
-                <input
-                  type="text"
-                  value={formData.responsable_nom}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      responsable_nom: e.target.value,
-                    })
-                  }
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                  placeholder="Nom du responsable"
-                />
-              </div>
+          <Field label="Téléphone">
+            <Input
+              type="tel"
+              value={formData.telephone}
+              onChange={(e) => setFormData({ ...formData, telephone: e.target.value })}
+              placeholder="+221 33 …"
+            />
+          </Field>
 
-              <div className="flex justify-end gap-3 mt-6">
-                <button
-                  type="button"
-                  onClick={handleClose}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
-                  disabled={submitting}
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-                  disabled={submitting}
-                >
-                  {submitting ? "Enregistrement..." : "Enregistrer"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+          <Field label="E-mail">
+            <Input
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              placeholder="contact@site.sn"
+            />
+          </Field>
+
+          <Field label="Responsable" className="sm:col-span-2">
+            <Input
+              type="text"
+              value={formData.responsable_nom}
+              onChange={(e) => setFormData({ ...formData, responsable_nom: e.target.value })}
+              placeholder="Nom du responsable"
+            />
+          </Field>
+        </form>
+      </Modal>
     </div>
   );
 }

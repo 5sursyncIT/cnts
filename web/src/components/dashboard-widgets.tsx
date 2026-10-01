@@ -1,255 +1,239 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-import {
-    Users,
-    Heart,
-    Package,
-    Truck,
-    Settings,
-    MoreHorizontal,
-    Mail,
-    Calendar as CalendarIcon
-} from "lucide-react";
+import { AlertTriangle, CalendarDays, Heart, Package, Truck, Users } from "lucide-react";
+
+import { Card, CardHeader, EmptyState, StatCard, StatusBadge, Table, TBody, THead, Td, Th, Tr } from "@/components/ui";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 import { SenegalMap } from "@/components/senegal-map";
 
-export function QuickLaunchpad() {
-    const items = [
-        { label: "Donneurs", icon: Users, href: "/donneurs" },
-        { label: "Nouveau Don", icon: Heart, href: "/dons/nouveau" },
-        { label: "Stock", icon: Package, href: "/stock" },
-        { label: "Commandes", icon: Truck, href: "/distribution" },
-        { label: "Paramètres", icon: Settings, href: "/admin/roles" },
-    ];
-
-    return (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 h-full">
-            <div className="flex items-center justify-between p-4 border-b border-gray-100">
-                <h2 className="font-semibold text-gray-800 flex items-center gap-2">
-                    <span className="border border-gray-300 rounded px-1 text-xs">-</span> Quick Launchpad
-                </h2>
-                <button className="text-gray-400 hover:text-gray-600">
-                    <MoreHorizontal className="h-5 w-5" />
-                </button>
-            </div>
-            <div className="p-8 flex justify-around items-center h-[200px]">
-                {items.map((item) => (
-                    <Link
-                        key={item.label}
-                        href={item.href}
-                        className="flex flex-col items-center gap-3 group"
-                    >
-                        <div className="h-16 w-16 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
-                            <item.icon className="h-8 w-8" />
-                        </div>
-                        <span className="text-sm font-medium text-gray-600 group-hover:text-blue-600">{item.label}</span>
-                    </Link>
-                ))}
-            </div>
-        </div>
-    );
-}
-
-export function CalendarWidget() {
-    return (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 h-full">
-            <div className="flex items-center justify-between p-4 border-b border-gray-100">
-                <h2 className="font-semibold text-gray-800 flex items-center gap-2">
-                    <span className="border border-gray-300 rounded px-1 text-xs">-</span> Today's Calendar
-                </h2>
-                <div className="flex items-center gap-2">
-                    <button className="bg-[#00a8b3] text-white text-xs px-2 py-1 rounded">New Event</button>
-                    <button className="text-blue-500 text-xs">My Calendar</button>
-                    <MoreHorizontal className="h-5 w-5 text-gray-400" />
-                </div>
-            </div>
-            <div className="p-4">
-                <div className="flex gap-4">
-                    <div className="flex flex-col items-center w-12 pt-2">
-                        <span className="text-xs font-semibold text-gray-500">Fri</span>
-                        <span className="text-2xl font-bold text-gray-800">31</span>
-                    </div>
-                    <div className="flex-1 relative h-[180px] border-l border-gray-200 pl-4">
-                        {/* Timeline lines */}
-                        {[5, 6, 7, 8].map(hour => (
-                            <div key={hour} className="absolute w-full border-t border-dashed border-gray-100" style={{ top: `${(hour - 5) * 60}px` }}>
-                                <span className="absolute -left-12 -top-2 text-xs text-gray-400">{hour}:00 AM</span>
-                            </div>
-                        ))}
-
-                        {/* Event */}
-                        <div className="absolute top-2 left-4 right-0 bg-[#e74c3c] text-white p-2 rounded text-sm font-medium shadow-sm">
-                            Standup meeting
-                        </div>
-
-                        {/* Current time line */}
-                        <div className="absolute top-[80px] w-full border-t border-red-400 z-10"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-export function RecentOrders() {
-    const [activeTab, setActiveTab] = useState<'validees' | 'servies' | 'attente'>('attente');
-
-    const tabs = [
-        { id: 'validees' as const, label: 'Validées', count: 0 },
-        { id: 'servies' as const, label: 'Servies', count: 0 },
-        { id: 'attente' as const, label: 'En attente', count: 15 }
-    ];
-
-    return (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 h-full">
-            <div className="flex items-center justify-between p-4 border-b border-gray-100">
-                <h2 className="font-semibold text-gray-800 flex items-center gap-2">
-                    <span className="border border-gray-300 rounded px-1 text-xs">-</span> Dernières Commandes
-                </h2>
-                <div className="flex items-center gap-2">
-                    <button className="text-blue-500 text-xs font-medium">View All</button>
-                    <MoreHorizontal className="h-5 w-5 text-gray-400" />
-                </div>
-            </div>
-
-            <div className="border-b border-gray-200">
-                <div className="flex px-4">
-                    {tabs.map((tab) => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
-                            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id
-                                ? 'text-gray-800 border-gray-800'
-                                : 'text-gray-500 border-transparent hover:text-gray-700'
-                                }`}
-                        >
-                            {tab.label}
-                            {tab.count > 0 && (
-                                <span className="ml-1 bg-orange-400 text-white text-[10px] px-1.5 py-0.5 rounded-full">
-                                    {tab.count}
-                                </span>
-                            )}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            <div className="bg-gray-600 text-white text-xs font-medium py-2 px-4 grid grid-cols-12 gap-4">
-                <div className="col-span-3">DATE</div>
-                <div className="col-span-4">HOPITAL</div>
-                <div className="col-span-5">STATUT</div>
-            </div>
-
-            <div className="divide-y divide-gray-100">
-                {activeTab === 'attente' && [1, 2, 3].map((i) => (
-                    <div key={i} className="p-4 grid grid-cols-12 gap-4 text-sm hover:bg-gray-50">
-                        <div className="col-span-3 text-gray-500">
-                            <div>Mar 27, 2025</div>
-                            <div className="text-xs">7:25 AM</div>
-                        </div>
-                        <div className="col-span-4 font-medium text-gray-800">
-                            Hôpital Principal
-                            <div className="text-xs text-gray-500 font-normal">Dr. Ndiaye</div>
-                        </div>
-                        <div className="col-span-5 text-gray-600">
-                            <span className="font-medium text-gray-900">Urgent - A+</span>
-                            <div className="text-xs text-gray-500 mt-1 line-clamp-2">
-                                Commande urgente pour bloc opératoire. Besoin de 3 CGR A+ et 2 PFC.
-                            </div>
-                        </div>
-                    </div>
-                ))}
-                {activeTab === 'validees' && (
-                    <div className="p-8 text-center text-gray-500">
-                        Aucune commande validée
-                    </div>
-                )}
-                {activeTab === 'servies' && (
-                    <div className="p-8 text-center text-gray-500">
-                        Aucune commande servie
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-}
-
-export function StockDistribution() {
-    const data = [
-        { name: 'O+', value: 400, color: '#3b82f6' },
-        { name: 'A+', value: 300, color: '#ef4444' },
-        { name: 'B+', value: 300, color: '#22c55e' },
-        { name: 'AB+', value: 200, color: '#eab308' },
-    ];
-
-    return (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 h-full">
-            <div className="flex items-center justify-between p-4 border-b border-gray-100">
-                <h2 className="font-semibold text-gray-800 flex items-center gap-2">
-                    <span className="border border-gray-300 rounded px-1 text-xs">-</span> Stock par Groupe
-                </h2>
-                <MoreHorizontal className="h-5 w-5 text-gray-400" />
-            </div>
-            <div className="h-[250px] w-full p-4">
-                <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                        <Pie
-                            data={data}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={60}
-                            outerRadius={80}
-                            paddingAngle={5}
-                            dataKey="value"
-                        >
-                            {data.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                        </Pie>
-                        <Tooltip />
-                        <Legend />
-                    </PieChart>
-                </ResponsiveContainer>
-                <div className="text-center text-sm text-gray-500 mt-[-10px]">
-                    Total: 1200 Poches
-                </div>
-            </div>
-        </div>
-    );
-}
-
-export function MapWidget() {
-    // Données simulées pour la démo UI
-    const MOCK_REGION_DATA = {
-        "Dakar": 1450,
-        "Thiès": 890,
-        "Saint-Louis": 450,
-        "Diourbel": 320,
-        "Ziguinchor": 280,
-        "Kaolack": 210,
-        "Tambacounda": 180,
-        "Louga": 150,
-        "Kolda": 120,
-        "Fatick": 110,
-        "Matam": 90,
-        "Kaffrine": 80,
-        "Sédhiou": 60,
-        "Kédougou": 40
+export type DashboardData = {
+    kpis: {
+        donneurs_total: number;
+        dons_30j: number;
+        poches_disponibles: number;
+        poches_peremption_proche: number;
+        commandes_en_cours: number;
     };
+    stock: { type_produit: string; groupe_sanguin: string; count: number }[];
+    commandes_par_statut: Record<string, number>;
+    commandes_recentes: {
+        id: string;
+        statut: string;
+        date_demande: string;
+        hopital: string;
+        lignes: { type_produit: string; groupe_sanguin: string | null; quantite: number }[];
+    }[];
+    donneurs_par_region: Record<string, number>;
+    collectes_a_venir: {
+        id: string;
+        nom: string;
+        lieu: string | null;
+        date_debut: string;
+        date_fin: string;
+        statut: string;
+        objectif_dons: number | null;
+    }[];
+    peremption_alerte_jours: number;
+};
+
+const dateFr = new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "short", year: "numeric" });
+const heureFr = new Intl.DateTimeFormat("fr-FR", { hour: "2-digit", minute: "2-digit" });
+
+function WidgetCard(props: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
+    return (
+        <Card className="h-full overflow-hidden">
+            <CardHeader title={props.title} actions={props.action} />
+            {props.children}
+        </Card>
+    );
+}
+
+function MoreLink({ href, children }: { href: string; children: React.ReactNode }) {
+    return <Link href={href} className="text-sm font-medium text-blue-700 hover:underline">{children}</Link>;
+}
+
+export function KpiRow({ kpis, alertDays }: { kpis: DashboardData["kpis"]; alertDays: number }) {
+    const icon = "h-5 w-5";
+    return (
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-5">
+            <StatCard label="Donneurs enregistrés" value={kpis.donneurs_total.toLocaleString("fr-FR")} href="/donneurs" tone="info" icon={<Users className={icon} />} />
+            <StatCard label="Dons (30 jours)" value={kpis.dons_30j.toLocaleString("fr-FR")} href="/dons" tone="danger" icon={<Heart className={icon} />} />
+            <StatCard label="Poches disponibles" value={kpis.poches_disponibles.toLocaleString("fr-FR")} href="/stock" tone="success" icon={<Package className={icon} />} />
+            <StatCard
+                label={`Péremption ≤ ${alertDays} jours`}
+                value={kpis.poches_peremption_proche.toLocaleString("fr-FR")}
+                hint={kpis.poches_peremption_proche > 0 ? "À distribuer en priorité (FEFO)" : "Aucune poche concernée"}
+                href="/stock"
+                tone={kpis.poches_peremption_proche > 0 ? "warning" : "neutral"}
+                icon={<AlertTriangle className={icon} />}
+            />
+            <StatCard label="Commandes à traiter" value={kpis.commandes_en_cours.toLocaleString("fr-FR")} href="/distribution/commandes" tone="neutral" icon={<Truck className={icon} />} />
+        </div>
+    );
+}
+
+export function UpcomingCollectes({ collectes }: { collectes: DashboardData["collectes_a_venir"] }) {
+    return (
+        <WidgetCard title="Prochaines collectes" action={<MoreLink href="/collectes">Tout voir</MoreLink>}>
+            {collectes.length === 0 ? (
+                <EmptyState title="Aucune collecte planifiée" icon={<CalendarDays className="h-6 w-6" />} />
+            ) : (
+                <ul className="divide-y divide-gray-100">
+                    {collectes.map((c) => {
+                        const d = new Date(c.date_debut);
+                        return (
+                            <li key={c.id}>
+                                <Link href={`/collectes/${c.id}`} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50">
+                                    <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-lg bg-brand-50 text-brand-700">
+                                        <span className="text-sm font-semibold leading-none">{d.getDate()}</span>
+                                        <span className="text-[10px] uppercase">{d.toLocaleDateString("fr-FR", { month: "short" })}</span>
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="truncate text-sm font-medium text-gray-900">{c.nom}</p>
+                                        <p className="truncate text-xs text-gray-500">{c.lieu ?? "Lieu à préciser"}</p>
+                                    </div>
+                                    {c.statut === "EN_COURS" ? <StatusBadge status="EN_COURS" /> : null}
+                                </Link>
+                            </li>
+                        );
+                    })}
+                </ul>
+            )}
+        </WidgetCard>
+    );
+}
+
+const STATUT_LABELS: Record<string, string> = {
+    BROUILLON: "En attente de validation",
+    VALIDEE: "Validée — à servir",
+    SERVIE: "Servie",
+    ANNULEE: "Annulée",
+};
+
+export function RecentOrders({ commandes, parStatut }: { commandes: DashboardData["commandes_recentes"]; parStatut: Record<string, number> }) {
+    const resume = ["BROUILLON", "VALIDEE", "SERVIE"].map((s) => ({ statut: s, count: parStatut[s] ?? 0 }));
 
     return (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 h-full">
-            <div className="flex items-center justify-between p-4 border-b border-gray-100">
-                <h2 className="font-semibold text-gray-800 flex items-center gap-2">
-                    <span className="border border-gray-300 rounded px-1 text-xs">-</span> Répartition des Donneurs
-                </h2>
-                <MoreHorizontal className="h-5 w-5 text-gray-400" />
+        <WidgetCard title="Commandes à traiter" action={<MoreLink href="/distribution/commandes">Toutes les commandes</MoreLink>}>
+            <div className="flex flex-wrap gap-2 border-b border-gray-100 px-5 py-3 text-xs">
+                {resume.map((r) => (
+                    <span key={r.statut} className="rounded-full bg-gray-100 px-2.5 py-1 text-gray-700">
+                        {STATUT_LABELS[r.statut]} : <strong className="tabular-nums">{r.count}</strong>
+                    </span>
+                ))}
             </div>
-            <div className="p-4 h-[400px] flex items-center justify-center">
-                <SenegalMap data={MOCK_REGION_DATA} />
-            </div>
-        </div>
+            {commandes.length === 0 ? (
+                <EmptyState title="Aucune commande en attente" description="Les nouvelles commandes des hôpitaux apparaîtront ici." icon={<Truck className="h-6 w-6" />} />
+            ) : (
+                <Table>
+                    <THead>
+                        <tr>
+                            <Th>Date</Th>
+                            <Th>Hôpital</Th>
+                            <Th>Produits</Th>
+                            <Th>Statut</Th>
+                        </tr>
+                    </THead>
+                    <TBody>
+                        {commandes.map((c) => {
+                            const d = new Date(c.date_demande);
+                            return (
+                                <Tr key={c.id}>
+                                    <Td className="whitespace-nowrap text-gray-600">
+                                        {dateFr.format(d)} <span className="text-xs text-gray-400">{heureFr.format(d)}</span>
+                                    </Td>
+                                    <Td className="font-medium">
+                                        <Link href={`/distribution/commandes/${c.id}`} className="hover:underline">{c.hopital}</Link>
+                                    </Td>
+                                    <Td className="text-gray-600">
+                                        {c.lignes.map((l) => `${l.quantite} ${l.type_produit}${l.groupe_sanguin ? ` ${l.groupe_sanguin}` : ""}`).join(", ") || "—"}
+                                    </Td>
+                                    <Td><StatusBadge status={c.statut} /></Td>
+                                </Tr>
+                            );
+                        })}
+                    </TBody>
+                </Table>
+            )}
+        </WidgetCard>
+    );
+}
+
+const GROUP_COLORS: Record<string, string> = {
+    "O+": "#3b82f6", "O-": "#1d4ed8",
+    "A+": "#ef4444", "A-": "#b91c1c",
+    "B+": "#22c55e", "B-": "#15803d",
+    "AB+": "#eab308", "AB-": "#a16207",
+};
+
+export function StockDistribution({ stock }: { stock: DashboardData["stock"] }) {
+    const byGroup = new Map<string, number>();
+    for (const s of stock) byGroup.set(s.groupe_sanguin, (byGroup.get(s.groupe_sanguin) ?? 0) + s.count);
+    const data = [...byGroup.entries()]
+        .map(([name, value]) => ({ name, value, color: GROUP_COLORS[name] ?? "#9ca3af" }))
+        .sort((a, b) => b.value - a.value);
+    const total = data.reduce((sum, d) => sum + d.value, 0);
+
+    return (
+        <WidgetCard title="Stock disponible par groupe" action={<MoreLink href="/stock">Détail</MoreLink>}>
+            {total === 0 ? (
+                <EmptyState title="Aucune poche disponible" description="Les poches libérées et en stock apparaîtront ici." icon={<Package className="h-6 w-6" />} />
+            ) : (
+                <div className="h-[250px] w-full p-4">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                            <Pie data={data} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={3} dataKey="value">
+                                {data.map((entry) => (
+                                    <Cell key={entry.name} fill={entry.color} />
+                                ))}
+                            </Pie>
+                            <Tooltip />
+                            <Legend />
+                        </PieChart>
+                    </ResponsiveContainer>
+                    <div className="text-center text-sm text-gray-500 mt-[-10px]">
+                        Total : {total.toLocaleString("fr-FR")} poche{total > 1 ? "s" : ""}
+                    </div>
+                </div>
+            )}
+        </WidgetCard>
+    );
+}
+
+// Noms de région tels qu'attendus par la carte (voir senegal-map.tsx).
+const REGIONS = [
+    "Dakar", "Thiès", "Saint-Louis", "Diourbel", "Ziguinchor", "Kaolack", "Tambacounda",
+    "Louga", "Kolda", "Fatick", "Matam", "Kaffrine", "Sédhiou", "Kédougou",
+];
+
+function normalize(s: string) {
+    return s.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[\s_-]+/g, "").toUpperCase();
+}
+
+export function MapWidget({ parRegion }: { parRegion: Record<string, number> }) {
+    const canonical = new Map(REGIONS.map((r) => [normalize(r), r]));
+    const data: Record<string, number> = {};
+    let nonLocalises = 0;
+    for (const [raw, count] of Object.entries(parRegion)) {
+        const name = canonical.get(normalize(raw));
+        if (name) data[name] = (data[name] ?? 0) + count;
+        else nonLocalises += count;
+    }
+    const total = Object.values(data).reduce((a, b) => a + b, 0);
+
+    return (
+        <WidgetCard title="Répartition des donneurs par région">
+            {total === 0 ? (
+                <EmptyState title="Aucun donneur localisé" description="Renseignez la région des donneurs pour alimenter la carte." />
+            ) : (
+                <div className="p-4 h-[400px] flex flex-col items-center justify-center">
+                    <SenegalMap data={data} />
+                    {nonLocalises > 0 ? (
+                        <p className="mt-2 text-xs text-gray-500">{nonLocalises} donneur(s) avec une région non reconnue.</p>
+                    ) : null}
+                </div>
+            )}
+        </WidgetCard>
     );
 }

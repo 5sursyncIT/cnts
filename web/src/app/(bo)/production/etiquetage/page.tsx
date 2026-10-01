@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import bwipjs from 'bwip-js';
 import { Printer, RefreshCw, AlertTriangle, Check, FileText } from 'lucide-react';
+import { Alert, Button, Card, CardBody, CardHeader, Field, Input, PageHeader } from '@/components/ui';
 
 // --- Types ---
 
@@ -24,7 +25,6 @@ const INITIAL_DATA: LabelData = {
 
 export default function LabelingPage() {
   const [data, setData] = useState<LabelData>(INITIAL_DATA);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [validation, setValidation] = useState<{valid: boolean, message: string} | null>(null);
   const [validating, setValidating] = useState(false);
   
@@ -148,151 +148,130 @@ export default function LabelingPage() {
     window.print();
   };
 
+  const FIELDS: { key: keyof LabelData; label: string; hint: string }[] = [
+    { key: 'din', label: 'Numéro de don (DIN)', hint: 'Format : =A9999YYNNNNNNCC' },
+    { key: 'productCode', label: 'Code produit', hint: 'Format : =Eaaaabbbb' },
+    { key: 'aboRh', label: 'Code ABO/Rh', hint: 'Format : =%gg00' },
+    { key: 'expiration', label: 'Date de péremption', hint: 'Format : &>CYYMMDDHHmm' },
+  ];
+
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-8">
-      <div className="flex justify-between items-center print:hidden">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Étiquetage ISBT 128</h1>
-          <p className="text-gray-500">Génération d'étiquettes conformes pour les produits sanguins finis.</p>
-        </div>
-        <button
-          onClick={handlePrint}
-          className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm"
-        >
-          <Printer size={18} />
-          Imprimer l'étiquette
-        </button>
+    <div className="space-y-6">
+      <div className="print:hidden">
+        <PageHeader
+          title="Étiquetage ISBT 128"
+          description="Génération d’étiquettes conformes pour les produits sanguins finis"
+          actions={
+            <Button onClick={handlePrint} icon={<Printer className="h-4 w-4" aria-hidden="true" />}>
+              Imprimer l’étiquette
+            </Button>
+          }
+        />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Formulaire de saisie */}
-        <div className="lg:col-span-1 space-y-6 bg-white p-6 rounded-xl border border-gray-200 shadow-sm print:hidden">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <FileText size={20} className="text-gray-500" />
-            Données du Produit
-          </h2>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Numéro de Don (DIN)</label>
-            <input
-              type="text"
-              value={data.din}
-              onChange={(e) => setData({ ...data, din: e.target.value })}
-              className="w-full rounded-lg border-gray-300 border p-2 font-mono"
-            />
-            <p className="text-xs text-gray-500 mt-1">Format: =A9999YYNNNNNNCC</p>
-          </div>
+        <Card className="print:hidden lg:col-span-1">
+          <CardHeader
+            title={
+              <span className="inline-flex items-center gap-2">
+                <FileText className="h-5 w-5 text-gray-500" aria-hidden="true" />
+                Données du produit
+              </span>
+            }
+          />
+          <CardBody className="space-y-4">
+            {FIELDS.map((f) => (
+              <Field key={f.key} label={f.label} hint={f.hint}>
+                <Input
+                  type="text"
+                  value={data[f.key]}
+                  onChange={(e) => setData({ ...data, [f.key]: e.target.value })}
+                  className="font-mono"
+                  spellCheck={false}
+                  autoComplete="off"
+                />
+              </Field>
+            ))}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Code Produit</label>
-            <input
-              type="text"
-              value={data.productCode}
-              onChange={(e) => setData({ ...data, productCode: e.target.value })}
-              className="w-full rounded-lg border-gray-300 border p-2 font-mono"
-            />
-            <p className="text-xs text-gray-500 mt-1">Format: =Eaaaabbbb</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Code ABO/Rh</label>
-            <input
-              type="text"
-              value={data.aboRh}
-              onChange={(e) => setData({ ...data, aboRh: e.target.value })}
-              className="w-full rounded-lg border-gray-300 border p-2 font-mono"
-            />
-            <p className="text-xs text-gray-500 mt-1">Format: =%gg00</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Date d'expiration</label>
-            <input
-              type="text"
-              value={data.expiration}
-              onChange={(e) => setData({ ...data, expiration: e.target.value })}
-              className="w-full rounded-lg border-gray-300 border p-2 font-mono"
-            />
-            <p className="text-xs text-gray-500 mt-1">Format: &amp;&gt;CYYMMDDHHmm</p>
-          </div>
-
-          <div className="pt-4 border-t border-gray-100">
-            {validating ? (
-                <div className="flex items-center gap-2 text-gray-500 bg-gray-50 p-3 rounded-lg text-sm">
-                    <RefreshCw size={16} className="animate-spin" />
-                    Vérification ISBT 128...
+            <div className="border-t border-gray-100 pt-4" aria-live="polite">
+              {validating ? (
+                <div className="flex items-center gap-2 rounded-lg bg-gray-50 p-3 text-sm text-gray-600">
+                  <RefreshCw className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  Vérification ISBT 128…
                 </div>
-            ) : validation?.valid ? (
-                <div className="flex items-center gap-2 text-green-700 bg-green-50 p-3 rounded-lg text-sm">
-                    <Check size={16} />
-                    {validation.message}
-                </div>
-            ) : (
-                <div className="flex items-center gap-2 text-red-700 bg-red-50 p-3 rounded-lg text-sm">
-                    <AlertTriangle size={16} />
-                    {validation?.message || "Données non conformes"}
-                </div>
-            )}
-          </div>
-        </div>
+              ) : validation?.valid ? (
+                <Alert tone="success" className="flex items-center gap-2">
+                  <Check className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  {validation.message}
+                </Alert>
+              ) : (
+                <Alert tone="danger" className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  {validation?.message || "Données non conformes"}
+                </Alert>
+              )}
+            </div>
+          </CardBody>
+        </Card>
 
-        {/* Aperçu de l'étiquette (Zone imprimable) */}
-        <div className="lg:col-span-2">
-          <div className="bg-white p-8 rounded-xl border border-gray-200 shadow-sm flex flex-col items-center justify-center min-h-[600px] print:shadow-none print:border-none print:p-0">
-            {/* Simulation d'une étiquette 100mm x 100mm (approximatif à l'écran) */}
-            <div className="w-[100mm] h-[100mm] bg-white border border-gray-300 relative p-4 grid grid-cols-2 grid-rows-2 gap-2 print:border-none">
-              
-              {/* Quadrant 1: DIN */}
-              <div className="border-r border-b border-gray-200 p-2 flex flex-col items-start justify-between">
-                <span className="text-[8px] uppercase font-bold">Donation Identification Number</span>
-                <canvas ref={canvasDinRef} className="max-w-full" />
+        {/* Aperçu de l'étiquette (zone imprimable) */}
+        <div className="label-print-area lg:col-span-2">
+          <Card className="flex min-h-[600px] flex-col items-center justify-center overflow-x-auto p-6 sm:p-8 print:min-h-0 print:rounded-none print:border-none print:p-0 print:shadow-none">
+            {/* Simulation d'une étiquette 100 mm x 100 mm (approximatif à l'écran) */}
+            <div className="relative grid h-[100mm] w-[100mm] shrink-0 grid-cols-2 grid-rows-2 gap-2 border border-gray-300 bg-white p-4 text-gray-900 print:border-none">
+              {/* Quadrant 1 : DIN */}
+              <div className="flex flex-col items-start justify-between border-b border-r border-gray-200 p-2">
+                <span className="text-[8px] font-bold uppercase">Numéro de don (DIN)</span>
+                <canvas ref={canvasDinRef} className="max-w-full" aria-label={`Code-barres DIN ${data.din}`} role="img" />
               </div>
 
-              {/* Quadrant 2: ABO/Rh */}
-              <div className="border-b border-gray-200 p-2 flex flex-col items-end justify-between">
-                <span className="text-[8px] uppercase font-bold text-right">ABO/Rh Blood Group</span>
-                <canvas ref={canvasAboRef} className="max-w-full" />
+              {/* Quadrant 2 : ABO/Rh */}
+              <div className="flex flex-col items-end justify-between border-b border-gray-200 p-2">
+                <span className="text-right text-[8px] font-bold uppercase">Groupe ABO/Rh</span>
+                <canvas ref={canvasAboRef} className="max-w-full" aria-label={`Code-barres ABO/Rh ${data.aboRh}`} role="img" />
               </div>
 
-              {/* Quadrant 3: Product Code */}
-              <div className="border-r border-gray-200 p-2 flex flex-col items-start justify-between">
-                <span className="text-[8px] uppercase font-bold">Product Code</span>
-                <canvas ref={canvasProdRef} className="max-w-full" />
+              {/* Quadrant 3 : code produit */}
+              <div className="flex flex-col items-start justify-between border-r border-gray-200 p-2">
+                <span className="text-[8px] font-bold uppercase">Code produit</span>
+                <canvas ref={canvasProdRef} className="max-w-full" aria-label={`Code-barres produit ${data.productCode}`} role="img" />
                 <div className="mt-2 text-[10px] leading-tight">
-                  <strong>Concentré de Globules Rouges</strong><br />
+                  <strong>Concentré de globules rouges</strong>
+                  <br />
                   Déleucocyté, CPD
                 </div>
               </div>
 
-              {/* Quadrant 4: Expiration */}
-              <div className="p-2 flex flex-col items-end justify-between">
-                <span className="text-[8px] uppercase font-bold text-right">Expiration Date</span>
-                <canvas ref={canvasExpRef} className="max-w-full" />
+              {/* Quadrant 4 : péremption */}
+              <div className="flex flex-col items-end justify-between p-2">
+                <span className="text-right text-[8px] font-bold uppercase">Date de péremption</span>
+                <canvas ref={canvasExpRef} className="max-w-full" aria-label={`Code-barres péremption ${data.expiration}`} role="img" />
               </div>
 
-              {/* Center: DataMatrix (Overlay) */}
-              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-2">
-                <canvas ref={canvasDataMatrixRef} />
+              {/* Centre : DataMatrix (superposé) */}
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white p-2">
+                <canvas ref={canvasDataMatrixRef} aria-label="Code DataMatrix combiné" role="img" />
               </div>
-
             </div>
-            
-            <p className="mt-8 text-sm text-gray-400 print:hidden">
-              Aperçu de l'étiquette finale (Format standard 100x100mm)
+
+            <p className="mt-6 text-sm text-gray-500 print:hidden">
+              Aperçu de l’étiquette finale (format standard 100 × 100 mm)
             </p>
-          </div>
+          </Card>
         </div>
       </div>
-      
+
       <style jsx global>{`
         @media print {
           body * {
             visibility: hidden;
           }
-          .lg\\:col-span-2, .lg\\:col-span-2 * {
+          .label-print-area,
+          .label-print-area * {
             visibility: visible;
           }
-          .lg\\:col-span-2 {
+          .label-print-area {
             position: absolute;
             left: 0;
             top: 0;
@@ -302,7 +281,7 @@ export default function LabelingPage() {
             padding: 0;
             border: none;
           }
-          /* Hide non-print elements inside the print area if any */
+          /* Masquer les éléments non imprimables dans la zone d'impression */
           .print\\:hidden {
             display: none !important;
           }

@@ -2,249 +2,143 @@
 
 import { useState } from "react";
 import { apiClient } from "@/lib/api-client";
-import {
-    FileText, Download, Calendar, Clock, CheckCircle, XCircle,
-    Loader, Filter, RefreshCw
-} from "lucide-react";
+import { Download, Info } from "lucide-react";
+import { Button, Card, CardBody, CardHeader, Field, Input, PageHeader } from "@/components/ui";
 
-type ReportType = "monthly" | "compliance" | "kpi" | "activity" | "stock";
+type ReportType = "activity" | "stock";
 type ReportFormat = "pdf" | "excel" | "csv";
 
-// Composant pour générer un rapport
+const REPORT_TYPES: { value: ReportType; label: string; description: string; usesPeriod: boolean }[] = [
+    { value: "activity", label: "Rapport d'activité", description: "Dons de la période : DIN, date, type, statut de qualification", usesPeriod: true },
+    { value: "stock", label: "État du stock", description: "Poches disponibles à l'instant T, triées par date de péremption", usesPeriod: false },
+];
+
+function isoDate(d: Date) {
+    return d.toISOString().split("T")[0];
+}
+
 function ReportGenerator() {
     const [reportType, setReportType] = useState<ReportType>("activity");
     const [format, setFormat] = useState<ReportFormat>("pdf");
     const [startDate, setStartDate] = useState(() => {
         const date = new Date();
         date.setDate(date.getDate() - 30);
-        return date.toISOString().split('T')[0];
+        return isoDate(date);
     });
-    const [endDate, setEndDate] = useState(() => {
-        return new Date().toISOString().split('T')[0];
-    });
-    const [isGenerating, setIsGenerating] = useState(false);
+    const [endDate, setEndDate] = useState(() => isoDate(new Date()));
+
+    const selected = REPORT_TYPES.find((t) => t.value === reportType)!;
+    const periodError = selected.usesPeriod && startDate > endDate ? "La date de début doit précéder la date de fin." : null;
 
     const handleGenerate = () => {
-        setIsGenerating(true);
-        // Simuler la génération
-        setTimeout(() => {
-            apiClient.analytics.exportReport({ format, report_type: reportType as "activity" | "stock" });
-            setIsGenerating(false);
-        }, 500);
+        if (periodError) return;
+        apiClient.analytics.exportReport({
+            format,
+            report_type: reportType,
+            ...(selected.usesPeriod ? { start_date: startDate, end_date: endDate } : {}),
+        });
     };
 
-    const reportTypes = [
-        { value: "activity", label: "Rapport d'Activité", description: "Dons, qualifications, rejets" },
-        { value: "stock", label: "État du Stock", description: "Inventaire, péremptions" },
-        { value: "monthly", label: "Rapport Mensuel", description: "Synthèse complète du mois" },
-        { value: "compliance", label: "Conformité", description: "Respect des normes et procédures" },
-        { value: "kpi", label: "Tableau de Bord KPI", description: "Indicateurs de performance" },
-    ];
-
     return (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Générer un Nouveau Rapport</h2>
-
-            <div className="space-y-4">
-                {/* Type de rapport */}
-                <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-2">Type de rapport</label>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {reportTypes.map((type) => (
+        <Card>
+            <CardHeader title="Générer un rapport" />
+            <CardBody className="space-y-5">
+                <fieldset>
+                    <legend className="mb-2 block text-sm font-medium text-gray-800">Type de rapport</legend>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                        {REPORT_TYPES.map((type) => (
                             <button
                                 key={type.value}
-                                onClick={() => setReportType(type.value as ReportType)}
-                                className={`p-4 rounded-lg border-2 text-left transition ${reportType === type.value
-                                        ? "border-blue-500 bg-blue-50"
-                                        : "border-gray-200 hover:border-gray-300"
+                                type="button"
+                                aria-pressed={reportType === type.value}
+                                onClick={() => setReportType(type.value)}
+                                className={`rounded-lg border-2 p-4 text-left transition-colors ${reportType === type.value
+                                    ? "border-blue-500 bg-blue-50"
+                                    : "border-gray-200 hover:border-gray-300"
                                     }`}
                             >
                                 <div className="font-medium text-gray-900">{type.label}</div>
-                                <div className="text-sm text-gray-700 mt-1">{type.description}</div>
+                                <div className="mt-1 text-sm text-gray-600">{type.description}</div>
                             </button>
                         ))}
                     </div>
-                </div>
+                </fieldset>
 
-                {/* Période */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-900 mb-2">Date de début</label>
-                        <input
-                            type="date"
-                            value={startDate}
-                            onChange={(e) => setStartDate(e.target.value)}
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900"
-                        />
+                {selected.usesPeriod ? (
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <Field label="Date de début" error={periodError ?? undefined}>
+                            <Input
+                                id="rapport-debut"
+                                type="date"
+                                value={startDate}
+                                max={endDate}
+                                onChange={(e) => setStartDate(e.target.value)}
+                            />
+                        </Field>
+                        <Field label="Date de fin">
+                            <Input
+                                id="rapport-fin"
+                                type="date"
+                                value={endDate}
+                                min={startDate}
+                                onChange={(e) => setEndDate(e.target.value)}
+                            />
+                        </Field>
                     </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-900 mb-2">Date de fin</label>
-                        <input
-                            type="date"
-                            value={endDate}
-                            onChange={(e) => setEndDate(e.target.value)}
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900"
-                        />
-                    </div>
-                </div>
+                ) : (
+                    <p className="flex items-center gap-2 text-sm text-gray-600">
+                        <Info className="h-4 w-4 text-gray-500" aria-hidden="true" />
+                        Ce rapport reflète le stock au moment du téléchargement.
+                    </p>
+                )}
 
-                {/* Format */}
-                <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-2">Format d'export</label>
-                    <div className="flex gap-3">
+                <fieldset>
+                    <legend className="mb-2 block text-sm font-medium text-gray-800">Format d&apos;export</legend>
+                    <div className="flex flex-wrap gap-3">
                         {(["pdf", "excel", "csv"] as ReportFormat[]).map((fmt) => (
                             <button
                                 key={fmt}
+                                type="button"
+                                aria-pressed={format === fmt}
                                 onClick={() => setFormat(fmt)}
-                                className={`flex-1 px-4 py-2.5 rounded-lg border-2 font-medium text-sm transition ${format === fmt
-                                        ? "border-blue-500 bg-blue-50 text-blue-700"
-                                        : "border-gray-200 text-gray-900 hover:border-gray-300"
+                                className={`min-w-20 flex-1 rounded-lg border-2 px-4 py-2 text-sm font-medium transition-colors ${format === fmt
+                                    ? "border-blue-500 bg-blue-50 text-blue-700"
+                                    : "border-gray-200 text-gray-900 hover:border-gray-300"
                                     }`}
                             >
                                 {fmt.toUpperCase()}
                             </button>
                         ))}
                     </div>
-                </div>
+                </fieldset>
 
-                {/* Bouton Générer */}
-                <button
-                    onClick={handleGenerate}
-                    disabled={isGenerating}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
-                >
-                    {isGenerating ? (
-                        <>
-                            <Loader className="h-5 w-5 animate-spin" />
-                            Génération en cours...
-                        </>
-                    ) : (
-                        <>
-                            <Download className="h-5 w-5" />
-                            Générer le rapport
-                        </>
-                    )}
-                </button>
-            </div>
-        </div>
-    );
-}
-
-// Composant pour l'historique des rapports
-function ReportHistory() {
-    // Données de démonstration
-    const reports = [
-        {
-            id: "1",
-            type: "Rapport d'Activité",
-            period: "01/01/2026 - 31/01/2026",
-            format: "PDF",
-            generatedAt: "05/02/2026 14:23",
-            status: "ready" as const,
-        },
-        {
-            id: "2",
-            type: "État du Stock",
-            period: "15/01/2026 - 15/02/2026",
-            format: "Excel",
-            generatedAt: "04/02/2026 09:15",
-            status: "ready" as const,
-        },
-        {
-            id: "3",
-            type: "Rapport Mensuel",
-            period: "01/12/2025 - 31/12/2025",
-            format: "PDF",
-            generatedAt: "02/01/2026 16:45",
-            status: "ready" as const,
-        },
-    ];
-
-    return (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-            <div className="p-6 border-b border-gray-200">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-semibold text-gray-900">Historique des Rapports</h2>
-                    <button className="text-sm text-blue-700 hover:text-blue-800 font-medium flex items-center gap-1">
-                        <RefreshCw className="h-4 w-4" />
-                        Actualiser
-                    </button>
-                </div>
-                <p className="text-sm text-gray-700 mt-1">30 derniers jours</p>
-            </div>
-
-            <div className="divide-y divide-gray-200">
-                {reports.map((report) => (
-                    <div key={report.id} className="p-6 hover:bg-gray-50 transition">
-                        <div className="flex items-start justify-between">
-                            <div className="flex items-start gap-4 flex-1">
-                                <div className="p-2 bg-blue-100 rounded-lg">
-                                    <FileText className="h-5 w-5 text-blue-700" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <h3 className="font-semibold text-gray-900">{report.type}</h3>
-                                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm text-gray-700">
-                                        <div className="flex items-center gap-1">
-                                            <Calendar className="h-4 w-4" />
-                                            {report.period}
-                                        </div>
-                                        <div className="flex items-center gap-1">
-                                            <Clock className="h-4 w-4" />
-                                            {report.generatedAt}
-                                        </div>
-                                        <div className="px-2 py-0.5 bg-gray-100 rounded text-xs font-medium text-gray-800">
-                                            {report.format}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-2 ml-4">
-                                {report.status === "ready" ? (
-                                    <>
-                                        <CheckCircle className="h-5 w-5 text-green-600" />
-                                        <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg flex items-center gap-2 transition">
-                                            <Download className="h-4 w-4" />
-                                            Télécharger
-                                        </button>
-                                    </>
-                                ) : report.status === "failed" ? (
-                                    <XCircle className="h-5 w-5 text-red-600" />
-                                ) : (
-                                    <Loader className="h-5 w-5 text-gray-400 animate-spin" />
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            {reports.length === 0 && (
-                <div className="p-12 text-center">
-                    <FileText className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Aucun rapport</h3>
-                    <p className="text-gray-700">
-                        Générez votre premier rapport pour commencer
+                <div className="space-y-2">
+                    <Button
+                        onClick={handleGenerate}
+                        disabled={Boolean(periodError)}
+                        className="w-full sm:w-auto"
+                        icon={<Download className="h-4 w-4" aria-hidden="true" />}
+                    >
+                        Télécharger le rapport
+                    </Button>
+                    <p className="text-xs text-gray-500">
+                        Les rapports sont générés à la demande et ne sont pas archivés : conservez le fichier téléchargé.
                     </p>
                 </div>
-            )}
-        </div>
+            </CardBody>
+        </Card>
     );
 }
 
 export default function RapportsPage() {
     return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div>
-                <h1 className="text-2xl font-bold text-gray-900">Rapports & Exports</h1>
-                <p className="text-gray-700 mt-1">Générez et téléchargez des rapports personnalisés</p>
-            </div>
-
-            {/* Générateur */}
+        <div>
+            <PageHeader
+                title="Rapports & exports"
+                description="Téléchargez les rapports d'activité et d'état du stock."
+                back={{ href: "/analytics", label: "Analytique" }}
+            />
             <ReportGenerator />
-
-            {/* Historique */}
-            <ReportHistory />
         </div>
     );
 }

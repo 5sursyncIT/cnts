@@ -5,7 +5,22 @@ import type { LigneCommandeCreate } from "@cnts/api";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { AlertTriangle, Plus, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { apiClient } from "@/lib/api-client";
+import { apiErrorMessage } from "@/lib/api-error";
+import {
+  Alert,
+  Button,
+  ButtonLink,
+  Card,
+  CardBody,
+  CardHeader,
+  Field,
+  Input,
+  PageHeader,
+  Select,
+} from "@/components/ui";
 
 export default function NouvelleCommandePage() {
   const router = useRouter();
@@ -35,7 +50,7 @@ export default function NouvelleCommandePage() {
   // Supprimer une ligne
   const supprimerLigne = (index: number) => {
     if (lignes.length === 1) {
-      alert("Une commande doit contenir au moins une ligne");
+      toast.error("Une commande doit contenir au moins une ligne");
       return;
     }
     setLignes(lignes.filter((_, i) => i !== index));
@@ -63,12 +78,12 @@ export default function NouvelleCommandePage() {
     e.preventDefault();
 
     if (!hopitalId) {
-      alert("Veuillez sélectionner un hôpital");
+      toast.error("Veuillez sélectionner un hôpital");
       return;
     }
 
     if (lignes.length === 0) {
-      alert("Veuillez ajouter au moins une ligne");
+      toast.error("Veuillez ajouter au moins une ligne");
       return;
     }
 
@@ -82,9 +97,11 @@ export default function NouvelleCommandePage() {
         })),
       });
 
+      toast.success("Commande créée");
       router.push(`/distribution/commandes/${commande.id}`);
     } catch (err) {
       console.error("Erreur création commande:", err);
+      toast.error(apiErrorMessage(err, "Création de la commande impossible"));
     }
   };
 
@@ -107,272 +124,194 @@ export default function NouvelleCommandePage() {
   ];
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="mb-6">
-        <Link
-          href="/distribution/commandes"
-          className="text-blue-600 hover:text-blue-900 text-sm mb-2 inline-block"
-        >
-          ← Retour aux commandes
-        </Link>
-        <h1 className="text-2xl font-bold text-gray-900">Nouvelle Commande</h1>
-        <p className="text-gray-700 mt-1">
-          Créer une demande de sang pour un hôpital
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Nouvelle commande"
+        description="Demande de produits sanguins pour un hôpital"
+        back={{ href: "/distribution/commandes", label: "Commandes" }}
+      />
 
-      {/* Erreur globale */}
       {createStatus === "error" && createError && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
-          <div className="text-sm font-medium text-red-900">
-            Erreur lors de la création
-          </div>
-          <div className="text-sm text-red-600 mt-1">
-            {createError.status === 404
-              ? "Hôpital introuvable"
-              : `Erreur ${createError.status}: ${JSON.stringify(
-                  createError.body
-                )}`}
-          </div>
-        </div>
+        <Alert tone="danger">
+          <p className="font-medium">Erreur lors de la création</p>
+          <p className="mt-1">
+            {createError.status === 404 ? "Hôpital introuvable." : apiErrorMessage(createError, "Création impossible")}
+          </p>
+        </Alert>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Formulaire principal */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Informations générales */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold mb-4">
-                Informations générales
-              </h2>
-
-              <div className="space-y-4">
-                {/* Hôpital */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Hôpital destinataire <span className="text-red-600">*</span>
-                  </label>
-                  <select
-                    value={hopitalId}
-                    onChange={(e) => setHopitalId(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  >
-                    <option value="">-- Sélectionner un hôpital --</option>
+            <Card>
+              <CardHeader title="Informations générales" />
+              <CardBody className="grid gap-4 sm:grid-cols-2">
+                <Field
+                  label="Hôpital destinataire"
+                  required
+                  hint={
+                    hopitaux?.length === 0 ? (
+                      <>
+                        Aucun hôpital disponible.{" "}
+                        <Link href="/distribution/hopitaux" className="text-blue-700 hover:underline">
+                          Gérer les hôpitaux
+                        </Link>
+                      </>
+                    ) : undefined
+                  }
+                >
+                  <Select value={hopitalId} onChange={(e) => setHopitalId(e.target.value)}>
+                    <option value="">Sélectionner un hôpital</option>
                     {hopitaux?.map((h) => (
                       <option key={h.id} value={h.id}>
                         {h.nom}
-                        {h.convention_actif ? "" : " (Convention inactive)"}
+                        {h.convention_actif ? "" : " (convention inactive)"}
                       </option>
                     ))}
-                  </select>
-                  {hopitaux?.length === 0 && (
-                    <p className="mt-2 text-sm text-gray-800">
-                      Aucun hôpital disponible.{" "}
-                      <Link
-                        href="/distribution/hopitaux/nouveau"
-                        className="text-blue-600 hover:text-blue-900"
-                      >
-                        Créer un hôpital →
-                      </Link>
-                    </p>
-                  )}
-                </div>
+                  </Select>
+                </Field>
 
-                {/* Date de livraison */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Date de livraison prévue (optionnel)
-                  </label>
-                  <input
+                <Field label="Date de livraison prévue" hint="Facultative">
+                  <Input
                     type="date"
                     value={dateLivraisonPrevue}
                     onChange={(e) => setDateLivraisonPrevue(e.target.value)}
                     min={new Date().toISOString().split("T")[0]}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
-                </div>
-              </div>
-            </div>
+                </Field>
+              </CardBody>
+            </Card>
 
-            {/* Lignes de commande */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Lignes de commande</h2>
-                <button
-                  type="button"
-                  onClick={ajouterLigne}
-                  className="text-sm text-blue-600 hover:text-blue-900"
-                >
-                  + Ajouter une ligne
-                </button>
-              </div>
-
-              <div className="space-y-4">
+            <Card>
+              <CardHeader
+                title="Lignes de commande"
+                actions={
+                  <Button variant="secondary" size="sm" onClick={ajouterLigne} icon={<Plus className="h-4 w-4" aria-hidden="true" />}>
+                    Ajouter une ligne
+                  </Button>
+                }
+              />
+              <CardBody className="space-y-4">
                 {lignes.map((ligne, index) => (
-                  <div
-                    key={index}
-                    className="p-4 bg-gray-50 rounded-md border border-gray-200"
-                  >
-                    <div className="flex justify-between items-start mb-3">
-                      <span className="text-sm font-medium text-gray-700">
-                        Ligne {index + 1}
-                      </span>
+                  <fieldset key={index} className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                    <div className="mb-3 flex items-center justify-between">
+                      <legend className="text-sm font-medium text-gray-800">Ligne {index + 1}</legend>
                       {lignes.length > 1 && (
-                        <button
-                          type="button"
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => supprimerLigne(index)}
-                          className="text-sm text-red-600 hover:text-red-900"
+                          aria-label={`Supprimer la ligne ${index + 1}`}
+                          icon={<Trash2 className="h-4 w-4 text-brand-600" aria-hidden="true" />}
                         >
                           Supprimer
-                        </button>
+                        </Button>
                       )}
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      {/* Type de produit */}
-                      <div>
-                        <label className="block text-xs text-gray-800 mb-1">
-                          Type de produit
-                        </label>
-                        <select
-                          value={ligne.type_produit}
-                          onChange={(e) =>
-                            modifierLigne(index, "type_produit", e.target.value)
-                          }
-                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                      <Field label="Type de produit">
+                        <Select value={ligne.type_produit} onChange={(e) => modifierLigne(index, "type_produit", e.target.value)}>
                           {TYPES_PRODUITS.map((t) => (
                             <option key={t.value} value={t.value}>
                               {t.label}
                             </option>
                           ))}
-                        </select>
-                      </div>
+                        </Select>
+                      </Field>
 
-                      {/* Groupe sanguin */}
-                      <div>
-                        <label className="block text-xs text-gray-800 mb-1">
-                          Groupe sanguin
-                        </label>
-                        <select
+                      <Field label="Groupe sanguin">
+                        <Select
                           value={ligne.groupe_sanguin || ""}
-                          onChange={(e) =>
-                            modifierLigne(
-                              index,
-                              "groupe_sanguin",
-                              e.target.value || undefined
-                            )
-                          }
-                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          onChange={(e) => modifierLigne(index, "groupe_sanguin", e.target.value || undefined)}
                         >
-                          <option value="">-- Indifférent --</option>
+                          <option value="">Indifférent</option>
                           {GROUPES_SANGUINS.map((g) => (
                             <option key={g.value} value={g.value}>
                               {g.label}
                             </option>
                           ))}
-                        </select>
-                      </div>
+                        </Select>
+                      </Field>
 
-                      {/* Quantité */}
-                      <div>
-                        <label className="block text-xs text-gray-800 mb-1">
-                          Quantité
-                        </label>
-                        <input
+                      <Field label="Quantité">
+                        <Input
                           type="number"
                           value={ligne.quantite}
-                          onChange={(e) =>
-                            modifierLigne(
-                              index,
-                              "quantite",
-                              parseInt(e.target.value, 10)
-                            )
-                          }
+                          onChange={(e) => modifierLigne(index, "quantite", parseInt(e.target.value, 10))}
                           min="1"
-                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
-                      </div>
+                      </Field>
                     </div>
-                  </div>
+                  </fieldset>
                 ))}
-              </div>
 
-              {/* Total */}
-              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                <div className="flex justify-between text-sm">
-                  <span className="text-blue-900 font-medium">
-                    Total de poches demandées:
-                  </span>
-                  <span className="text-blue-900 font-bold">{totalPoches}</span>
+                <div className="flex justify-between rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+                  <span className="font-medium">Total de poches demandées</span>
+                  <span className="font-semibold tabular-nums">{totalPoches}</span>
                 </div>
-              </div>
-            </div>
+              </CardBody>
+            </Card>
 
-            {/* Actions */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex justify-end gap-3">
-                <Link
-                  href="/distribution/commandes"
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition"
-                >
-                  Annuler
-                </Link>
-                <button
-                  type="submit"
-                  disabled={createStatus === "loading" || !hopitalId}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition disabled:opacity-50"
-                >
-                  {createStatus === "loading"
-                    ? "Création..."
-                    : "Créer la commande"}
-                </button>
-              </div>
+            <div className="flex flex-wrap justify-end gap-3">
+              <ButtonLink href="/distribution/commandes" variant="secondary">
+                Annuler
+              </ButtonLink>
+              <Button type="submit" loading={createStatus === "loading"} disabled={!hopitalId}>
+                {createStatus === "loading" ? "Création…" : "Créer la commande"}
+              </Button>
             </div>
           </form>
         </div>
 
-        {/* Sidebar */}
-        <div className="space-y-6">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 className="font-medium text-blue-900 mb-2 text-sm">
-              Workflow de commande
-            </h3>
-            <ul className="text-xs text-blue-900 space-y-1">
-              <li>1. Créer la commande (statut BROUILLON)</li>
-              <li>2. Valider la commande (réserve les poches)</li>
-              <li>3. Affecter les receveurs (cross-matching)</li>
-              <li>4. Servir la commande (marque DISTRIBUE)</li>
-            </ul>
-          </div>
+        <aside className="space-y-4">
+          <Alert tone="info">
+            <p className="mb-2 font-medium">Circuit de la commande</p>
+            <ol className="list-inside list-decimal space-y-1 text-xs">
+              <li>Création de la commande (brouillon)</li>
+              <li>Validation (réservation des poches)</li>
+              <li>Affectation des receveurs (cross-matching)</li>
+              <li>Service de la commande (poches distribuées)</li>
+            </ol>
+          </Alert>
 
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <h3 className="font-medium text-yellow-900 mb-2 text-sm">
-              ⚠️ Réservation automatique
-            </h3>
-            <p className="text-xs text-yellow-900">
-              Lors de la validation, les poches seront automatiquement réservées
-              selon FEFO (First Expired, First Out) parmi les poches DISPONIBLE.
+          <Alert tone="warning">
+            <p className="mb-1 flex items-center gap-2 font-medium">
+              <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+              Réservation automatique
             </p>
-          </div>
+            <p className="text-xs">
+              À la validation, les poches sont réservées automatiquement selon la règle FEFO (premier périmé, premier
+              sorti) parmi les poches disponibles.
+            </p>
+          </Alert>
 
-          <div className="bg-white rounded-lg shadow p-4">
-            <h3 className="font-medium text-gray-900 mb-2 text-sm">
-              Groupes sanguins compatibles
-            </h3>
-            <ul className="text-xs text-gray-700 space-y-1">
-              <li>• <strong>O-</strong>: Donneur universel</li>
-              <li>• <strong>AB+</strong>: Receveur universel</li>
-              <li>• <strong>A</strong> reçoit: A, O</li>
-              <li>• <strong>B</strong> reçoit: B, O</li>
-              <li>• <strong>+</strong> reçoit: + ou -</li>
-              <li>• <strong>-</strong> reçoit: - seulement</li>
-            </ul>
-          </div>
-        </div>
+          <Card>
+            <CardBody>
+              <h2 className="mb-2 text-sm font-semibold text-gray-900">Compatibilités ABO/Rh</h2>
+              <ul className="list-inside list-disc space-y-1 text-xs text-gray-700">
+                <li>
+                  <strong>O−</strong> : donneur universel
+                </li>
+                <li>
+                  <strong>AB+</strong> : receveur universel
+                </li>
+                <li>
+                  <strong>A</strong> reçoit : A, O
+                </li>
+                <li>
+                  <strong>B</strong> reçoit : B, O
+                </li>
+                <li>
+                  <strong>Rh+</strong> reçoit : Rh+ ou Rh−
+                </li>
+                <li>
+                  <strong>Rh−</strong> reçoit : Rh− seulement
+                </li>
+              </ul>
+            </CardBody>
+          </Card>
+        </aside>
       </div>
     </div>
   );

@@ -730,3 +730,169 @@ export interface ReportGenerateRequest {
   end_date: string;    // ISO date
   format: ReportFormat;
 }
+
+// ============================================================================
+// COLLECTES
+// ============================================================================
+
+export type CampagneStatut = "PLANIFIEE" | "EN_COURS" | "TERMINEE" | "ANNULEE";
+export type CampagneType = "FIXE" | "MOBILE" | "ENTREPRISE" | "UNIVERSITE";
+export type InscriptionStatut = "INSCRIT" | "PRESENT" | "PRELEVE" | "ABSENT" | "ANNULE";
+
+export type CampagneCollecte = {
+  id: UUID;
+  code: string;
+  nom: string;
+  site_id: UUID | null;
+  type_campagne: CampagneType;
+  lieu: string | null;
+  adresse: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  date_debut: string;
+  date_fin: string;
+  objectif_dons: number | null;
+  statut: CampagneStatut;
+  responsable_id: UUID | null;
+  materiel_notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CampagneCollecteUpdate = Partial<
+  Pick<CampagneCollecte, "nom" | "lieu" | "adresse" | "date_debut" | "date_fin" | "objectif_dons" | "materiel_notes">
+>;
+
+export type InscriptionCollecte = {
+  id: UUID;
+  campagne_id: UUID;
+  donneur_id: UUID | null;
+  nom: string | null;
+  telephone: string | null;
+  creneau: string | null;
+  statut: InscriptionStatut;
+  created_at: string;
+};
+
+export type InscriptionCollecteCreate = {
+  donneur_id?: UUID;
+  nom?: string;
+  telephone?: string;
+  creneau?: string;
+};
+
+export type BilanCampagne = {
+  campagne_id: UUID;
+  code: string;
+  objectif_dons: number | null;
+  inscrits: number;
+  presents: number;
+  preleves: number;
+  absents: number;
+  taux_presence: number;
+  taux_realisation: number | null;
+};
+
+// ============================================================================
+// EIR
+// ============================================================================
+
+export type TypeEIR =
+  | "REACTION_FEBRILE"
+  | "ALLERGIQUE"
+  | "HEMOLYTIQUE_AIGUE"
+  | "TACO"
+  | "TRALI"
+  | "INFECTION_BACTERIENNE"
+  | "INCOMPATIBILITE_ABO"
+  | "AUTRE";
+export type GraviteEIR = "GRADE_1" | "GRADE_2" | "GRADE_3" | "GRADE_4";
+export type ImputabiliteEIR = "CERTAINE" | "PROBABLE" | "POSSIBLE" | "DOUTEUSE" | "EXCLUE";
+export type EvolutionEIR = "GUERISON_SANS_SEQUELLE" | "SEQUELLE" | "DECES" | "EN_COURS";
+export type StatutInvestigationEIR = "OUVERTE" | "EN_COURS" | "CLOTUREE";
+
+export type EIR = {
+  id: UUID;
+  acte_transfusionnel_id: UUID;
+  receveur_id: UUID;
+  poche_id: UUID;
+  type_eir: TypeEIR;
+  gravite: GraviteEIR;
+  imputabilite: ImputabiliteEIR;
+  delai_apparition_minutes: number | null;
+  symptomes: string | null;
+  conduite_tenue: string | null;
+  evolution: EvolutionEIR;
+  declarant_id: UUID | null;
+  date_declaration: string | null;
+  statut_investigation: StatutInvestigationEIR;
+  conclusion: string | null;
+  created_at: string;
+};
+
+export type EIRCreate = {
+  acte_transfusionnel_id: UUID;
+  type_eir: TypeEIR;
+  gravite: GraviteEIR;
+  imputabilite: ImputabiliteEIR;
+  delai_apparition_minutes?: number;
+  symptomes?: string;
+  conduite_tenue?: string;
+  evolution?: EvolutionEIR;
+};
+
+export type EIRUpdate = {
+  imputabilite?: ImputabiliteEIR;
+  conduite_tenue?: string;
+  evolution?: EvolutionEIR;
+  statut_investigation?: StatutInvestigationEIR;
+  conclusion?: string;
+};
+
+export type StatistiquesEIR = {
+  total: number;
+  par_type: Record<string, number>;
+  par_gravite: Record<string, number>;
+  investigations_ouvertes: number;
+};
+
+export type ReservationCommande = {
+  reservation_id: UUID;
+  ligne_commande_id: UUID | null;
+  poche_id: UUID;
+  din: string;
+  type_produit: string;
+  groupe_sanguin: string | null;
+  date_peremption: string;
+  expires_at: string | null;
+  receveur_id: UUID | null;
+  crossmatch_requis: boolean;
+  crossmatch: "COMPATIBLE" | "INCOMPATIBLE" | null;
+};
+
+export type MotifDestruction =
+  | "PEREMPTION"
+  | "SEROLOGIE_POSITIVE"
+  | "NON_CONFORMITE"
+  | "RUPTURE_CHAINE_FROID"
+  | "RAPPEL"
+  | "CASSE_FUITE"
+  | "AUTRE";
+
+export type PocheDestruction = { motif: MotifDestruction; commentaire?: string };
+
+export type EtiquetteProduit = {
+  poche_id: UUID;
+  don_id: UUID;
+  din: string;
+  type_produit: string;
+  code_produit_isbt: string | null;
+  lot: string | null;
+  division: number | null;
+  date_prelevement: string;
+  date_peremption: string;
+  groupe_sanguin: string | null;
+  statut_stock: string;
+  statut_distribution: string;
+  payload: { datamatrix_content?: string } & Record<string, unknown>;
+};

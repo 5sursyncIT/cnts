@@ -4,7 +4,11 @@ import { useCreateUser } from "@cnts/api";
 import type { UserRole } from "@cnts/api";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Copy, Eye, EyeOff, KeyRound } from "lucide-react";
+import { toast } from "sonner";
 import { apiClient } from "@/lib/api-client";
+import { apiErrorMessage } from "@/lib/api-error";
+import { Alert, Button, Card, CardBody, Field, Input, Modal, PageHeader, Select } from "@/components/ui";
 
 export default function NouveauUtilisateurPage() {
     const router = useRouter();
@@ -19,6 +23,8 @@ export default function NouveauUtilisateurPage() {
 
     const [showPassword, setShowPassword] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
+    // Identifiants affichés une seule fois après création.
+    const [created, setCreated] = useState<{ email: string; password: string } | null>(null);
 
     const generatePassword = () => {
         const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
@@ -35,9 +41,9 @@ export default function NouveauUtilisateurPage() {
 
         // Email validation
         if (!formData.email.trim()) {
-            newErrors.email = "L'email est requis";
+            newErrors.email = "L'e-mail est requis";
         } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-            newErrors.email = "Format d'email invalide";
+            newErrors.email = "Format d'e-mail invalide";
         }
 
         // Password validation
@@ -67,148 +73,157 @@ export default function NouveauUtilisateurPage() {
         }
 
         try {
-            const user = await createMutation.mutate({
+            await createMutation.mutate({
                 email: formData.email.trim().toLowerCase(),
                 password: formData.password,
                 role: formData.role,
                 is_active: formData.is_active,
             });
 
-            alert(
-                `Utilisateur créé avec succès!\n\nEmail: ${formData.email}\nMot de passe temporaire: ${formData.password}\n\nVeuillez communiquer ce mot de passe à l'utilisateur de manière sécurisée.`
-            );
-            router.push("/parametrage/utilisateurs");
-        } catch (error: any) {
-            alert(`Erreur: ${error?.body?.detail || "Échec de la création"}`);
+            toast.success("Utilisateur créé");
+            setCreated({ email: formData.email, password: formData.password });
+        } catch (err) {
+            toast.error(apiErrorMessage(err, "Échec de la création"));
         }
     };
 
+    const copyCredentials = async () => {
+        if (!created) return;
+        try {
+            await navigator.clipboard.writeText(`E-mail : ${created.email}\nMot de passe temporaire : ${created.password}`);
+            toast.success("Identifiants copiés");
+        } catch {
+            toast.error("Copie impossible : sélectionnez le texte manuellement.");
+        }
+    };
+
+    const finish = () => {
+        setCreated(null);
+        router.push("/parametrage/utilisateurs");
+    };
+
     return (
-        <div className="p-6 max-w-2xl mx-auto">
-            {/* Header */}
-            <div className="mb-6">
-                <h1 className="text-2xl font-bold text-gray-900">Nouvel Utilisateur</h1>
-                <p className="text-gray-700 mt-1">
-                    Créer un compte utilisateur avec attribution de rôle
-                </p>
-            </div>
+        <div className="max-w-2xl space-y-4">
+            <PageHeader
+                title="Nouvel utilisateur"
+                description="Créer un compte et lui attribuer un rôle."
+                back={{ href: "/parametrage/utilisateurs", label: "Utilisateurs" }}
+            />
 
-            {/* Form */}
-            <div className="bg-white rounded-lg shadow p-6">
-                <form onSubmit={handleSubmit}>
-                    {/* Email */}
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Email <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                            type="email"
-                            value={formData.email}
-                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                            placeholder="utilisateur@cnts.gouv.sn"
-                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 ${errors.email ? "border-red-500" : "border-gray-300"
-                                }`}
-                        />
-                        {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
-                    </div>
+            <Card>
+                <CardBody>
+                    <form onSubmit={handleSubmit} noValidate className="space-y-5">
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <Field label="E-mail" required error={errors.email}>
+                                <Input
+                                    type="email"
+                                    autoComplete="off"
+                                    value={formData.email}
+                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                    placeholder="utilisateur@cnts.gouv.sn"
+                                />
+                            </Field>
 
-                    {/* Role */}
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Rôle <span className="text-red-500">*</span>
-                        </label>
-                        <select
-                            value={formData.role}
-                            onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                        >
-                            <option value="admin">Administrateur</option>
-                            <option value="biologiste">Biologiste</option>
-                            <option value="technicien_labo">Technicien Laboratoire</option>
-                            <option value="agent_distribution">Agent Distribution</option>
-                            <option value="agent_accueil">Agent Accueil</option>
-                        </select>
-                        <p className="text-gray-500 text-xs mt-1">
-                            Détermine les permissions de l'utilisateur dans le système
-                        </p>
-                    </div>
-
-                    {/* Password */}
-                    <div className="mb-4">
-                        <div className="flex justify-between items-center mb-1">
-                            <label className="block text-sm font-medium text-gray-700">
-                                Mot de Passe Temporaire <span className="text-red-500">*</span>
-                            </label>
-                            <button
-                                type="button"
-                                onClick={generatePassword}
-                                className="text-sm text-blue-600 hover:text-blue-700"
-                            >
-                                Générer sécurisé
-                            </button>
+                            <Field label="Rôle" required hint="Détermine les permissions de l’utilisateur.">
+                                <Select
+                                    value={formData.role}
+                                    onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })}
+                                >
+                                    <option value="admin">Administrateur</option>
+                                    <option value="biologiste">Biologiste</option>
+                                    <option value="technicien_labo">Technicien laboratoire</option>
+                                    <option value="agent_distribution">Agent distribution</option>
+                                    <option value="agent_accueil">Agent accueil</option>
+                                </Select>
+                            </Field>
                         </div>
-                        <div className="relative">
-                            <input
-                                type={showPassword ? "text" : "password"}
-                                value={formData.password}
-                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                placeholder="Minimum 12 caractères"
-                                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.password ? "border-red-500" : "border-gray-300"
-                                    }`}
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm"
-                            >
-                                {showPassword ? "Masquer" : "Afficher"}
-                            </button>
-                        </div>
-                        {errors.password && (
-                            <p className="text-red-500 text-sm mt-1">{errors.password}</p>
-                        )}
-                        <p className="text-gray-500 text-xs mt-1">
-                            Min. 12 caractères avec majuscules, minuscules et chiffres
-                        </p>
-                    </div>
 
-                    {/* Active */}
-                    <div className="mb-6">
-                        <label className="flex items-center gap-2">
+                        <div className="space-y-2">
+                            <Field
+                                label="Mot de passe temporaire"
+                                required
+                                error={errors.password}
+                                hint="Au moins 12 caractères avec majuscules, minuscules et chiffres."
+                            >
+                                <Input
+                                    type={showPassword ? "text" : "password"}
+                                    autoComplete="new-password"
+                                    value={formData.password}
+                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                    placeholder="Minimum 12 caractères"
+                                    className="font-mono"
+                                />
+                            </Field>
+                            <div className="flex flex-wrap gap-2">
+                                <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    aria-pressed={showPassword}
+                                    icon={showPassword ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
+                                >
+                                    {showPassword ? "Masquer" : "Afficher"}
+                                </Button>
+                                <Button size="sm" variant="secondary" onClick={generatePassword} icon={<KeyRound className="h-4 w-4" aria-hidden="true" />}>
+                                    Générer un mot de passe sûr
+                                </Button>
+                            </div>
+                        </div>
+
+                        <label htmlFor="user-active" className="flex items-center gap-2 text-sm font-medium text-gray-800">
                             <input
+                                id="user-active"
                                 type="checkbox"
                                 checked={formData.is_active}
                                 onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                             />
-                            <span className="text-sm font-medium text-gray-700">Compte actif</span>
+                            Compte actif
                         </label>
-                    </div>
 
-                    {/* Actions */}
-                    <div className="flex gap-3 mt-6">
-                        <button
-                            type="submit"
-                            disabled={createMutation.isLoading}
-                            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition disabled:bg-gray-400"
-                        >
-                            {createMutation.isLoading ? "Création..." : "Créer l'Utilisateur"}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => router.back()}
-                            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition"
-                        >
-                            Annuler
-                        </button>
-                    </div>
-                </form>
-            </div>
+                        <div className="flex flex-wrap justify-end gap-2 border-t border-gray-100 pt-4">
+                            <Button type="button" variant="secondary" onClick={() => router.back()}>
+                                Annuler
+                            </Button>
+                            <Button type="submit" loading={createMutation.isLoading}>
+                                Créer l’utilisateur
+                            </Button>
+                        </div>
+                    </form>
+                </CardBody>
+            </Card>
 
-            {/* Security Warning */}
-            <div className="mt-4 text-sm text-gray-800 bg-yellow-50 border border-yellow-200 rounded p-4">
-                <strong>⚠️ Sécurité:</strong> Le mot de passe sera affiché une seule fois après création. L'utilisateur devra le changer à sa première connexion.
-            </div>
+            <Alert tone="warning">
+                <strong>Sécurité :</strong> le mot de passe sera affiché une seule fois après création. L’utilisateur devra le changer à sa première connexion.
+            </Alert>
+
+            <Modal
+                open={created !== null}
+                onClose={finish}
+                title="Utilisateur créé"
+                description="Communiquez ce mot de passe temporaire à l’utilisateur de manière sécurisée. Il ne sera plus affiché."
+                footer={
+                    <>
+                        <Button variant="secondary" onClick={copyCredentials} icon={<Copy className="h-4 w-4" aria-hidden="true" />}>
+                            Copier
+                        </Button>
+                        <Button onClick={finish}>Terminer</Button>
+                    </>
+                }
+            >
+                {created && (
+                    <dl className="space-y-3 text-sm">
+                        <div>
+                            <dt className="text-gray-600">E-mail</dt>
+                            <dd className="mt-0.5 break-all font-medium text-gray-900">{created.email}</dd>
+                        </div>
+                        <div>
+                            <dt className="text-gray-600">Mot de passe temporaire</dt>
+                            <dd className="mt-0.5 break-all rounded-lg bg-gray-50 px-3 py-2 font-mono text-gray-900 select-all">{created.password}</dd>
+                        </div>
+                    </dl>
+                )}
+            </Modal>
         </div>
     );
 }

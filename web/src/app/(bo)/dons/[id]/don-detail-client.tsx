@@ -9,8 +9,36 @@ import {
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
+import { AlertTriangle, CheckCircle2, FlaskConical, Printer, RefreshCw, XCircle } from "lucide-react";
+import { toast } from "sonner";
+
 import { apiClient } from "@/lib/api-client";
+import { apiErrorMessage } from "@/lib/api-error";
+import { renderProductLabelHtml } from "@/lib/labels/product-label";
+import {
+  Alert,
+  Badge,
+  Button,
+  ButtonLink,
+  Card,
+  CardBody,
+  CardHeader,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  PageHeader,
+  StatusBadge,
+  type BadgeTone,
+} from "@/components/ui";
 import ApheresisCollection from "./apheresis-collection";
+
+const TESTS = ["ABO", "RH", "VIH", "VHB", "VHC", "SYPHILIS"];
+
+function resultatTone(resultat: string): BadgeTone {
+  if (resultat === "NEGATIF" || ["A", "B", "AB", "O", "POS", "NEG"].includes(resultat)) return "success";
+  if (resultat === "POSITIF") return "danger";
+  return "neutral";
+}
 
 export default function DonDetailClient({ canManageApheresis }: { canManageApheresis: boolean }) {
   const params = useParams();
@@ -29,245 +57,173 @@ export default function DonDetailClient({ canManageApheresis }: { canManageApher
   const [downloadingEtiquette, setDownloadingEtiquette] = useState(false);
 
   const handleDownloadEtiquette = async (pocheId: string) => {
+    // Fenêtre ouverte dans le geste utilisateur (sinon bloquée comme popup).
+    const printWindow = window.open("", "_blank", "width=480,height=520");
+    if (!printWindow) {
+      toast.error("Autorisez les fenêtres pop-up pour imprimer l’étiquette.");
+      return;
+    }
     setDownloadingEtiquette(true);
     try {
-      const response = await fetch(`/api/poches/${pocheId}/etiquette-produit`);
-      if (!response.ok) throw new Error(`Erreur ${response.status}`);
-      const etiquette = await response.json();
-
-      // Créer un blob de texte avec les données de l'étiquette
-      const text = `
-ÉTIQUETTE DE DON - ISBT 128
-================================
-
-DIN: ${etiquette.din}
-Date du don: ${new Date(etiquette.date_prelevement).toLocaleDateString("fr-FR")}
-Groupe sanguin: ${etiquette.groupe_sanguin || "Non déterminé"}
-Type produit: ${etiquette.type_produit}
-Poche: ${etiquette.poche_id}
-Date de péremption: ${new Date(etiquette.date_peremption).toLocaleDateString(
-        "fr-FR"
-      )}
-
-⚠️ ANONYME - Ne contient aucune information personnelle du donneur
-================================
-      `.trim();
-
-      const blob = new Blob([text], { type: "text/plain" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `etiquette_${etiquette.din}_${pocheId}.txt`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      const etiquette = await apiClient.poches.etiquetteProduit(pocheId);
+      printWindow.document.open();
+      printWindow.document.write(renderProductLabelHtml(etiquette));
+      printWindow.document.close();
     } catch (err) {
-      alert("Erreur lors de la génération de l'étiquette");
-      console.error(err);
+      printWindow.close();
+      toast.error(apiErrorMessage(err, "Erreur lors de la génération de l’étiquette"));
     } finally {
       setDownloadingEtiquette(false);
     }
   };
 
+  const back = { href: "/dons", label: "Retour à la liste" };
+
   if (donStatus === "loading") {
     return (
-      <div className="p-6 max-w-6xl mx-auto">
-        <div className="text-center py-12 text-gray-500">Chargement...</div>
+      <div className="space-y-6">
+        <PageHeader title="Don" back={back} />
+        <Card>
+          <LoadingState rows={6} />
+        </Card>
       </div>
     );
   }
 
   if (donStatus === "error" || !don) {
     return (
-      <div className="p-6 max-w-6xl mx-auto">
-        <div className="text-center py-12">
-          <div className="text-red-600 mb-2">Erreur de chargement</div>
-          <div className="text-sm text-gray-800">
-            {donError?.status === 404 ? "Don introuvable" : "Erreur inconnue"}
-          </div>
-          <Link
-            href="/dons"
-            className="mt-4 inline-block text-blue-600 hover:text-blue-900"
-          >
-            ← Retour à la liste
-          </Link>
-        </div>
+      <div className="space-y-6">
+        <PageHeader title="Don" back={back} />
+        <Card>
+          <ErrorState
+            title={donError?.status === 404 ? "Don introuvable" : "Chargement impossible"}
+            message={donError?.status === 404 ? "Ce don n’existe pas." : apiErrorMessage(donError, "Erreur inconnue")}
+            onRetry={donError?.status === 404 ? undefined : () => refetchDon()}
+          />
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      {/* Header */}
-      <div className="mb-6">
-        <Link
-          href="/dons"
-          className="text-blue-600 hover:text-blue-900 text-sm mb-2 inline-block"
-        >
-          ← Retour à la liste
-        </Link>
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Don {don.din}</h1>
-            <div className="flex gap-3 mt-2">
-              <span
-                className={`px-3 py-1 text-sm font-semibold rounded-full ${
-                  don.statut_qualification === "LIBERE"
-                    ? "bg-green-100 text-green-900"
-                    : "bg-yellow-100 text-yellow-900"
-                }`}
-              >
-                {don.statut_qualification === "LIBERE"
-                  ? "✓ Libéré"
-                  : "⏳ En attente"}
-              </span>
-            </div>
-          </div>
-          <div className="flex gap-3">
-            {don.statut_qualification !== "LIBERE" && <Link
+    <div className="space-y-6">
+      <PageHeader
+        back={back}
+        title={<span className="font-mono">Don {don.din}</span>}
+        description={
+          <span className="mt-1 flex flex-wrap gap-2">
+            <StatusBadge status={don.statut_qualification} />
+            <Badge tone="neutral">{don.type_don}</Badge>
+          </span>
+        }
+        actions={
+          don.statut_qualification !== "LIBERE" ? (
+            <ButtonLink
               href={`/laboratoire/analyses?don_id=${donId}`}
-              className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition"
+              icon={<FlaskConical className="h-4 w-4" aria-hidden="true" />}
             >
-              + Ajouter analyses
-            </Link>}
-          </div>
-        </div>
-      </div>
+              Ajouter des analyses
+            </ButtonLink>
+          ) : undefined
+        }
+      />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Informations principales */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Carte d'identité du don */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold mb-4">Informations du don</h2>
-            <dl className="grid grid-cols-2 gap-4">
-              <div>
-                <dt className="text-sm font-medium text-gray-500">DIN</dt>
-                <dd className="mt-1 text-sm text-gray-900">
-                  <code className="bg-gray-100 px-2 py-1 rounded">
-                    {don.din}
-                  </code>
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">
-                  Date du don
-                </dt>
-                <dd className="mt-1 text-sm text-gray-900">
-                  {new Date(don.date_don).toLocaleDateString("fr-FR", {
-                    weekday: "long",
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Type</dt>
-                <dd className="mt-1 text-sm text-gray-900">{don.type_don}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">
-                  Créé le
-                </dt>
-                <dd className="mt-1 text-sm text-gray-900">
-                  {new Date(don.created_at).toLocaleDateString("fr-FR")}
-                </dd>
-              </div>
-            </dl>
-
-            {donneur && (
-              <div className="mt-4 pt-4 border-t">
-                <div className="text-sm font-medium text-gray-500 mb-2">
-                  Donneur
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
+          <Card>
+            <CardHeader title="Informations du don" />
+            <CardBody>
+              <dl className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">DIN</dt>
+                  <dd className="mt-1 text-sm text-gray-900">
+                    <code className="rounded bg-gray-100 px-2 py-1">{don.din}</code>
+                  </dd>
                 </div>
-                <Link
-                  href={`/donneurs/${donneur.id}`}
-                  className="text-blue-600 hover:text-blue-900"
-                >
-                  {donneur.nom}, {donneur.prenom} ({donneur.sexe === "H" ? "Homme" : "Femme"})
-                  →
-                </Link>
-              </div>
-            )}
-          </div>
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Date du don</dt>
+                  <dd className="mt-1 text-sm text-gray-900">
+                    {new Date(don.date_don).toLocaleDateString("fr-FR", {
+                      weekday: "long",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Type</dt>
+                  <dd className="mt-1 text-sm text-gray-900">{don.type_don}</dd>
+                </div>
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Créé le</dt>
+                  <dd className="mt-1 text-sm text-gray-900">
+                    {new Date(don.created_at).toLocaleDateString("fr-FR")}
+                  </dd>
+                </div>
+                {donneur && (
+                  <div className="border-t border-gray-100 pt-4 sm:col-span-2">
+                    <dt className="text-sm font-medium text-gray-500">Donneur</dt>
+                    <dd className="mt-1 text-sm">
+                      <Link href={`/donneurs/${donneur.id}`} className="font-medium text-blue-600 hover:text-blue-800">
+                        {donneur.nom}, {donneur.prenom} ({donneur.sexe === "H" ? "Homme" : "Femme"}) →
+                      </Link>
+                    </dd>
+                  </div>
+                )}
+              </dl>
+            </CardBody>
+          </Card>
 
-          {/* Analyses biologiques */}
-          <div className="bg-white rounded-lg shadow">
-            <div className="p-6 border-b border-gray-200 flex justify-between items-center">
-              <h2 className="text-lg font-semibold text-gray-900">Analyses biologiques</h2>
-              <button
-                onClick={() => refetchAnalyses()}
-                className="text-sm text-blue-600 hover:text-blue-900"
-              >
-                Actualiser
-              </button>
-            </div>
+          <Card className="overflow-hidden">
+            <CardHeader
+              title="Analyses biologiques"
+              actions={
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => refetchAnalyses()}
+                  icon={<RefreshCw className="h-4 w-4" aria-hidden="true" />}
+                >
+                  Actualiser
+                </Button>
+              }
+            />
 
             {!analyses || analyses.length === 0 ? (
-              <div className="p-6 text-center text-gray-700">
-                Aucune analyse enregistrée
-                <div className="mt-2">
-                  <Link
-                    href={`/laboratoire/analyses?don_id=${donId}`}
-                    className="text-blue-600 hover:text-blue-900 text-sm"
-                  >
-                    Ajouter des analyses →
-                  </Link>
-                </div>
-              </div>
+              <EmptyState
+                icon={<FlaskConical className="h-6 w-6" aria-hidden="true" />}
+                title="Aucune analyse enregistrée"
+                action={
+                  <ButtonLink href={`/laboratoire/analyses?don_id=${donId}`} size="sm" variant="secondary">
+                    Ajouter des analyses
+                  </ButtonLink>
+                }
+              />
             ) : (
-              <div className="divide-y divide-gray-200">
-                {["ABO", "RH", "VIH", "VHB", "VHC", "SYPHILIS"].map(
-                  (testType) => {
-                    const analyse = analyses.find(
-                      (a) => a.type_test === testType
-                    );
-                    return (
-                      <div
-                        key={testType}
-                        className="p-4 flex justify-between items-center"
-                      >
-                        <div>
-                          <div className="font-medium text-gray-900">
-                            {testType}
-                          </div>
-                          {analyse && analyse.note && (
-                            <div className="text-sm text-gray-800 mt-1">
-                              {analyse.note}
-                            </div>
-                          )}
-                        </div>
-                        {analyse ? (
-                          <span
-                            className={`px-3 py-1 text-sm font-semibold rounded-full ${
-                              analyse.resultat === "NEGATIF" ||
-                              ["A", "B", "AB", "O", "POS", "NEG"].includes(
-                                analyse.resultat
-                              )
-                                ? "bg-green-100 text-green-900"
-                                : analyse.resultat === "POSITIF"
-                                ? "bg-red-100 text-red-900"
-                                : "bg-gray-100 text-gray-800"
-                            }`}
-                          >
-                            {analyse.resultat}
-                          </span>
-                        ) : (
-                          <span className="px-3 py-1 text-sm text-gray-700 bg-gray-100 rounded-full">
-                            Non effectué
-                          </span>
+              <ul className="divide-y divide-gray-100">
+                {TESTS.map((testType) => {
+                  const analyse = analyses.find((a) => a.type_test === testType);
+                  return (
+                    <li key={testType} className="flex items-center justify-between gap-3 px-5 py-3">
+                      <div className="min-w-0">
+                        <p className="font-medium text-gray-900">{testType}</p>
+                        {analyse && analyse.note && (
+                          <p className="mt-1 text-sm text-gray-600">{analyse.note}</p>
                         )}
                       </div>
-                    );
-                  }
-                )}
-              </div>
+                      {analyse ? (
+                        <Badge tone={resultatTone(analyse.resultat)}>{analyse.resultat}</Badge>
+                      ) : (
+                        <Badge tone="neutral">Non effectué</Badge>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
             )}
-          </div>
+          </Card>
 
-          {/* Poches associées */}
           {canManageApheresis && ["PLASMAPHERESE", "CYTAPHERESE"].includes(don.type_don) && (
             <ApheresisCollection don={don} onSaved={async () => {
               await refetchDon();
@@ -275,159 +231,121 @@ Date de péremption: ${new Date(etiquette.date_peremption).toLocaleDateString(
             }} />
           )}
 
-          <div className="bg-white rounded-lg shadow">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Poches créées</h2>
-            </div>
+          <Card className="overflow-hidden">
+            <CardHeader title="Poches créées" />
 
             {!don.poches || don.poches.length === 0 ? (
-              <div className="p-6 text-center text-gray-700">
-                Aucune poche créée
-              </div>
+              <EmptyState title="Aucune poche créée" />
             ) : (
-              <div className="divide-y divide-gray-200">
+              <ul className="divide-y divide-gray-100">
                 {don.poches.map((poche) => (
-                  <div
-                    key={poche.id}
-                    className="p-4 hover:bg-gray-50 transition"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="font-medium text-gray-900">
-                          {poche.type_produit}
-                          {poche.groupe_sanguin && ` - ${poche.groupe_sanguin}`}
-                        </div>
-                        <div className="text-sm text-gray-800 mt-1">
-                          Péremption:{" "}
-                          {new Date(poche.date_peremption).toLocaleDateString(
-                            "fr-FR"
-                          )}
-                          {poche.volume_ml && ` • ${poche.volume_ml}ml`}
-                        </div>
-                        <div className="text-sm text-gray-700 mt-1">
-                          {poche.emplacement_stock}
-                        </div>
-                      </div>
-                      <div className="flex flex-col gap-2 items-end">
-                        <button type="button" onClick={() => handleDownloadEtiquette(poche.id)}
-                          disabled={downloadingEtiquette}
-                          className="text-sm font-medium text-blue-700 hover:underline disabled:opacity-50">
-                          Étiquette de cette poche
-                        </button>
-                        <span
-                          className={`px-2 py-1 text-xs font-semibold rounded ${
-                            poche.statut_distribution === "DISPONIBLE"
-                              ? "bg-green-100 text-green-900"
-                              : poche.statut_distribution === "RESERVE"
-                              ? "bg-blue-100 text-blue-900"
-                              : poche.statut_distribution === "DISTRIBUE"
-                              ? "bg-gray-100 text-gray-800"
-                              : "bg-yellow-100 text-yellow-900"
-                          }`}
-                        >
-                          {poche.statut_distribution}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          {poche.statut_stock}
-                        </span>
-                      </div>
+                  <li key={poche.id} className="flex flex-wrap items-start justify-between gap-3 px-5 py-4">
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900">
+                        {poche.type_produit}
+                        {poche.groupe_sanguin && ` · ${poche.groupe_sanguin}`}
+                      </p>
+                      <p className="mt-1 text-sm text-gray-600">
+                        Péremption : {new Date(poche.date_peremption).toLocaleDateString("fr-FR")}
+                        {poche.volume_ml && ` · ${poche.volume_ml} ml`}
+                      </p>
+                      {poche.emplacement_stock && (
+                        <p className="mt-1 text-sm text-gray-500">{poche.emplacement_stock}</p>
+                      )}
                     </div>
-                  </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <div className="flex flex-wrap justify-end gap-1.5">
+                        <StatusBadge status={poche.statut_distribution} />
+                        <StatusBadge status={poche.statut_stock} />
+                      </div>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleDownloadEtiquette(poche.id)}
+                        disabled={downloadingEtiquette}
+                        icon={<Printer className="h-4 w-4" aria-hidden="true" />}
+                      >
+                        Étiquette
+                      </Button>
+                    </div>
+                  </li>
                 ))}
-              </div>
+              </ul>
             )}
-          </div>
+          </Card>
         </div>
 
-        {/* Sidebar - Libération */}
         <div className="space-y-6">
           {liberation && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold mb-4">
-                Statut de libération
-              </h2>
+            <Card>
+              <CardHeader title="Statut de libération" />
+              <CardBody className="space-y-4">
+                <Alert tone={liberation.liberable ? "success" : "danger"}>
+                  <p className="flex items-center gap-2 text-base font-semibold">
+                    {liberation.liberable ? (
+                      <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
+                    ) : (
+                      <XCircle className="h-5 w-5" aria-hidden="true" />
+                    )}
+                    {liberation.liberable ? "Libérable" : "Non libérable"}
+                  </p>
+                  {liberation.raison && <p className="mt-1">{liberation.raison}</p>}
+                </Alert>
 
-              <div
-                className={`p-4 rounded-lg mb-4 ${
-                  liberation.liberable
-                    ? "bg-green-50 border border-green-200"
-                    : "bg-red-50 border border-red-200"
-                }`}
-              >
-                <div
-                  className={`text-lg font-semibold mb-2 ${
-                    liberation.liberable ? "text-green-900" : "text-red-900"
-                  }`}
-                >
-                  {liberation.liberable ? "✓ Libérable" : "✗ Non libérable"}
-                </div>
-                {liberation.raison && (
-                  <div
-                    className={`text-sm ${
-                      liberation.liberable
-                        ? "text-green-700"
-                        : "text-red-700"
-                    }`}
-                  >
-                    {liberation.raison}
+                {liberation.tests_manquants.length > 0 && (
+                  <div>
+                    <p className="mb-2 text-sm font-medium text-gray-700">Tests manquants</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {liberation.tests_manquants.map((test) => (
+                        <Badge key={test} tone="warning">{test}</Badge>
+                      ))}
+                    </div>
                   </div>
                 )}
-              </div>
 
-              {liberation.tests_manquants.length > 0 && (
-                <div className="mb-4">
-                  <div className="text-sm font-medium text-gray-700 mb-2">
-                    Tests manquants:
+                {liberation.tests_positifs.length > 0 && (
+                  <div>
+                    <p className="mb-2 text-sm font-medium text-gray-700">Tests positifs</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {liberation.tests_positifs.map((test) => (
+                        <Badge key={test} tone="danger">{test}</Badge>
+                      ))}
+                    </div>
                   </div>
-                  <ul className="text-sm text-red-600 space-y-1">
-                    {liberation.tests_manquants.map((test) => (
-                      <li key={test}>• {test}</li>
-                    ))}
-                  </ul>
+                )}
+
+                <div className="space-y-2">
+                  {liberation.liberable && (
+                    <ButtonLink href={`/laboratoire/liberation?don_id=${donId}`} variant="success" className="w-full">
+                      Libérer le don
+                    </ButtonLink>
+                  )}
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => refetchLiberation()}
+                    icon={<RefreshCw className="h-4 w-4" aria-hidden="true" />}
+                  >
+                    Recalculer
+                  </Button>
                 </div>
-              )}
-
-              {liberation.tests_positifs.length > 0 && (
-                <div className="mb-4">
-                  <div className="text-sm font-medium text-gray-700 mb-2">
-                    Tests positifs:
-                  </div>
-                  <ul className="text-sm text-red-600 space-y-1">
-                    {liberation.tests_positifs.map((test) => (
-                      <li key={test}>• {test}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {liberation.liberable && (
-                <Link
-                  href={`/laboratoire/liberation?don_id=${donId}`}
-                  className="block w-full mt-4 px-4 py-2 bg-green-600 text-white text-center rounded-md hover:bg-green-700 transition"
-                >
-                  Libérer le don
-                </Link>
-              )}
-
-              <button
-                onClick={() => refetchLiberation()}
-                className="w-full mt-2 px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition"
-              >
-                Recalculer
-              </button>
-            </div>
+              </CardBody>
+            </Card>
           )}
 
-          {/* Règle d'or */}
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <h3 className="font-medium text-red-900 mb-2 text-sm">
-              ⚠️ Règle d'or
-            </h3>
-            <p className="text-xs text-red-900">
-              Aucune poche ne peut être distribuée sans libération biologique
-              validée. Tous les tests doivent être NÉGATIF.
-            </p>
-          </div>
+          <Alert tone="danger">
+            <div className="flex gap-3">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              <div>
+                <p className="font-medium">Règle d’or</p>
+                <p className="mt-1 text-xs">
+                  Aucune poche ne peut être distribuée sans libération biologique
+                  validée. Tous les tests doivent être négatifs.
+                </p>
+              </div>
+            </div>
+          </Alert>
         </div>
       </div>
     </div>

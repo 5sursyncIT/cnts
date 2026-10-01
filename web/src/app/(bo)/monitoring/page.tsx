@@ -4,9 +4,41 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { 
   LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend 
 } from 'recharts';
-import { Activity, Server, Clock, AlertTriangle, CheckCircle, XCircle, Download } from 'lucide-react';
+import { Activity, Server, Clock, AlertTriangle, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
+import {
+  Badge,
+  Button,
+  Card,
+  CardBody,
+  CardHeader,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  PageHeader,
+  Select,
+  StatCard,
+  Table,
+  TBody,
+  THead,
+  Td,
+  Th,
+  Tr,
+  type BadgeTone,
+} from "@/components/ui";
 
-// --- Mock Data --- (Removed, fetched from API)
+const SERVICE_STATUS: Record<string, { label: string; tone: BadgeTone; icon: React.ReactNode }> = {
+  healthy: { label: 'Opérationnel', tone: 'success', icon: <CheckCircle className="h-3.5 w-3.5" aria-hidden="true" /> },
+  degraded: { label: 'Dégradé', tone: 'warning', icon: <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" /> },
+  down: { label: 'Hors service', tone: 'danger', icon: <XCircle className="h-3.5 w-3.5" aria-hidden="true" /> },
+};
+
+const TIME_RANGES = [
+  { value: '1h', label: 'Dernière heure' },
+  { value: '6h', label: 'Dernières 6 heures' },
+  { value: '12h', label: 'Dernières 12 heures' },
+  { value: '24h', label: 'Dernières 24 heures' },
+  { value: '7d', label: '7 derniers jours' },
+];
 
 // --- Components ---
 
@@ -99,255 +131,225 @@ export default function MonitoringPage() {
     };
   }, [fetchMetrics, autoRefreshEnabled, timeRange]);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'healthy': return 'text-green-500 bg-green-50';
-      case 'degraded': return 'text-yellow-500 bg-yellow-50';
-      case 'down': return 'text-red-500 bg-red-50';
-      default: return 'text-gray-500 bg-gray-50';
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'healthy': return <CheckCircle size={18} />;
-      case 'degraded': return <AlertTriangle size={18} />;
-      case 'down': return <XCircle size={18} />;
-      default: return <Activity size={18} />;
-    }
-  };
+  const header = (actions?: React.ReactNode) => (
+    <PageHeader
+      title="Observabilité"
+      description="Performances et santé des services en temps réel."
+      actions={actions}
+    />
+  );
 
   if (!dashboardData) {
     return (
-      <div className="p-6 flex flex-col items-center justify-center h-screen text-gray-700">
-        <div className="mb-3">
-          {refreshState === "error" ? "Impossible de charger le tableau de bord." : "Chargement du tableau de bord..."}
-        </div>
-        {refreshState === "error" && (
-          <button
-            onClick={() => fetchMetrics({ force: true })}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-          >
-            Réessayer
-          </button>
-        )}
+      <div className="space-y-6">
+        {header()}
+        <Card>
+          {refreshState === "error" ? (
+            <ErrorState
+              message={refreshError ? `Impossible de charger le tableau de bord (${refreshError}).` : "Impossible de charger le tableau de bord."}
+              onRetry={() => fetchMetrics({ force: true })}
+            />
+          ) : (
+            <LoadingState rows={8} label="Chargement du tableau de bord…" />
+          )}
+        </Card>
       </div>
     );
   }
 
   const { metrics, services, errors, total_requests, avg_latency, error_rate } = dashboardData;
+  const healthyCount = services.filter((s: any) => s.status === 'healthy').length;
+  const healthyPct = services.length ? Math.round((healthyCount / services.length) * 100) : 0;
+
+  const refreshLabel = autoRefreshEnabled
+    ? refreshState === "loading"
+      ? "Mise à jour…"
+      : refreshState === "error"
+      ? "Connexion interrompue"
+      : "Données à jour"
+    : "Rafraîchissement automatique désactivé";
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-8">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Observabilité Système</h1>
-          <p className="text-gray-700">Monitoring en temps réel des performances et de la santé des services.</p>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-xs text-gray-700" title={refreshError ?? undefined}>
+    <div className="space-y-6">
+      {header(
+        <>
+          <span className="flex items-center gap-2 text-xs text-gray-600" role="status" aria-live="polite" title={refreshError ?? undefined}>
             <span
+              aria-hidden="true"
               className={`h-2 w-2 rounded-full ${
                 refreshState === "loading"
                   ? "bg-blue-500 animate-pulse"
                   : refreshState === "error"
                   ? "bg-red-500"
                   : autoRefreshEnabled
-                  ? "bg-green-500"
+                  ? "bg-emerald-500"
                   : "bg-gray-400"
               }`}
             />
-            <span>
-              {autoRefreshEnabled
-                ? refreshState === "loading"
-                  ? "Mise à jour..."
-                  : refreshState === "error"
-                  ? "Connexion interrompue"
-                  : "Données à jour"
-                : "Rafraîchissement désactivé"}
-            </span>
-          </div>
-          <select 
+            {refreshLabel}
+          </span>
+          <Select
+            aria-label="Période"
             value={timeRange}
             onChange={(e) => setTimeRange(e.target.value)}
-            className="bg-white border border-gray-300 text-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5"
+            className="w-auto"
           >
-            <option value="1h">Dernière heure</option>
-            <option value="6h">Dernières 6 heures</option>
-            <option value="12h">Dernières 12 heures</option>
-            <option value="24h">Dernières 24 heures</option>
-            <option value="7d">7 derniers jours</option>
-          </select>
-          <button className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
-            <Download size={18} />
-            Exporter
-          </button>
-        </div>
+            {TIME_RANGES.map((r) => (
+              <option key={r.value} value={r.value}>{r.label}</option>
+            ))}
+          </Select>
+          <Button
+            variant="secondary"
+            onClick={() => fetchMetrics({ force: true })}
+            loading={refreshState === "loading"}
+            icon={<RefreshCw className="h-4 w-4" aria-hidden="true" />}
+          >
+            Actualiser
+          </Button>
+        </>
+      )}
+
+      {/* Indicateurs */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          label="Requêtes totales"
+          value={`${(total_requests / 1000000).toFixed(1)} M`}
+          icon={<Activity className="h-5 w-5" aria-hidden="true" />}
+          tone="info"
+        />
+        <StatCard
+          label="Latence moyenne"
+          value={`${avg_latency} ms`}
+          icon={<Clock className="h-5 w-5" aria-hidden="true" />}
+          tone="neutral"
+        />
+        <StatCard
+          label="Taux d’erreur"
+          value={`${error_rate} %`}
+          icon={<AlertTriangle className="h-5 w-5" aria-hidden="true" />}
+          tone="danger"
+        />
+        <StatCard
+          label="Services opérationnels"
+          value={`${healthyCount}/${services.length}`}
+          hint={`${healthyPct} % opérationnels`}
+          icon={<Server className="h-5 w-5" aria-hidden="true" />}
+          tone={healthyCount < services.length ? "warning" : "success"}
+        />
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-sm font-medium text-gray-700">Requêtes Totales</p>
-              <h3 className="text-2xl font-bold text-gray-900 mt-2">{(total_requests / 1000000).toFixed(1)}M</h3>
-              <span className="text-green-600 text-sm font-medium flex items-center mt-1">
-                +12% <span className="text-gray-800 ml-1">vs hier</span>
-              </span>
+      {/* Graphiques */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader title="Volume de requêtes" description="Requêtes par seconde" />
+          <CardBody>
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={metrics}>
+                  <defs>
+                    <linearGradient id="colorRequests" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#2563eb" stopOpacity={0.35}/>
+                      <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                  <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 12}} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 12}} />
+                  <Tooltip
+                    contentStyle={{borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}
+                  />
+                  <Area type="monotone" dataKey="requests" name="Requêtes" stroke="#2563eb" strokeWidth={2} fillOpacity={1} fill="url(#colorRequests)" />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
-            <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
-              <Activity size={20} />
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader title="Latence et erreurs" />
+          <CardBody>
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={metrics}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                  <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 12}} />
+                  <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 12}} />
+                  <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 12}} />
+                  <Tooltip
+                    contentStyle={{borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}
+                  />
+                  <Legend />
+                  <Line yAxisId="left" type="monotone" dataKey="latency" name="Latence (ms)" stroke="#7c3aed" strokeWidth={2} dot={false} />
+                  <Line yAxisId="right" type="monotone" dataKey="errors" name="Erreurs" stroke="#dc2626" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-sm font-medium text-gray-700">Latence Moyenne</p>
-              <h3 className="text-2xl font-bold text-gray-900 mt-2">{avg_latency}ms</h3>
-              <span className="text-green-600 text-sm font-medium flex items-center mt-1">
-                -5ms <span className="text-gray-800 ml-1">vs hier</span>
-              </span>
-            </div>
-            <div className="p-2 bg-purple-50 rounded-lg text-purple-600">
-              <Clock size={20} />
-            </div>
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-sm font-medium text-gray-700">Taux d'Erreur</p>
-              <h3 className="text-2xl font-bold text-gray-900 mt-2">{error_rate}%</h3>
-              <span className="text-red-600 text-sm font-medium flex items-center mt-1">
-                +0.02% <span className="text-gray-800 ml-1">vs hier</span>
-              </span>
-            </div>
-            <div className="p-2 bg-red-50 rounded-lg text-red-600">
-              <AlertTriangle size={20} />
-            </div>
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-sm font-medium text-gray-700">Services Actifs</p>
-              <h3 className="text-2xl font-bold text-gray-900 mt-2">{services.filter((s: any) => s.status === 'healthy').length}/{services.length}</h3>
-              <span className="text-gray-700 text-sm font-medium flex items-center mt-1">
-                {Math.round((services.filter((s: any) => s.status === 'healthy').length / services.length) * 100)}% opérationnel
-              </span>
-            </div>
-            <div className="p-2 bg-green-50 rounded-lg text-green-600">
-              <Server size={20} />
-            </div>
-          </div>
-        </div>
+          </CardBody>
+        </Card>
       </div>
 
-      {/* Main Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Request Volume */}
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-          <h3 className="text-lg font-semibold text-gray-900 mb-6">Volume de Requêtes (RPS)</h3>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={metrics}>
-                <defs>
-                  <linearGradient id="colorRequests" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} />
-                <Tooltip 
-                  contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}
-                />
-                <Area type="monotone" dataKey="requests" stroke="#3b82f6" fillOpacity={1} fill="url(#colorRequests)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Latency & Errors */}
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-          <h3 className="text-lg font-semibold text-gray-900 mb-6">Latence et Erreurs</h3>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={metrics}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} />
-                <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} />
-                <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} />
-                <Tooltip 
-                  contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}
-                />
-                <Legend />
-                <Line yAxisId="left" type="monotone" dataKey="latency" name="Latence (ms)" stroke="#8b5cf6" strokeWidth={2} dot={false} />
-                <Line yAxisId="right" type="monotone" dataKey="errors" name="Erreurs" stroke="#ef4444" strokeWidth={2} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Service Health */}
-        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">État des Services</h3>
-          </div>
-          <table className="w-full text-left">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-700 uppercase">Service</th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-700 uppercase">Version</th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-700 uppercase">Uptime (24h)</th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-700 uppercase">Statut</th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-700 uppercase text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {services.map((service: any) => (
-                <tr key={service.name} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 font-medium text-gray-900 flex items-center gap-2">
-                    <Server size={16} className="text-gray-800" />
-                    {service.name}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-700 font-mono">{service.version}</td>
-                  <td className="px-6 py-4 text-sm text-gray-700">{service.uptime}</td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(service.status)}`}>
-                      <span className="mr-1.5">{getStatusIcon(service.status)}</span>
-                      {service.status.toUpperCase()}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <button className="text-blue-600 hover:text-blue-900 text-sm font-medium">Logs</button>
-                  </td>
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader title="État des services" />
+          {services.length === 0 ? (
+            <EmptyState title="Aucun service remonté" />
+          ) : (
+            <Table>
+              <THead>
+                <tr>
+                  <Th>Service</Th>
+                  <Th>Version</Th>
+                  <Th>Disponibilité (24 h)</Th>
+                  <Th>Statut</Th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </THead>
+              <TBody>
+                {services.map((service: any) => {
+                  const st = SERVICE_STATUS[service.status];
+                  return (
+                    <Tr key={service.name}>
+                      <Td className="font-medium text-gray-900">
+                        <span className="flex items-center gap-2">
+                          <Server className="h-4 w-4 text-gray-500" aria-hidden="true" />
+                          {service.name}
+                        </span>
+                      </Td>
+                      <Td className="font-mono text-gray-700">{service.version}</Td>
+                      <Td className="tabular-nums">{service.uptime}</Td>
+                      <Td>
+                        <Badge tone={st?.tone ?? "neutral"}>
+                          {st?.icon ?? <Activity className="h-3.5 w-3.5" aria-hidden="true" />}
+                          {st?.label ?? String(service.status)}
+                        </Badge>
+                      </Td>
+                    </Tr>
+                  );
+                })}
+              </TBody>
+            </Table>
+          )}
+        </Card>
 
-        {/* Error Distribution */}
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-          <h3 className="text-lg font-semibold text-gray-900 mb-6">Distribution des Erreurs</h3>
-          <div className="h-64">
-             <ResponsiveContainer width="100%" height="100%">
-              <BarChart layout="vertical" data={errors}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
-                <XAxis type="number" hide />
-                <YAxis dataKey="name" type="category" width={120} tick={{fontSize: 11}} interval={0} />
-                <Tooltip cursor={{fill: 'transparent'}} />
-                <Bar dataKey="count" fill="#ef4444" radius={[0, 4, 4, 0]} barSize={20} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+        <Card>
+          <CardHeader title="Répartition des erreurs" />
+          <CardBody>
+            {(errors ?? []).length === 0 ? (
+              <EmptyState title="Aucune erreur" className="py-6" />
+            ) : (
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart layout="vertical" data={errors}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f3f4f6" />
+                    <XAxis type="number" hide />
+                    <YAxis dataKey="name" type="category" width={120} tick={{fontSize: 11, fill: '#4b5563'}} interval={0} />
+                    <Tooltip cursor={{fill: 'transparent'}} />
+                    <Bar dataKey="count" name="Occurrences" fill="#dc2626" radius={[0, 4, 4, 0]} barSize={20} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </CardBody>
+        </Card>
       </div>
     </div>
   );

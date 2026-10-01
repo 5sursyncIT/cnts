@@ -192,6 +192,13 @@ export function createApiClient(options: ApiClientOptions) {
       create: (data: T.AnalyseCreate) => post<T.Analyse>("/analyses", data),
 
       get: (id: T.UUID) => get<T.Analyse>(`/analyses/${id}`),
+
+      /** Correction avant libération ; un résultat modifié doit être revalidé. */
+      update: (id: T.UUID, data: { resultat: string; note?: string }) =>
+        patch<T.Analyse>(`/analyses/${id}`, data),
+
+      /** Validation biologique (biologiste / admin). */
+      valider: (id: T.UUID) => post<T.Analyse>(`/analyses/${id}/valider`),
     },
 
     // ========================================================================
@@ -218,7 +225,12 @@ export function createApiClient(options: ApiClientOptions) {
       getAlertesPeremption: (jours: number = 7) =>
         get<T.Poche[]>("/poches/alertes/peremption", { jours }),
 
-      delete: (id: T.UUID) => del<void>(`/poches/${id}`),
+      /** Mise au rebut tracée (la suppression physique est interdite). */
+      detruire: (id: T.UUID, data: T.PocheDestruction) =>
+        post<T.Poche>(`/poches/${id}/detruire`, data),
+
+      etiquetteProduit: (id: T.UUID) =>
+        get<T.EtiquetteProduit>(`/poches/${id}/etiquette-produit`),
     },
 
     // ========================================================================
@@ -340,6 +352,9 @@ export function createApiClient(options: ApiClientOptions) {
           `/commandes/${id}/annuler`
         ),
 
+      reservations: (id: T.UUID) =>
+        get<T.ReservationCommande[]>(`/commandes/${id}/reservations`),
+
       sweepReservations: () =>
         post<{ released: number }>("/commandes/reservations/sweep"),
     },
@@ -382,9 +397,6 @@ export function createApiClient(options: ApiClientOptions) {
         limit?: number;
       }) => get<T.ActeTransfusionnel[]>("/hemovigilance/transfusions", params),
 
-      getActeTransfusionnel: (id: T.UUID) =>
-        get<T.ActeTransfusionnel>(`/hemovigilance/transfusions/${id}`),
-
       listRappels: (params?: { statut?: string; limit?: number }) =>
         get<T.RappelLot[]>("/hemovigilance/rappels", params),
 
@@ -405,13 +417,38 @@ export function createApiClient(options: ApiClientOptions) {
       getRappelImpacts: (id: T.UUID, params?: { limit?: number }) =>
         get<T.ImpactRappel[]>(`/hemovigilance/rappels/${id}/impacts`, params),
 
-      exportRappelImpacts: (id: T.UUID) =>
-        get<string>(`/hemovigilance/rappels/${id}/impacts.csv`),
+      /** URL de téléchargement CSV (hôpitaux ou receveurs impactés par un rappel). */
+      rappelExportUrl: (id: T.UUID, cible: "hopitaux" | "receveurs") =>
+        `${baseUrl}/hemovigilance/rappels/${id}/export/${cible}`,
 
       rapportAutorites: () => get<T.RapportAutorite>("/hemovigilance/rapports/autorites"),
 
       fluxPartenaires: (params?: { cursor?: string; hopital_id?: T.UUID; limit?: number }) =>
         get<T.PartenaireFlux>("/hemovigilance/partenaires/flux", params),
+    },
+
+    // ========================================================================
+    // EIR (événements indésirables receveur)
+    // ========================================================================
+    eir: {
+      list: (params?: {
+        type_eir?: T.TypeEIR;
+        gravite?: T.GraviteEIR;
+        statut_investigation?: T.StatutInvestigationEIR;
+        receveur_id?: T.UUID;
+        limit?: number;
+        offset?: number;
+      }) => get<T.EIR[]>("/eir", params),
+
+      get: (id: T.UUID) => get<T.EIR>(`/eir/${id}`),
+
+      statistiques: () => get<T.StatistiquesEIR>("/eir/statistiques"),
+
+      declarer: (data: T.EIRCreate) => post<T.EIR>("/eir", data),
+
+      update: (id: T.UUID, data: T.EIRUpdate) => patch<T.EIR>(`/eir/${id}`, data),
+
+      cloturer: (id: T.UUID) => post<T.EIR>(`/eir/${id}/cloturer`),
     },
 
     // ========================================================================
@@ -449,8 +486,10 @@ export function createApiClient(options: ApiClientOptions) {
       exportReport: (params: {
         format: "csv" | "excel" | "pdf";
         report_type: "activity" | "stock";
+        start_date?: string;
+        end_date?: string;
       }) => {
-        const query = new URLSearchParams(params as any).toString();
+        const query = buildQueryString(params).slice(1);
         return window.open(`${baseUrl}/analytics/export?${query}`, "_blank");
       },
     },
@@ -466,6 +505,33 @@ export function createApiClient(options: ApiClientOptions) {
 
       setStatus: (id: T.UUID, status: T.ContactMessageStatus) =>
         patch<T.ContactMessage>(`/contact/${id}`, { status }),
+    },
+
+    // ========================================================================
+    // COLLECTES
+    // ========================================================================
+    collectes: {
+      get: (id: T.UUID) => get<T.CampagneCollecte>(`/collectes/${id}`),
+
+      update: (id: T.UUID, data: T.CampagneCollecteUpdate) =>
+        put<T.CampagneCollecte>(`/collectes/${id}`, data),
+
+      demarrer: (id: T.UUID) => post<T.CampagneCollecte>(`/collectes/${id}/demarrer`),
+
+      terminer: (id: T.UUID) => post<T.CampagneCollecte>(`/collectes/${id}/terminer`),
+
+      annuler: (id: T.UUID) => post<T.CampagneCollecte>(`/collectes/${id}/annuler`),
+
+      bilan: (id: T.UUID) => get<T.BilanCampagne>(`/collectes/${id}/bilan`),
+
+      inscriptions: (id: T.UUID, params?: { statut?: T.InscriptionStatut; limit?: number; offset?: number }) =>
+        get<T.InscriptionCollecte[]>(`/collectes/${id}/inscriptions`, params),
+
+      inscrire: (id: T.UUID, data: T.InscriptionCollecteCreate) =>
+        post<T.InscriptionCollecte>(`/collectes/${id}/inscriptions`, { ...data, campagne_id: id }),
+
+      pointer: (id: T.UUID, inscriptionId: T.UUID, statut: T.InscriptionStatut) =>
+        patch<T.InscriptionCollecte>(`/collectes/${id}/inscriptions/${inscriptionId}`, { statut }),
     },
 
     // ========================================================================

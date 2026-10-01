@@ -2,9 +2,29 @@
 
 import { useProductRules } from "@cnts/api";
 import type { ProductRule } from "@cnts/api";
-import Link from "next/link";
+import { Pencil } from "lucide-react";
+import { toast } from "sonner";
 import { useState } from "react";
 import { apiClient } from "@/lib/api-client";
+import { apiErrorMessage } from "@/lib/api-error";
+import {
+  Alert,
+  Button,
+  Card,
+  EmptyState,
+  ErrorState,
+  Field,
+  Input,
+  LoadingState,
+  Modal,
+  PageHeader,
+  Table,
+  TBody,
+  Td,
+  Th,
+  THead,
+  Tr,
+} from "@/components/ui";
 
 export default function ProductRulesPage() {
   const { data: rules, refetch, status } = useProductRules(apiClient);
@@ -38,8 +58,9 @@ export default function ProductRulesPage() {
       });
       await refetch();
       setEditingRule(null);
-    } catch (err: any) {
-      setError(err.body?.detail || "Erreur lors de la sauvegarde");
+      toast.success("Règle enregistrée");
+    } catch (err) {
+      setError(apiErrorMessage(err, "Erreur lors de la sauvegarde"));
     } finally {
       setIsSaving(false);
     }
@@ -65,209 +86,140 @@ export default function ProductRulesPage() {
 
   const getTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
-      ST: "Sang Total (ST)",
-      CGR: "Concentré de Globules Rouges (CGR)",
-      PFC: "Plasma Frais Congelé (PFC)",
-      CP: "Concentré Plaquettaire (CP)",
+      ST: "Sang total (ST)",
+      CGR: "Concentré de globules rouges (CGR)",
+      PFC: "Plasma frais congelé (PFC)",
+      CP: "Concentré plaquettaire (CP)",
     };
     return labels[type] || type;
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Link
-              href="/stock"
-              className="text-gray-500 hover:text-gray-700 text-sm"
-            >
-              ← Retour au stock
-            </Link>
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900">Règles Produits</h1>
-          <p className="text-gray-700 mt-1">
-            Configuration des durées de vie et volumes par type de produit
-          </p>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Règles produits"
+        description="Durées de vie et volumes par type de produit"
+        back={{ href: "/stock", label: "Stock" }}
+      />
 
-      {status === "loading" && (
-        <div className="text-center py-10">Chargement...</div>
-      )}
+      <Card>
+        {status === "loading" && <LoadingState rows={4} />}
 
-      {status === "error" && (
-        <div className="bg-red-50 text-red-600 p-4 rounded-md mb-6">
-          Une erreur est survenue lors du chargement des règles.
-        </div>
-      )}
+        {status === "error" && (
+          <ErrorState message="Une erreur est survenue lors du chargement des règles." onRetry={() => refetch()} />
+        )}
 
-      {status === "success" && (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        {status === "success" && (!rules || rules.length === 0) && (
+          <EmptyState title="Aucune règle produit" description="Aucune règle n’est configurée pour le moment." />
+        )}
+
+        {status === "success" && rules && rules.length > 0 && (
+          <Table>
+            <THead>
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Type de Produit
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Durée de vie (jours)
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Volume par défaut (ml)
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Volume Min (ml)
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Volume Max (ml)
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Actions
-                </th>
+                <Th>Type de produit</Th>
+                <Th align="right">Durée de vie (jours)</Th>
+                <Th align="right">Volume par défaut (mL)</Th>
+                <Th align="right">Volume min. (mL)</Th>
+                <Th align="right">Volume max. (mL)</Th>
+                <Th align="right">
+                  <span className="sr-only">Actions</span>
+                </Th>
               </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {rules?.map((rule) => (
-                <tr key={rule.type_produit} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="font-medium text-gray-900">
-                      {rule.type_produit}
-                    </div>
-                    <div className="text-sm text-gray-700">
-                      {getTypeLabel(rule.type_produit)}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {rule.shelf_life_days}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {rule.default_volume_ml || "-"}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {rule.min_volume_ml || "-"}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {rule.max_volume_ml || "-"}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button
+            </THead>
+            <TBody>
+              {rules.map((rule) => (
+                <Tr key={rule.type_produit}>
+                  <Td className="whitespace-nowrap">
+                    <div className="font-medium text-gray-900">{rule.type_produit}</div>
+                    <div className="text-xs text-gray-600">{getTypeLabel(rule.type_produit)}</div>
+                  </Td>
+                  <Td align="right" className="tabular-nums">{rule.shelf_life_days}</Td>
+                  <Td align="right" className="tabular-nums">{rule.default_volume_ml || "—"}</Td>
+                  <Td align="right" className="tabular-nums">{rule.min_volume_ml || "—"}</Td>
+                  <Td align="right" className="tabular-nums">{rule.max_volume_ml || "—"}</Td>
+                  <Td align="right">
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => handleEdit(rule)}
-                      className="text-indigo-600 hover:text-indigo-900"
+                      icon={<Pencil className="h-3.5 w-3.5" aria-hidden="true" />}
+                      aria-label={`Modifier la règle ${rule.type_produit}`}
                     >
                       Modifier
-                    </button>
-                  </td>
-                </tr>
+                    </Button>
+                  </Td>
+                </Tr>
               ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+            </TBody>
+          </Table>
+        )}
+      </Card>
 
-      {/* Edit Modal */}
-      {editingRule && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h2 className="text-xl font-bold mb-4">
-              Modifier règle {editingRule.type_produit}
-            </h2>
+      <Modal
+        open={editingRule !== null}
+        onClose={handleCancel}
+        title={`Modifier la règle ${editingRule?.type_produit ?? ""}`}
+        description={editingRule ? getTypeLabel(editingRule.type_produit) : undefined}
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" onClick={handleCancel} disabled={isSaving}>
+              Annuler
+            </Button>
+            <Button type="submit" form="regle-form" loading={isSaving}>
+              Enregistrer
+            </Button>
+          </>
+        }
+      >
+        {editingRule && (
+          <form id="regle-form" onSubmit={handleSave} className="space-y-4">
+            {error && <Alert tone="danger">{error}</Alert>}
 
-            {error && (
-              <div className="bg-red-50 text-red-600 p-3 rounded mb-4 text-sm">
-                {error}
-              </div>
-            )}
+            <Field label="Durée de vie (jours)" required>
+              <Input
+                type="number"
+                min="1"
+                max="3650"
+                value={editingRule.shelf_life_days}
+                onChange={(e) => handleChange("shelf_life_days", e.target.value)}
+              />
+            </Field>
 
-            <form onSubmit={handleSave} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Durée de vie (jours)
-                </label>
-                <input
-                  type="number"
-                  required
-                  min="1"
-                  max="3650"
-                  value={editingRule.shelf_life_days}
-                  onChange={(e) =>
-                    handleChange("shelf_life_days", e.target.value)
-                  }
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900"
-                />
-              </div>
+            <Field label="Volume par défaut (mL)">
+              <Input
+                type="number"
+                min="0"
+                max="2000"
+                value={editingRule.default_volume_ml || ""}
+                onChange={(e) => handleChange("default_volume_ml", e.target.value)}
+              />
+            </Field>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Volume par défaut (ml)
-                </label>
-                <input
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Volume min. (mL)">
+                <Input
                   type="number"
                   min="0"
                   max="2000"
-                  value={editingRule.default_volume_ml || ""}
-                  onChange={(e) =>
-                    handleChange("default_volume_ml", e.target.value)
-                  }
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900"
+                  value={editingRule.min_volume_ml || ""}
+                  onChange={(e) => handleChange("min_volume_ml", e.target.value)}
                 />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Volume Min (ml)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="2000"
-                    value={editingRule.min_volume_ml || ""}
-                    onChange={(e) =>
-                      handleChange("min_volume_ml", e.target.value)
-                    }
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Volume Max (ml)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="2000"
-                    value={editingRule.max_volume_ml || ""}
-                    onChange={(e) =>
-                      handleChange("max_volume_ml", e.target.value)
-                    }
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3 mt-6">
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
-                  disabled={isSaving}
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50"
-                  disabled={isSaving}
-                >
-                  {isSaving ? "Enregistrement..." : "Enregistrer"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+              </Field>
+              <Field label="Volume max. (mL)">
+                <Input
+                  type="number"
+                  min="0"
+                  max="2000"
+                  value={editingRule.max_volume_ml || ""}
+                  onChange={(e) => handleChange("max_volume_ml", e.target.value)}
+                />
+              </Field>
+            </div>
+          </form>
+        )}
+      </Modal>
     </div>
   );
 }

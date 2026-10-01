@@ -4,6 +4,14 @@ import { cookies } from "next/headers";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { logAuditEvent } from "@/lib/audit/log";
 import { accessCookieName } from "@/lib/auth/session";
+import { Alert, Badge, Card, EmptyState, PageHeader, Table, TBody, Td, Th, THead, Tr } from "@/components/ui";
+
+const dateFormatter = new Intl.DateTimeFormat("fr-FR", { dateStyle: "short", timeStyle: "medium", timeZone: "Africa/Dakar" });
+
+function formatDate(value: string) {
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? value : dateFormatter.format(d);
+}
 
 type PersistedAuditEvent = {
   id: string;
@@ -33,12 +41,10 @@ export default async function AuditPage() {
   if (!canView) {
     logAuditEvent({ actorEmail: user.email, action: "audit.view_denied" });
     return (
-      <main>
-        <h1 className="text-2xl font-semibold">Audit</h1>
-        <div className="mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900" role="alert">
-          Accès refusé.
-        </div>
-      </main>
+      <div>
+        <PageHeader title="Audit" />
+        <Alert tone="danger">Accès refusé : vous n’avez pas la permission de consulter le journal d’audit.</Alert>
+      </div>
     );
   }
 
@@ -46,47 +52,41 @@ export default async function AuditPage() {
   logAuditEvent({ actorEmail: user.email, action: "audit.view" });
 
   return (
-    <main>
-      <h1 className="text-2xl font-semibold">Logs & audit</h1>
-      <p className="mt-1 text-sm text-zinc-600">Événements persistés de traçabilité métier.</p>
+    <div>
+      <PageHeader title="Logs & audit" description="Événements persistés de traçabilité métier (80 plus récents)." />
 
-      <section className="mt-6 overflow-auto rounded-xl border border-zinc-200 bg-white shadow-sm">
-        <table className="w-full border-collapse text-left text-sm">
-          <thead>
-            <tr className="border-b border-zinc-200">
-              <th scope="col" className="px-4 py-2 font-medium text-zinc-900">
-                Date
-              </th>
-              <th scope="col" className="px-4 py-2 font-medium text-zinc-900">
-                Acteur
-              </th>
-              <th scope="col" className="px-4 py-2 font-medium text-zinc-900">
-                Action
-              </th>
-              <th scope="col" className="px-4 py-2 font-medium text-zinc-900">
-                Cible
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {events.map((e, idx) => (
-              <tr key={e.id ?? idx} className="border-b border-zinc-100">
-                <td className="px-4 py-2 font-mono text-xs text-zinc-700">{e.created_at}</td>
-                <td className="px-4 py-2 text-zinc-800">{String(e.payload?.actor_email ?? e.payload?.admin_email ?? "—")}</td>
-                <td className="px-4 py-2 text-zinc-800">{e.event_type}</td>
-                <td className="px-4 py-2 text-zinc-800">{e.aggregate_type}:{e.aggregate_id}</td>
-              </tr>
-            ))}
-            {events.length === 0 ? (
+      <Card>
+        {events.length === 0 ? (
+          <EmptyState title="Aucun événement pour l’instant" description="Les actions tracées apparaîtront ici." />
+        ) : (
+          <Table>
+            <THead>
               <tr>
-                <td className="px-4 py-4 text-sm text-zinc-600" colSpan={4}>
-                  Aucun événement pour l’instant.
-                </td>
+                <Th>Date</Th>
+                <Th>Acteur</Th>
+                <Th>Action</Th>
+                <Th>Cible</Th>
               </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </section>
-    </main>
+            </THead>
+            <TBody>
+              {events.map((e, idx) => (
+                <Tr key={e.id ?? idx}>
+                  <Td className="whitespace-nowrap tabular-nums text-gray-700">
+                    <time dateTime={e.created_at}>{formatDate(e.created_at)}</time>
+                  </Td>
+                  <Td>{String(e.payload?.actor_email ?? e.payload?.admin_email ?? "—")}</Td>
+                  <Td>
+                    <Badge tone="info">{e.event_type}</Badge>
+                  </Td>
+                  <Td className="font-mono text-xs text-gray-700">
+                    {e.aggregate_type}:{e.aggregate_id}
+                  </Td>
+                </Tr>
+              ))}
+            </TBody>
+          </Table>
+        )}
+      </Card>
+    </div>
   );
 }

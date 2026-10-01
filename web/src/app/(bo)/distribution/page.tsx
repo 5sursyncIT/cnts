@@ -3,7 +3,39 @@
 import { useCommandes, useHopitaux } from "@cnts/api";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import type * as React from "react";
+import {
+  Building2,
+  CheckCircle2,
+  ChevronRight,
+  ClipboardList,
+  FilePen,
+  Plus,
+  RefreshCw,
+  Truck,
+  UserRound,
+  XCircle,
+} from "lucide-react";
 import { apiClient } from "@/lib/api-client";
+import {
+  Alert,
+  Button,
+  ButtonLink,
+  Card,
+  CardHeader,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  PageHeader,
+  StatCard,
+  StatusBadge,
+  Table,
+  TBody,
+  Td,
+  Th,
+  THead,
+  Tr,
+} from "@/components/ui";
 
 export default function DistributionPage() {
   // Charger toutes les commandes récentes
@@ -101,267 +133,184 @@ export default function DistributionPage() {
     return hopitaux?.find((h) => h.id === hopitalId)?.nom || "Hôpital inconnu";
   };
 
-  return (
-    <div className="p-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Distribution</h1>
-          <p className="text-gray-700 mt-1">
-            Gestion des commandes hospitalières et réservations
-          </p>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-xs text-gray-700" title={refreshError ?? undefined}>
-            <span
-              className={`h-2 w-2 rounded-full ${
-                refreshState === "loading"
-                  ? "bg-blue-500 animate-pulse"
-                  : refreshState === "error"
-                  ? "bg-red-500"
-                  : autoRefreshEnabled
-                  ? "bg-green-500"
-                  : "bg-gray-400"
-              }`}
-            />
-            <span>
-              {autoRefreshEnabled
-                ? refreshState === "loading"
-                  ? "Mise à jour..."
-                  : refreshState === "error"
-                  ? "Connexion interrompue"
-                  : "Données à jour"
-                : "Rafraîchissement désactivé"}
-            </span>
-          </div>
-          <Link
-            href="/distribution/commandes/nouvelle"
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-          >
-            + Nouvelle commande
-          </Link>
-        </div>
-      </div>
+  const refreshDotClass =
+    refreshState === "loading"
+      ? "bg-blue-500 animate-pulse"
+      : refreshState === "error"
+      ? "bg-red-500"
+      : autoRefreshEnabled
+      ? "bg-emerald-500"
+      : "bg-gray-400";
+  const refreshLabel = autoRefreshEnabled
+    ? refreshState === "loading"
+      ? "Mise à jour…"
+      : refreshState === "error"
+      ? "Connexion interrompue"
+      : "Données à jour"
+    : "Rafraîchissement désactivé";
 
-      {/* Statistiques */}
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Distribution"
+        description="Commandes hospitalières et réservations de poches"
+        actions={
+          <>
+            <span
+              className="inline-flex items-center gap-2 text-xs text-gray-600"
+              title={refreshError ?? undefined}
+              role="status"
+              aria-live="polite"
+            >
+              <span className={`h-2 w-2 rounded-full ${refreshDotClass}`} aria-hidden="true" />
+              {refreshLabel}
+            </span>
+            <ButtonLink href="/distribution/commandes/nouvelle" icon={<Plus className="h-4 w-4" aria-hidden="true" />}>
+              Nouvelle commande
+            </ButtonLink>
+          </>
+        }
+      />
+
       {status === "success" && commandes && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="text-xs text-gray-500 mb-1">Total</div>
-            <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
-          </div>
-          <div className="bg-gray-50 rounded-lg shadow p-4">
-            <div className="text-xs text-gray-800 mb-1">Brouillon</div>
-            <div className="text-2xl font-bold text-gray-900">
-              {stats.brouillon}
-            </div>
-          </div>
-          <div className="bg-blue-50 rounded-lg shadow p-4">
-            <div className="text-xs text-blue-600 mb-1">Validée</div>
-            <div className="text-2xl font-bold text-blue-900">
-              {stats.validee}
-            </div>
-          </div>
-          <div className="bg-green-50 rounded-lg shadow p-4">
-            <div className="text-xs text-green-600 mb-1">Servie</div>
-            <div className="text-2xl font-bold text-green-900">
-              {stats.servie}
-            </div>
-          </div>
-          <div className="bg-red-50 rounded-lg shadow p-4">
-            <div className="text-xs text-red-600 mb-1">Annulée</div>
-            <div className="text-2xl font-bold text-red-900">{stats.annulee}</div>
-          </div>
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
+          <StatCard label="Total" value={stats.total} icon={<ClipboardList className="h-5 w-5" aria-hidden="true" />} />
+          <StatCard label="Brouillons" value={stats.brouillon} icon={<FilePen className="h-5 w-5" aria-hidden="true" />} />
+          <StatCard label="Validées" value={stats.validee} tone="info" icon={<CheckCircle2 className="h-5 w-5" aria-hidden="true" />} />
+          <StatCard label="Servies" value={stats.servie} tone="success" icon={<Truck className="h-5 w-5" aria-hidden="true" />} />
+          <StatCard label="Annulées" value={stats.annulee} tone="danger" icon={<XCircle className="h-5 w-5" aria-hidden="true" />} />
         </div>
       )}
 
-      {/* Actions rapides */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <Link
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <QuickLink
           href="/distribution/commandes"
-          className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition"
-        >
-          <div className="flex items-start justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">Toutes les commandes</h2>
-              <p className="text-sm text-gray-800">
-                Voir l'historique complet des commandes hospitalières
-              </p>
-            </div>
-            <span className="text-2xl">📋</span>
-          </div>
-        </Link>
-
-        <Link
+          title="Toutes les commandes"
+          description="Historique complet des commandes hospitalières"
+          icon={<ClipboardList className="h-5 w-5" aria-hidden="true" />}
+        />
+        <QuickLink
           href="/distribution/hopitaux"
-          className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition"
-        >
-          <div className="flex items-start justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">Hôpitaux</h2>
-              <p className="text-sm text-gray-800">
-                Gérer les hôpitaux et les conventions
-              </p>
-            </div>
-            <span className="text-2xl">🏥</span>
-          </div>
-        </Link>
-
-        <Link
+          title="Hôpitaux"
+          description="Établissements et conventions"
+          icon={<Building2 className="h-5 w-5" aria-hidden="true" />}
+        />
+        <QuickLink
           href="/distribution/receveurs"
-          className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition"
-        >
-          <div className="flex items-start justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">Receveurs</h2>
-              <p className="text-sm text-gray-800">
-                Gérer les receveurs et les cross-matchings
-              </p>
-            </div>
-            <span className="text-2xl">👤</span>
-          </div>
-        </Link>
+          title="Receveurs"
+          description="Receveurs et cross-matchings"
+          icon={<UserRound className="h-5 w-5" aria-hidden="true" />}
+        />
       </div>
 
-      {/* Commandes en attente */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="p-6 border-b border-gray-200 flex justify-between items-center">
-          <h2 className="text-lg font-semibold text-gray-900">Commandes en attente</h2>
-          <button
-            onClick={() => refetch()}
-            className="text-sm text-blue-600 hover:text-blue-900"
-          >
-            Actualiser
-          </button>
-        </div>
-
-        {status === "loading" && (
-          <div className="p-8 text-center text-gray-700">Chargement...</div>
-        )}
-
-        {status === "error" && (
-          <div className="p-8 text-center">
-            <div className="text-red-600 mb-2">Erreur de chargement</div>
-            <button
+      <Card>
+        <CardHeader
+          title="Commandes en attente"
+          description="Brouillons et commandes validées à traiter"
+          actions={
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => refetch()}
-              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              icon={<RefreshCw className="h-4 w-4" aria-hidden="true" />}
             >
-              Réessayer
-            </button>
-          </div>
-        )}
+              Actualiser
+            </Button>
+          }
+        />
+
+        {status === "loading" && <LoadingState rows={4} />}
+
+        {status === "error" && <ErrorState message="Les commandes n’ont pas pu être chargées." onRetry={() => refetch()} />}
 
         {status === "success" && (!commandesEnAttente || commandesEnAttente.length === 0) && (
-          <div className="p-8 text-center text-gray-700">
-            <div className="mb-2">Aucune commande en attente</div>
-            <Link
-              href="/distribution/commandes/nouvelle"
-              className="text-sm text-blue-600 hover:text-blue-900"
-            >
-              Créer une commande →
-            </Link>
-          </div>
+          <EmptyState
+            title="Aucune commande en attente"
+            description="Toutes les commandes ont été traitées."
+            action={
+              <ButtonLink href="/distribution/commandes/nouvelle" variant="secondary" size="sm" icon={<Plus className="h-4 w-4" aria-hidden="true" />}>
+                Créer une commande
+              </ButtonLink>
+            }
+          />
         )}
 
         {status === "success" && commandesEnAttente && commandesEnAttente.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Hôpital
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Date demande
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Livraison prévue
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Lignes
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Statut
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {commandesEnAttente.map((commande) => (
-                  <tr key={commande.id} className="hover:bg-gray-50 transition">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {getHopitalNom(commande.hopital_id)}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                      {new Date(commande.date_demande).toLocaleDateString("fr-FR")}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                      {commande.date_livraison_prevue
-                        ? new Date(commande.date_livraison_prevue).toLocaleDateString(
-                            "fr-FR"
-                          )
-                        : "-"}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                      {commande.lignes.length} ligne(s)
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                          commande.statut === "BROUILLON"
-                            ? "bg-gray-100 text-gray-800"
-                            : commande.statut === "VALIDEE"
-                            ? "bg-blue-100 text-blue-900"
-                            : commande.statut === "SERVIE"
-                            ? "bg-green-100 text-green-900"
-                            : "bg-red-100 text-red-900"
-                        }`}
-                      >
-                        {commande.statut}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <Link
-                        href={`/distribution/commandes/${commande.id}`}
-                        className="text-blue-700 hover:text-blue-900 font-semibold hover:underline"
-                      >
-                        Gérer →
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table>
+            <THead>
+              <tr>
+                <Th>Hôpital</Th>
+                <Th>Date demande</Th>
+                <Th>Livraison prévue</Th>
+                <Th>Lignes</Th>
+                <Th>Statut</Th>
+                <Th align="right">
+                  <span className="sr-only">Actions</span>
+                </Th>
+              </tr>
+            </THead>
+            <TBody>
+              {commandesEnAttente.map((commande) => (
+                <Tr key={commande.id}>
+                  <Td className="whitespace-nowrap font-medium text-gray-900">{getHopitalNom(commande.hopital_id)}</Td>
+                  <Td className="whitespace-nowrap">{new Date(commande.date_demande).toLocaleDateString("fr-FR")}</Td>
+                  <Td className="whitespace-nowrap">
+                    {commande.date_livraison_prevue
+                      ? new Date(commande.date_livraison_prevue).toLocaleDateString("fr-FR")
+                      : "—"}
+                  </Td>
+                  <Td className="whitespace-nowrap">{commande.lignes.length} ligne(s)</Td>
+                  <Td>
+                    <StatusBadge status={commande.statut} />
+                  </Td>
+                  <Td align="right" className="whitespace-nowrap">
+                    <Link
+                      href={`/distribution/commandes/${commande.id}`}
+                      className="font-medium text-blue-700 hover:text-blue-900 hover:underline"
+                    >
+                      Gérer
+                    </Link>
+                  </Td>
+                </Tr>
+              ))}
+            </TBody>
+          </Table>
         )}
-      </div>
+      </Card>
 
-      {/* Workflow info */}
-      <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h3 className="font-medium text-blue-900 mb-2 text-sm">
-          Workflow de distribution
-        </h3>
-        <ul className="text-xs text-blue-900 space-y-1">
+      <Alert tone="info">
+        <p className="mb-2 font-medium">Circuit de distribution</p>
+        <ol className="list-inside list-decimal space-y-1 text-xs">
           <li>
-            1. <strong>BROUILLON</strong>: Commande créée, lignes spécifiées
+            <strong>Brouillon</strong> : commande créée, lignes spécifiées
           </li>
           <li>
-            2. <strong>VALIDEE</strong>: Poches réservées automatiquement (FEFO)
+            <strong>Validée</strong> : poches réservées automatiquement (FEFO)
           </li>
           <li>
-            3. <strong>Affectation</strong>: Associer receveurs aux poches
-            (cross-matching)
+            <strong>Affectation</strong> : association des receveurs aux poches (cross-matching)
           </li>
           <li>
-            4. <strong>SERVIE</strong>: Poches marquées DISTRIBUE, prêtes pour
-            transfusion
+            <strong>Servie</strong> : poches marquées distribuées, prêtes pour la transfusion
           </li>
-        </ul>
-      </div>
+        </ol>
+      </Alert>
     </div>
+  );
+}
+
+function QuickLink({ href, title, description, icon }: { href: string; title: string; description: string; icon: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="group flex items-start gap-3 rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition-colors hover:border-blue-300"
+    >
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">{icon}</span>
+      <span className="min-w-0 flex-1">
+        <span className="block font-semibold text-gray-900">{title}</span>
+        <span className="mt-0.5 block text-sm text-gray-600">{description}</span>
+      </span>
+      <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-gray-400 group-hover:text-blue-600" aria-hidden="true" />
+    </Link>
   );
 }

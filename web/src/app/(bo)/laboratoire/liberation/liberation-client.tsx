@@ -10,7 +10,25 @@ import {
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { AlertTriangle, ArrowRight, CheckCircle2, RefreshCw, Search, XCircle } from "lucide-react";
+import { toast } from "sonner";
 import { apiClient } from "@/lib/api-client";
+import { apiErrorMessage } from "@/lib/api-error";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  CardBody,
+  CardHeader,
+  EmptyState,
+  Field,
+  Input,
+  Modal,
+  PageHeader,
+  Select,
+  StatusBadge,
+} from "@/components/ui";
 
 export default function LiberationClient({ canValidate }: { canValidate: boolean }) {
   const router = useRouter();
@@ -55,7 +73,7 @@ export default function LiberationClient({ canValidate }: { canValidate: boolean
       setSelectedDonId(foundDon.id);
       setSearchDin("");
     } else {
-      alert("Don introuvable avec ce DIN");
+      toast.error("Don introuvable avec ce DIN");
     }
   };
 
@@ -70,6 +88,7 @@ export default function LiberationClient({ canValidate }: { canValidate: boolean
       await libererDon(selectedDonId);
       setLiberationStatus("success");
       setShowConfirmModal(false);
+      toast.success("Don libéré");
 
       // Recharger les données
       await refetchDon();
@@ -79,372 +98,317 @@ export default function LiberationClient({ canValidate }: { canValidate: boolean
       setTimeout(() => {
         router.push(`/dons/${selectedDonId}`);
       }, 2000);
-    } catch (err: any) {
+    } catch (err) {
       console.error("Erreur libération:", err);
       setLiberationStatus("error");
-      setErrorMessage(err.message || "Erreur lors de la libération");
+      setErrorMessage(apiErrorMessage(err, "Erreur lors de la libération"));
     }
   };
 
   const TESTS_REQUIS = ["ABO", "RH", "VIH", "VHB", "VHC", "SYPHILIS"];
 
+  const GROUPAGE_VALIDE = ["A", "B", "AB", "O", "POS", "NEG"];
+  const resultTone = (resultat: string) =>
+    resultat === "NEGATIF" || GROUPAGE_VALIDE.includes(resultat)
+      ? "success"
+      : resultat === "POSITIF"
+        ? "danger"
+        : "warning";
+
   return (
-    <div className="p-6 max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="mb-6">
-        <Link
-          href="/laboratoire"
-          className="text-blue-600 hover:text-blue-900 text-sm mb-2 inline-block"
-        >
-          ← Retour au laboratoire
-        </Link>
-        <h1 className="text-2xl font-bold text-gray-900">Libération Biologique</h1>
-        <p className="text-gray-700 mt-1">
-          Validation finale et libération des dons pour distribution
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Libération biologique"
+        description="Validation finale et libération des dons pour distribution"
+        back={{ href: "/laboratoire", label: "Laboratoire" }}
+      />
 
-      {/* Message de succès */}
       {liberationStatus === "success" && (
-        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-md">
-          <div className="text-sm font-medium text-green-900">
-            ✓ Don libéré avec succès ! Redirection en cours...
-          </div>
-        </div>
+        <Alert tone="success">Don libéré avec succès. Redirection vers la fiche du don…</Alert>
       )}
 
-      {/* Message d'erreur */}
       {liberationStatus === "error" && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
-          <div className="text-sm font-medium text-red-900">
-            Erreur lors de la libération
-          </div>
-          <div className="text-sm text-red-600 mt-1">{errorMessage}</div>
-        </div>
+        <Alert tone="danger">
+          <p className="font-medium">Erreur lors de la libération</p>
+          <p className="mt-0.5">{errorMessage}</p>
+        </Alert>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Section principale */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Sélection du don */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold mb-4">Sélectionner un don</h2>
-
-            {/* Recherche par DIN */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Recherche par DIN
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={searchDin}
-                  onChange={(e) => setSearchDin(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSearchByDin()}
-                  placeholder="Ex: CNTS2600X123456"
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                />
-                <button
-                  onClick={handleSearchByDin}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-                >
+        <div className="space-y-6 lg:col-span-2">
+          <Card>
+            <CardHeader title="Sélectionner un don" />
+            <CardBody className="space-y-4">
+              <div className="flex flex-wrap items-end gap-2">
+                <Field label="Recherche par DIN" className="min-w-0 flex-1">
+                  <Input
+                    type="text"
+                    value={searchDin}
+                    onChange={(e) => setSearchDin(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSearchByDin()}
+                    placeholder="Ex. : CNTS2600X123456"
+                    className="font-mono"
+                  />
+                </Field>
+                <Button variant="secondary" onClick={handleSearchByDin} icon={<Search className="h-4 w-4" aria-hidden="true" />}>
                   Rechercher
-                </button>
+                </Button>
               </div>
-            </div>
 
-            {/* Ou sélection dans la liste */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Ou sélectionner dans la liste (EN_ATTENTE)
-              </label>
-              <select
-                value={selectedDonId}
-                onChange={(e) => setSelectedDonId(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-              >
-                <option value="">-- Choisir un don --</option>
-                {donsEnAttente?.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.din} - {new Date(d.date_don).toLocaleDateString("fr-FR")}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
+              <Field label="Ou sélectionner dans la liste des dons en attente">
+                <Select value={selectedDonId} onChange={(e) => setSelectedDonId(e.target.value)}>
+                  <option value="">— Choisir un don —</option>
+                  {donsEnAttente?.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.din} — {new Date(d.date_don).toLocaleDateString("fr-FR")}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </CardBody>
+          </Card>
+
+          {!selectedDonId && (
+            <Card>
+              <EmptyState
+                title="Aucun don sélectionné"
+                description="Recherchez un don par son DIN ou choisissez-le dans la liste pour vérifier s’il est libérable."
+              />
+            </Card>
+          )}
 
           {/* Résumé des analyses */}
           {selectedDonId && don && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold mb-4">Résultats des analyses</h2>
-
+            <Card>
+              <CardHeader title="Résultats des analyses" />
               {!analyses || analyses.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <div className="mb-2">Aucune analyse enregistrée</div>
-                  <Link
-                    href={`/laboratoire/analyses?don_id=${selectedDonId}`}
-                    className="text-sm text-blue-600 hover:text-blue-900"
-                  >
-                    Ajouter des analyses →
-                  </Link>
-                </div>
+                <EmptyState
+                  title="Aucune analyse enregistrée"
+                  action={
+                    <Link
+                      href={`/laboratoire/analyses?don_id=${selectedDonId}`}
+                      className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700"
+                    >
+                      Ajouter des analyses
+                      <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                    </Link>
+                  }
+                />
               ) : (
-                <div className="space-y-3">
+                <ul className="divide-y divide-gray-100">
                   {TESTS_REQUIS.map((testType) => {
                     const analyse = analyses.find((a) => a.type_test === testType);
                     return (
-                      <div
-                        key={testType}
-                        className="flex justify-between items-center p-3 border border-gray-200 rounded-md"
-                      >
-                        <div>
-                          <div className="font-medium text-gray-900">{testType}</div>
-                          {analyse && analyse.note && (
-                            <div className="text-sm text-gray-800 mt-1">
-                              {analyse.note}
-                            </div>
-                          )}
+                      <li key={testType} className="flex items-center justify-between gap-3 px-5 py-3">
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium text-gray-900">{testType}</div>
+                          {analyse && analyse.note && <div className="mt-0.5 text-sm text-gray-600">{analyse.note}</div>}
                         </div>
                         {analyse ? (
-                          <span
-                            className={`px-3 py-1 text-sm font-semibold rounded-full ${analyse.resultat === "NEGATIF" ||
-                              ["A", "B", "AB", "O", "POS", "NEG"].includes(
-                                analyse.resultat
-                              )
-                              ? "bg-green-100 text-green-900"
-                              : analyse.resultat === "POSITIF"
-                                ? "bg-red-100 text-red-900"
-                                : "bg-yellow-100 text-yellow-900"
-                              }`}
-                          >
+                          <Badge tone={resultTone(analyse.resultat)} dot>
                             {analyse.resultat}
-                          </span>
+                          </Badge>
                         ) : (
-                          <span className="px-3 py-1 text-sm text-red-600 bg-red-50 rounded-full font-semibold">
-                            ✗ Manquant
-                          </span>
+                          <Badge tone="danger">Manquant</Badge>
                         )}
-                      </div>
+                      </li>
                     );
                   })}
-                </div>
+                </ul>
               )}
-            </div>
+            </Card>
           )}
 
           {/* Informations du don */}
           {selectedDonId && don && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold mb-4">Don sélectionné</h2>
-              <dl className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <dt className="text-gray-500">DIN</dt>
-                  <dd className="font-mono text-gray-900">{don.din}</dd>
-                </div>
-                <div>
-                  <dt className="text-gray-500">Date</dt>
-                  <dd className="text-gray-900">
-                    {new Date(don.date_don).toLocaleDateString("fr-FR")}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-gray-500">Type</dt>
-                  <dd className="text-gray-900">{don.type_don}</dd>
-                </div>
-                <div>
-                  <dt className="text-gray-500">Statut actuel</dt>
-                  <dd>
-                    <span
-                      className={`px-2 py-1 rounded text-xs ${don.statut_qualification === "LIBERE"
-                        ? "bg-green-100 text-green-900"
-                        : "bg-yellow-100 text-yellow-900"
-                        }`}
-                    >
-                      {don.statut_qualification}
-                    </span>
-                  </dd>
-                </div>
-              </dl>
-              <Link
-                href={`/dons/${don.id}`}
-                className="block mt-4 text-sm text-blue-600 hover:text-blue-900"
-              >
-                Voir la fiche complète →
-              </Link>
-            </div>
+            <Card>
+              <CardHeader title="Don sélectionné" />
+              <CardBody>
+                <dl className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
+                  <div>
+                    <dt className="text-gray-500">DIN</dt>
+                    <dd className="font-mono text-gray-900">{don.din}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-gray-500">Date</dt>
+                    <dd className="text-gray-900">{new Date(don.date_don).toLocaleDateString("fr-FR")}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-gray-500">Type</dt>
+                    <dd className="text-gray-900">{don.type_don}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-gray-500">Statut actuel</dt>
+                    <dd className="mt-0.5">
+                      <StatusBadge status={don.statut_qualification} />
+                    </dd>
+                  </div>
+                </dl>
+                <Link
+                  href={`/dons/${don.id}`}
+                  className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700"
+                >
+                  Voir la fiche complète
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </Link>
+              </CardBody>
+            </Card>
           )}
         </div>
 
-        {/* Sidebar - Validation */}
+        {/* Colonne latérale : validation */}
         <div className="space-y-6">
           {liberation && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold mb-4">
-                Validation de libération
-              </h2>
-
-              <div
-                className={`p-4 rounded-lg mb-4 ${liberation.liberable
-                  ? "bg-green-50 border border-green-200"
-                  : "bg-red-50 border border-red-200"
-                  }`}
-              >
+            <Card>
+              <CardHeader title="Validation de libération" />
+              <CardBody className="space-y-4">
                 <div
-                  className={`text-lg font-semibold mb-2 ${liberation.liberable ? "text-green-900" : "text-red-900"
-                    }`}
+                  className={`rounded-lg border p-4 ${liberation.liberable ? "border-emerald-200 bg-emerald-50" : "border-red-200 bg-red-50"}`}
                 >
-                  {liberation.liberable ? "✓ Libérable" : "✗ Non libérable"}
-                </div>
-                {liberation.raison && (
                   <div
-                    className={`text-sm ${liberation.liberable ? "text-green-700" : "text-red-700"
-                      }`}
+                    className={`flex items-center gap-2 text-base font-semibold ${liberation.liberable ? "text-emerald-900" : "text-red-900"}`}
                   >
-                    {liberation.raison}
+                    {liberation.liberable ? (
+                      <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
+                    ) : (
+                      <XCircle className="h-5 w-5" aria-hidden="true" />
+                    )}
+                    {liberation.liberable ? "Libérable" : "Non libérable"}
+                  </div>
+                  {liberation.raison && (
+                    <p className={`mt-1 text-sm ${liberation.liberable ? "text-emerald-800" : "text-red-800"}`}>{liberation.raison}</p>
+                  )}
+                </div>
+
+                {liberation.tests_manquants.length > 0 && (
+                  <div>
+                    <p className="mb-1.5 text-sm font-medium text-gray-800">Tests manquants</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {liberation.tests_manquants.map((test) => (
+                        <Badge key={test} tone="danger">{test}</Badge>
+                      ))}
+                    </div>
+                    <Link
+                      href={`/laboratoire/analyses?don_id=${selectedDonId}`}
+                      className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700"
+                    >
+                      Compléter les analyses
+                      <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                    </Link>
                   </div>
                 )}
-              </div>
 
-              {liberation.tests_manquants.length > 0 && (
-                <div className="mb-4">
-                  <div className="text-sm font-medium text-gray-700 mb-2">
-                    Tests manquants:
+                {liberation.tests_positifs.length > 0 && (
+                  <div>
+                    <p className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-red-800">
+                      <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+                      Tests positifs
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {liberation.tests_positifs.map((test) => (
+                        <Badge key={test} tone="danger" dot>{test}</Badge>
+                      ))}
+                    </div>
                   </div>
-                  <ul className="text-sm text-red-600 space-y-1">
-                    {liberation.tests_manquants.map((test) => (
-                      <li key={test}>• {test}</li>
-                    ))}
-                  </ul>
-                  <Link
-                    href={`/laboratoire/analyses?don_id=${selectedDonId}`}
-                    className="block mt-3 text-sm text-blue-600 hover:text-blue-900"
-                  >
-                    Compléter les analyses →
-                  </Link>
-                </div>
-              )}
+                )}
 
-              {liberation.tests_positifs.length > 0 && (
-                <div className="mb-4">
-                  <div className="text-sm font-medium text-gray-700 mb-2">
-                    ⚠️ Tests positifs:
+                {canValidate && liberation.liberable && don?.statut_qualification !== "LIBERE" && (
+                  <div>
+                    <Button
+                      variant="success"
+                      className="w-full"
+                      onClick={() => setShowConfirmModal(true)}
+                      loading={liberationStatus === "loading"}
+                    >
+                      Libérer le don
+                    </Button>
+                    <p className="mt-2 text-center text-xs text-gray-500">
+                      La libération mettra à jour le statut du don et des poches.
+                    </p>
                   </div>
-                  <ul className="text-sm text-red-600 space-y-1">
-                    {liberation.tests_positifs.map((test) => (
-                      <li key={test}>• {test}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+                )}
 
-              {canValidate && liberation.liberable && don?.statut_qualification !== "LIBERE" && (
-                <>
-                  <button
-                    onClick={() => setShowConfirmModal(true)}
-                    disabled={liberationStatus === "loading"}
-                    className="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition disabled:opacity-50"
-                  >
-                    {liberationStatus === "loading"
-                      ? "Libération en cours..."
-                      : "Libérer le don"}
-                  </button>
-                  <p className="mt-2 text-xs text-gray-500 text-center">
-                    La libération mettra à jour le statut du don et des poches
-                  </p>
-                </>
-              )}
+                {don?.statut_qualification === "LIBERE" && (
+                  <Alert tone="success">Ce don a déjà été libéré.</Alert>
+                )}
 
-              {don?.statut_qualification === "LIBERE" && (
-                <div className="p-3 bg-green-50 border border-green-200 rounded-md text-sm text-green-900">
-                  ✓ Ce don a déjà été libéré
-                </div>
-              )}
-
-              <button
-                onClick={() => refetchLiberation()}
-                className="w-full mt-2 px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition"
-              >
-                Recalculer
-              </button>
-            </div>
+                <Button
+                  variant="secondary"
+                  className="w-full"
+                  onClick={() => refetchLiberation()}
+                  icon={<RefreshCw className="h-4 w-4" aria-hidden="true" />}
+                >
+                  Recalculer
+                </Button>
+              </CardBody>
+            </Card>
           )}
 
-          {/* Règle d'or */}
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <h3 className="font-medium text-red-900 mb-2 text-sm">
-              ⚠️ Règle de libération
-            </h3>
-            <ul className="text-xs text-red-900 space-y-1">
-              <li>• Tous les 6 tests doivent être effectués</li>
-              <li>• Groupage (ABO + Rh) doit être déterminé</li>
-              <li>• Sérologies (VIH, VHB, VHC, Syphilis) doivent être NÉGATIF</li>
-              <li>• Toute anomalie bloque la libération</li>
+          <Alert tone="danger">
+            <p className="flex items-center gap-1.5 font-medium">
+              <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+              Règle de libération
+            </p>
+            <ul className="mt-1 list-disc space-y-0.5 pl-5">
+              <li>Les 6 tests doivent être effectués</li>
+              <li>Le groupage (ABO + Rh) doit être déterminé</li>
+              <li>Les sérologies (VIH, VHB, VHC, Syphilis) doivent être négatives</li>
+              <li>Toute anomalie bloque la libération</li>
             </ul>
-          </div>
+          </Alert>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 className="font-medium text-blue-900 mb-2 text-sm">
-              Workflow de libération
-            </h3>
-            <ul className="text-xs text-blue-900 space-y-1">
-              <li>1. Vérifier toutes les analyses</li>
-              <li>2. Confirmer la conformité biologique</li>
-              <li>3. Libérer le don</li>
-              <li>4. Poches deviennent DISPONIBLE</li>
-              <li>5. Don peut être fractionné/distribué</li>
-            </ul>
-          </div>
+          <Alert tone="info">
+            <p className="font-medium">Étapes de libération</p>
+            <ol className="mt-1 list-decimal space-y-0.5 pl-5">
+              <li>Vérifier toutes les analyses</li>
+              <li>Confirmer la conformité biologique</li>
+              <li>Libérer le don</li>
+              <li>Les poches deviennent disponibles</li>
+              <li>Le don peut être fractionné ou distribué</li>
+            </ol>
+          </Alert>
         </div>
       </div>
 
-      {/* Modal de confirmation */}
-      {showConfirmModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">
-              Confirmer la libération biologique
-            </h3>
-            <div className="mb-6 space-y-3">
-              <div className="p-3 bg-gray-50 rounded-md">
-                <div className="text-sm font-medium text-gray-700 mb-1">Don</div>
-                <div className="text-sm text-gray-900 font-mono">{don?.din}</div>
-              </div>
-              <div className="text-sm text-gray-700">
-                <strong>Conséquences de la libération:</strong>
-                <ul className="mt-2 space-y-1 ml-4 list-disc">
-                  <li>Don passe en statut LIBERE</li>
-                  <li>Poches associées deviennent DISPONIBLE</li>
-                  <li>Action irréversible</li>
-                </ul>
-              </div>
-              {analyses && (
-                <div className="text-xs text-gray-800">
-                  <strong>Résumé:</strong>{" "}
-                  {analyses.length} analyse(s) validée(s)
-                </div>
-              )}
-            </div>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowConfirmModal(false)}
-                disabled={liberationStatus === "loading"}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition disabled:opacity-50"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleLiberer}
-                disabled={liberationStatus === "loading"}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition disabled:opacity-50"
-              >
-                {liberationStatus === "loading"
-                  ? "Libération..."
-                  : "Confirmer la libération"}
-              </button>
-            </div>
+      <Modal
+        open={showConfirmModal}
+        onClose={() => {
+          if (liberationStatus !== "loading") setShowConfirmModal(false);
+        }}
+        title="Confirmer la libération biologique"
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setShowConfirmModal(false)} disabled={liberationStatus === "loading"}>
+              Annuler
+            </Button>
+            <Button variant="success" onClick={handleLiberer} loading={liberationStatus === "loading"}>
+              Confirmer la libération
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4 text-sm">
+          <div className="rounded-lg bg-gray-50 p-3">
+            <div className="text-xs font-medium text-gray-600">Don</div>
+            <div className="font-mono text-gray-900">{don?.din}</div>
           </div>
+          <div className="text-gray-700">
+            <p className="font-medium text-gray-900">Conséquences de la libération :</p>
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Le don passe au statut « Libéré »</li>
+              <li>Les poches associées deviennent « Disponible »</li>
+              <li>Action irréversible</li>
+            </ul>
+          </div>
+          {analyses && (
+            <p className="text-xs text-gray-600">
+              <span className="font-medium">Résumé :</span> {analyses.length} analyse(s) validée(s)
+            </p>
+          )}
         </div>
-      )}
+      </Modal>
     </div>
   );
 }

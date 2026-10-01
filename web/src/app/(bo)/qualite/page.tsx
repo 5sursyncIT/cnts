@@ -1,16 +1,41 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef, type KeyboardEvent } from "react";
+import { toast } from "sonner";
 import {
   FileText,
   AlertTriangle,
   CheckSquare,
   ClipboardCheck,
   Plus,
-  X,
   Eye,
   RefreshCw,
+  Wrench,
 } from "lucide-react";
+import {
+  Badge,
+  Button,
+  ButtonLink,
+  Card,
+  EmptyState,
+  ErrorState,
+  Field,
+  Input,
+  LoadingState,
+  Modal,
+  PageHeader,
+  Select,
+  StatCard,
+  Table,
+  TBody,
+  Td,
+  Textarea,
+  Th,
+  THead,
+  Tr,
+  statusLabel,
+  type BadgeTone,
+} from "@/components/ui";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -79,7 +104,7 @@ type TabKey = "documents" | "nc" | "capa" | "audits";
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "documents", label: "Documents" },
-  { key: "nc", label: "Non-Conformit\u00e9s" },
+  { key: "nc", label: "Non-conformités" },
   { key: "capa", label: "CAPA" },
   { key: "audits", label: "Audits" },
 ];
@@ -88,77 +113,113 @@ const TABS: { key: TabKey; label: string }[] = [
 // Badge helpers
 // ---------------------------------------------------------------------------
 
-function docTypeBadge(type: DocumentQualite["type_document"]) {
-  const map: Record<string, string> = {
-    PROCEDURE: "bg-blue-100 text-blue-800",
-    MODE_OPERATOIRE: "bg-indigo-100 text-indigo-800",
-    FORMULAIRE: "bg-purple-100 text-purple-800",
-    ENREGISTREMENT: "bg-teal-100 text-teal-800",
-    POLITIQUE: "bg-gray-100 text-gray-800",
-  };
-  return map[type] || "bg-gray-100 text-gray-800";
+const DOC_STATUTS = ["BROUILLON", "EN_REVUE", "APPROUVE", "OBSOLETE"] as const;
+const NC_STATUTS = ["OUVERTE", "EN_INVESTIGATION", "ACTION_CORRECTIVE", "VERIFIEE", "CLOTUREE"] as const;
+const CAPA_STATUTS = ["PLANIFIEE", "EN_COURS", "REALISEE", "VERIFIEE", "EFFICACE", "INEFFICACE"] as const;
+const AUDIT_STATUTS = ["PLANIFIE", "EN_COURS", "RAPPORT_REDIGE", "CLOTURE"] as const;
+
+// Labels français des valeurs d'énumération (statuts, types, gravités).
+const LABELS: Record<string, string> = {
+  EN_REVUE: "En revue",
+  APPROUVE: "Approuvé",
+  OBSOLETE: "Obsolète",
+  EN_INVESTIGATION: "En investigation",
+  ACTION_CORRECTIVE: "Action corrective",
+  VERIFIEE: "Vérifiée",
+  REALISEE: "Réalisée",
+  EFFICACE: "Efficace",
+  INEFFICACE: "Inefficace",
+  RAPPORT_REDIGE: "Rapport rédigé",
+  PROCEDURE: "Procédure",
+  MODE_OPERATOIRE: "Mode opératoire",
+  EQUIPEMENT: "Équipement",
+  PREVENTIVE: "Préventive",
+};
+
+function label(value: string): string {
+  return LABELS[value] ?? statusLabel(value);
 }
 
-function docStatutBadge(statut: DocumentQualite["statut"]) {
-  const map: Record<string, string> = {
-    BROUILLON: "bg-gray-100 text-gray-800",
-    EN_REVUE: "bg-yellow-100 text-yellow-800",
-    APPROUVE: "bg-green-100 text-green-800",
-    OBSOLETE: "bg-red-100 text-red-800",
-  };
-  return map[statut] || "bg-gray-100 text-gray-800";
+const TONE_CLASSES: Record<BadgeTone, string> = {
+  neutral: "bg-gray-100 text-gray-800 ring-gray-200",
+  info: "bg-blue-50 text-blue-800 ring-blue-200",
+  success: "bg-emerald-50 text-emerald-800 ring-emerald-200",
+  warning: "bg-amber-50 text-amber-800 ring-amber-200",
+  danger: "bg-red-50 text-red-800 ring-red-200",
+  purple: "bg-violet-50 text-violet-800 ring-violet-200",
+};
+
+/** Sélecteur de statut présenté comme un badge (changement de statut en ligne). */
+function StatutSelect(props: {
+  value: string;
+  options: readonly string[];
+  tone: BadgeTone;
+  label: string;
+  disabled?: boolean;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <select
+      aria-label={props.label}
+      value={props.value}
+      disabled={props.disabled}
+      onChange={(e) => props.onChange(e.target.value)}
+      className={`cursor-pointer rounded-full border-0 py-1 pl-2.5 pr-7 text-xs font-medium ring-1 ring-inset focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-wait disabled:opacity-60 ${TONE_CLASSES[props.tone]}`}
+    >
+      {props.options.map((o) => (
+        <option key={o} value={o}>{label(o)}</option>
+      ))}
+    </select>
+  );
 }
 
-function ncGraviteBadge(gravite: NonConformite["gravite"]) {
-  const map: Record<string, string> = {
-    CRITIQUE: "bg-red-100 text-red-800",
-    MAJEURE: "bg-orange-100 text-orange-800",
-    MINEURE: "bg-yellow-100 text-yellow-800",
-  };
-  return map[gravite] || "bg-gray-100 text-gray-800";
-}
+const DOC_TYPE_TONES: Record<DocumentQualite["type_document"], BadgeTone> = {
+  PROCEDURE: "info",
+  MODE_OPERATOIRE: "info",
+  FORMULAIRE: "purple",
+  ENREGISTREMENT: "neutral",
+  POLITIQUE: "neutral",
+};
 
-function ncStatutBadge(statut: NonConformite["statut"]) {
-  const map: Record<string, string> = {
-    OUVERTE: "bg-red-100 text-red-800",
-    EN_INVESTIGATION: "bg-yellow-100 text-yellow-800",
-    ACTION_CORRECTIVE: "bg-blue-100 text-blue-800",
-    VERIFIEE: "bg-indigo-100 text-indigo-800",
-    CLOTUREE: "bg-green-100 text-green-800",
-  };
-  return map[statut] || "bg-gray-100 text-gray-800";
-}
+const DOC_STATUT_TONES: Record<DocumentQualite["statut"], BadgeTone> = {
+  BROUILLON: "neutral",
+  EN_REVUE: "warning",
+  APPROUVE: "success",
+  OBSOLETE: "danger",
+};
 
-function capaTypeBadge(type: CAPA["type_action"]) {
-  return type === "CORRECTIVE"
-    ? "bg-blue-100 text-blue-800"
-    : "bg-green-100 text-green-800";
-}
+const NC_GRAVITE_TONES: Record<NonConformite["gravite"], BadgeTone> = {
+  CRITIQUE: "danger",
+  MAJEURE: "warning",
+  MINEURE: "neutral",
+};
 
-function capaStatutBadge(statut: CAPA["statut"]) {
-  const map: Record<string, string> = {
-    PLANIFIEE: "bg-gray-100 text-gray-800",
-    EN_COURS: "bg-blue-100 text-blue-800",
-    REALISEE: "bg-indigo-100 text-indigo-800",
-    VERIFIEE: "bg-purple-100 text-purple-800",
-    EFFICACE: "bg-green-100 text-green-800",
-    INEFFICACE: "bg-red-100 text-red-800",
-  };
-  return map[statut] || "bg-gray-100 text-gray-800";
-}
+const NC_STATUT_TONES: Record<NonConformite["statut"], BadgeTone> = {
+  OUVERTE: "danger",
+  EN_INVESTIGATION: "warning",
+  ACTION_CORRECTIVE: "info",
+  VERIFIEE: "purple",
+  CLOTUREE: "success",
+};
 
-function auditStatutBadge(statut: AuditInterne["statut"]) {
-  const map: Record<string, string> = {
-    PLANIFIE: "bg-gray-100 text-gray-800",
-    EN_COURS: "bg-blue-100 text-blue-800",
-    RAPPORT_REDIGE: "bg-indigo-100 text-indigo-800",
-    CLOTURE: "bg-green-100 text-green-800",
-  };
-  return map[statut] || "bg-gray-100 text-gray-800";
-}
+const CAPA_STATUT_TONES: Record<CAPA["statut"], BadgeTone> = {
+  PLANIFIEE: "neutral",
+  EN_COURS: "info",
+  REALISEE: "info",
+  VERIFIEE: "purple",
+  EFFICACE: "success",
+  INEFFICACE: "danger",
+};
+
+const AUDIT_STATUT_TONES: Record<AuditInterne["statut"], BadgeTone> = {
+  PLANIFIE: "neutral",
+  EN_COURS: "info",
+  RAPPORT_REDIGE: "purple",
+  CLOTURE: "success",
+};
 
 function formatDate(iso: string | null | undefined): string {
-  if (!iso) return "-";
+  if (!iso) return "—";
   return new Date(iso).toLocaleDateString("fr-FR", {
     year: "numeric",
     month: "short",
@@ -200,7 +261,7 @@ export default function QualitePage() {
       ]);
 
       if (!docRes.ok || !ncRes.ok || !capaRes.ok || !auditRes.ok) {
-        throw new Error("Erreur lors du chargement des donn\u00e9es");
+        throw new Error("Erreur lors du chargement des données");
       }
 
       const [docData, ncData, capaData, auditData] = await Promise.all([
@@ -224,6 +285,28 @@ export default function QualitePage() {
   useEffect(() => {
     fetchAll();
   }, [fetchAll]);
+
+  const [statutBusy, setStatutBusy] = useState<string | null>(null);
+  const changerStatut = async (ressource: "documents" | "non-conformites" | "capa" | "audits", id: string, statut: string) => {
+    setStatutBusy(id);
+    try {
+      const res = await fetch(`${API}/qualite/${ressource}/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ statut }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(typeof body?.detail === "string" ? body.detail : `Erreur ${res.status}`);
+      }
+      toast.success(`Statut mis à jour : ${label(statut)}`);
+      await fetchAll();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Mise à jour du statut impossible");
+    } finally {
+      setStatutBusy(null);
+    }
+  };
 
   // ------ Summary stats ------
   const totalDocuments = documents.length;
@@ -251,11 +334,12 @@ export default function QualitePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      if (!res.ok) throw new Error("Erreur lors de la cr\u00e9ation");
+      if (!res.ok) throw new Error("Erreur lors de la création");
+      toast.success("Document créé");
       setModalOpen(false);
       await fetchAll();
     } catch {
-      alert("Erreur lors de la cr\u00e9ation du document.");
+      toast.error("Erreur lors de la création du document.");
     } finally {
       setSubmitting(false);
     }
@@ -277,11 +361,12 @@ export default function QualitePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      if (!res.ok) throw new Error("Erreur lors de la cr\u00e9ation");
+      if (!res.ok) throw new Error("Erreur lors de la création");
+      toast.success("Non-conformité déclarée");
       setModalOpen(false);
       await fetchAll();
     } catch {
-      alert("Erreur lors de la cr\u00e9ation de la non-conformit\u00e9.");
+      toast.error("Erreur lors de la création de la non-conformité.");
     } finally {
       setSubmitting(false);
     }
@@ -303,11 +388,12 @@ export default function QualitePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      if (!res.ok) throw new Error("Erreur lors de la cr\u00e9ation");
+      if (!res.ok) throw new Error("Erreur lors de la création");
+      toast.success("CAPA créée");
       setModalOpen(false);
       await fetchAll();
     } catch {
-      alert("Erreur lors de la cr\u00e9ation de la CAPA.");
+      toast.error("Erreur lors de la création de la CAPA.");
     } finally {
       setSubmitting(false);
     }
@@ -328,749 +414,466 @@ export default function QualitePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      if (!res.ok) throw new Error("Erreur lors de la cr\u00e9ation");
+      if (!res.ok) throw new Error("Erreur lors de la création");
+      toast.success("Audit planifié");
       setModalOpen(false);
       await fetchAll();
     } catch {
-      alert("Erreur lors de la cr\u00e9ation de l\u2019audit.");
+      toast.error("Erreur lors de la création de l’audit.");
     } finally {
       setSubmitting(false);
     }
   }
 
+  // ------ Tabs / modal ------
+  const tabRefs = useRef<Partial<Record<TabKey, HTMLButtonElement | null>>>({});
+  const onTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    let next = -1;
+    if (event.key === "ArrowRight") next = (index + 1) % TABS.length;
+    else if (event.key === "ArrowLeft") next = (index - 1 + TABS.length) % TABS.length;
+    else if (event.key === "Home") next = 0;
+    else if (event.key === "End") next = TABS.length - 1;
+    if (next < 0) return;
+    event.preventDefault();
+    setActiveTab(TABS[next].key);
+    tabRefs.current[TABS[next].key]?.focus();
+  };
+
+  // Callback stable : la Modal ré-exécute son effet (focus) quand onClose change.
+  const closeModal = useCallback(() => setModalOpen(false), []);
+
+  const NEW_LABELS: Record<TabKey, string> = {
+    documents: "Nouveau document",
+    nc: "Nouvelle non-conformité",
+    capa: "Nouvelle CAPA",
+    audits: "Nouvel audit",
+  };
+  const MODAL_TITLES: Record<TabKey, string> = {
+    documents: "Nouveau document qualité",
+    nc: "Déclarer une non-conformité",
+    capa: "Nouvelle action corrective ou préventive",
+    audits: "Planifier un audit interne",
+  };
+  const FORM_ID = "qualite-form";
+  const plural = (n: number, one: string, many: string) => `${n} ${n > 1 ? many : one}`;
+  const countLabel: Record<TabKey, string> = {
+    documents: plural(documents.length, "document", "documents"),
+    nc: plural(ncs.length, "non-conformité", "non-conformités"),
+    capa: plural(capas.length, "action", "actions"),
+    audits: plural(audits.length, "audit", "audits"),
+  };
+  const createAction = (
+    <Button size="sm" onClick={() => setModalOpen(true)} icon={<Plus className="h-4 w-4" aria-hidden="true" />}>
+      {NEW_LABELS[activeTab]}
+    </Button>
+  );
+
   // ------ Render ------
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">
-          Syst\u00e8me Management Qualit\u00e9 (SMQ)
-        </h1>
-        <p className="text-gray-700 mt-1">
-          Gestion documentaire, non-conformit\u00e9s, actions correctives et audits internes
-        </p>
+    <div className="space-y-6">
+      <PageHeader
+        title="Qualité (SMQ)"
+        description="Gestion documentaire, non-conformités, actions correctives et audits internes."
+        actions={
+          <>
+            <ButtonLink href="/qualite/equipements" variant="secondary" icon={<Wrench className="h-4 w-4" aria-hidden="true" />}>
+              Équipements
+            </ButtonLink>
+            <Button onClick={() => setModalOpen(true)} icon={<Plus className="h-4 w-4" aria-hidden="true" />}>
+              {NEW_LABELS[activeTab]}
+            </Button>
+          </>
+        }
+      />
+
+      {/* Indicateurs */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatCard
+          label="Documents"
+          value={loading ? "…" : totalDocuments}
+          icon={<FileText className="h-5 w-5" aria-hidden="true" />}
+          tone="info"
+        />
+        <StatCard
+          label="NC ouvertes"
+          value={loading ? "…" : ncOuvertes}
+          icon={<AlertTriangle className="h-5 w-5" aria-hidden="true" />}
+          tone={ncOuvertes > 0 ? "warning" : "neutral"}
+        />
+        <StatCard
+          label="CAPA en cours"
+          value={loading ? "…" : capaEnCours}
+          icon={<CheckSquare className="h-5 w-5" aria-hidden="true" />}
+          tone="info"
+        />
+        <StatCard
+          label="Audits planifiés"
+          value={loading ? "…" : auditsPlanifies}
+          icon={<ClipboardCheck className="h-5 w-5" aria-hidden="true" />}
+          tone="success"
+        />
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
-              <FileText className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="text-xs text-gray-700 mb-0.5">Total Documents</div>
-              <div className="text-2xl font-bold text-gray-900">{totalDocuments}</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-50 text-red-600 rounded-lg">
-              <AlertTriangle className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="text-xs text-gray-700 mb-0.5">NC Ouvertes</div>
-              <div className="text-2xl font-bold text-gray-900">{ncOuvertes}</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
-              <CheckSquare className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="text-xs text-gray-700 mb-0.5">CAPA en cours</div>
-              <div className="text-2xl font-bold text-gray-900">{capaEnCours}</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-50 text-green-600 rounded-lg">
-              <ClipboardCheck className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="text-xs text-gray-700 mb-0.5">Audits planifi\u00e9s</div>
-              <div className="text-2xl font-bold text-gray-900">{auditsPlanifies}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Tab bar */}
-      <div className="flex items-center border-b border-gray-200 mb-6">
-        {TABS.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition ${
-              activeTab === tab.key
-                ? "border-blue-600 text-blue-600"
-                : "border-transparent text-gray-700 hover:text-gray-900 hover:border-gray-300"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-        <div className="ml-auto flex items-center gap-2">
-          <button
-            onClick={fetchAll}
-            className="p-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md transition"
-            title="Actualiser"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-          </button>
-          <button
-            onClick={() => setModalOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition"
-          >
-            <Plus className="h-4 w-4" />
-            Nouveau
-          </button>
-        </div>
-      </div>
-
-      {/* Loading */}
-      {loading && (
-        <div className="p-8 text-center text-gray-700">Chargement...</div>
-      )}
-
-      {/* Error */}
-      {error && !loading && (
-        <div className="p-8 text-center">
-          <div className="text-red-600 mb-2">{error}</div>
-          <button
-            onClick={fetchAll}
-            className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-          >
-            R\u00e9essayer
-          </button>
-        </div>
-      )}
-
-      {/* Tab content */}
-      {!loading && !error && (
-        <div className="bg-white rounded-lg shadow">
-          {/* ==================== DOCUMENTS ==================== */}
-          {activeTab === "documents" && (
-            <div className="overflow-x-auto">
-              {documents.length === 0 ? (
-                <div className="p-8 text-center text-gray-700">
-                  Aucun document qualit\u00e9 enregistr\u00e9
-                </div>
-              ) : (
-                <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        Code
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        Titre
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        Type
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        Version
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        Statut
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        Date r\u00e9vision
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {documents.map((doc) => (
-                      <tr key={doc.id} className="hover:bg-gray-50 transition">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {doc.code}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {doc.titre}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={`px-2 py-1 text-xs font-semibold rounded ${docTypeBadge(doc.type_document)}`}
-                          >
-                            {doc.type_document.replace(/_/g, " ")}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                          {doc.version}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={`px-2 py-1 text-xs font-semibold rounded-full ${docStatutBadge(doc.statut)}`}
-                          >
-                            {doc.statut.replace(/_/g, " ")}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                          {formatDate(doc.date_revision)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right">
-                          <button
-                            onClick={() =>
-                              window.open(
-                                doc.fichier_url || "#",
-                                "_blank"
-                              )
-                            }
-                            className="text-blue-700 hover:text-blue-900 p-1"
-                            title="Voir le document"
-                          >
-                            <Eye className="h-4 w-4 inline" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          )}
-
-          {/* ==================== NON-CONFORMITES ==================== */}
-          {activeTab === "nc" && (
-            <div className="overflow-x-auto">
-              {ncs.length === 0 ? (
-                <div className="p-8 text-center text-gray-700">
-                  Aucune non-conformit\u00e9 enregistr\u00e9e
-                </div>
-              ) : (
-                <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        Code
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        Titre
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        Type
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        Gravit\u00e9
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        Statut
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        Date
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {ncs.map((nc) => (
-                      <tr key={nc.id} className="hover:bg-gray-50 transition">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {nc.code}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {nc.titre}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                          {nc.type_nc}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={`px-2 py-1 text-xs font-semibold rounded ${ncGraviteBadge(nc.gravite)}`}
-                          >
-                            {nc.gravite}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={`px-2 py-1 text-xs font-semibold rounded-full ${ncStatutBadge(nc.statut)}`}
-                          >
-                            {nc.statut.replace(/_/g, " ")}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                          {formatDate(nc.created_at)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right">
-                          <button
-                            className="text-blue-700 hover:text-blue-900 p-1"
-                            title="Voir le d\u00e9tail"
-                          >
-                            <Eye className="h-4 w-4 inline" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          )}
-
-          {/* ==================== CAPA ==================== */}
-          {activeTab === "capa" && (
-            <div className="overflow-x-auto">
-              {capas.length === 0 ? (
-                <div className="p-8 text-center text-gray-700">
-                  Aucune action corrective ou pr\u00e9ventive enregistr\u00e9e
-                </div>
-              ) : (
-                <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        Code
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        Type
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        Description
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        \u00c9ch\u00e9ance
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        Statut
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {capas.map((capa) => (
-                      <tr key={capa.id} className="hover:bg-gray-50 transition">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {capa.code}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={`px-2 py-1 text-xs font-semibold rounded ${capaTypeBadge(capa.type_action)}`}
-                          >
-                            {capa.type_action}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-800 max-w-xs truncate">
-                          {capa.description}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                          {formatDate(capa.date_echeance)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={`px-2 py-1 text-xs font-semibold rounded-full ${capaStatutBadge(capa.statut)}`}
-                          >
-                            {capa.statut.replace(/_/g, " ")}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right">
-                          <button
-                            className="text-blue-700 hover:text-blue-900 p-1"
-                            title="Voir le d\u00e9tail"
-                          >
-                            <Eye className="h-4 w-4 inline" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          )}
-
-          {/* ==================== AUDITS ==================== */}
-          {activeTab === "audits" && (
-            <div className="overflow-x-auto">
-              {audits.length === 0 ? (
-                <div className="p-8 text-center text-gray-700">
-                  Aucun audit interne enregistr\u00e9
-                </div>
-              ) : (
-                <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        Code
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        Titre
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        Processus
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        Date
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        Statut
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {audits.map((audit) => (
-                      <tr key={audit.id} className="hover:bg-gray-50 transition">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {audit.code}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {audit.titre}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                          {audit.processus_audite}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                          {formatDate(audit.date_audit)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={`px-2 py-1 text-xs font-semibold rounded-full ${auditStatutBadge(audit.statut)}`}
-                          >
-                            {audit.statut.replace(/_/g, " ")}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right">
-                          <button
-                            className="text-blue-700 hover:text-blue-900 p-1"
-                            title="Voir le d\u00e9tail"
-                          >
-                            <Eye className="h-4 w-4 inline" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Footer count */}
-      {!loading && !error && (
-        <div className="mt-4 text-sm text-gray-800 text-right">
-          {activeTab === "documents" && `${documents.length} document(s)`}
-          {activeTab === "nc" && `${ncs.length} non-conformit\u00e9(s)`}
-          {activeTab === "capa" && `${capas.length} action(s)`}
-          {activeTab === "audits" && `${audits.length} audit(s)`}
-        </div>
-      )}
-
-      {/* ==================== CREATION MODAL ==================== */}
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          {/* Overlay */}
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={() => setModalOpen(false)}
-          />
-          {/* Modal */}
-          <div className="relative bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">
-                {activeTab === "documents" && "Nouveau Document Qualit\u00e9"}
-                {activeTab === "nc" && "Nouvelle Non-Conformit\u00e9"}
-                {activeTab === "capa" && "Nouvelle CAPA"}
-                {activeTab === "audits" && "Nouvel Audit Interne"}
-              </h2>
+      {/* Onglets */}
+      <div className="flex flex-wrap items-end justify-between gap-3 border-b border-gray-200">
+        <div role="tablist" aria-label="Sections du système qualité" className="-mb-px flex gap-1 overflow-x-auto">
+          {TABS.map((tab, index) => {
+            const isActive = activeTab === tab.key;
+            return (
               <button
-                onClick={() => setModalOpen(false)}
-                className="text-gray-700 hover:text-gray-900 p-1"
+                key={tab.key}
+                ref={(el) => { tabRefs.current[tab.key] = el; }}
+                type="button"
+                role="tab"
+                id={`qualite-tab-${tab.key}`}
+                aria-selected={isActive}
+                aria-controls="qualite-panel"
+                tabIndex={isActive ? 0 : -1}
+                onClick={() => setActiveTab(tab.key)}
+                onKeyDown={(e) => onTabKeyDown(e, index)}
+                className={`whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+                  isActive
+                    ? "border-blue-600 text-blue-700"
+                    : "border-transparent text-gray-600 hover:border-gray-300 hover:text-gray-900"
+                }`}
               >
-                <X className="h-5 w-5" />
+                {tab.label}
               </button>
-            </div>
-
-            <div className="p-4">
-              {/* ---- Document Form ---- */}
-              {activeTab === "documents" && (
-                <form onSubmit={handleCreateDocument} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Titre
-                    </label>
-                    <input
-                      name="titre"
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                      placeholder="Titre du document"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Type de document
-                    </label>
-                    <select
-                      name="type_document"
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                    >
-                      <option value="PROCEDURE">Proc\u00e9dure</option>
-                      <option value="MODE_OPERATOIRE">Mode op\u00e9ratoire</option>
-                      <option value="FORMULAIRE">Formulaire</option>
-                      <option value="ENREGISTREMENT">Enregistrement</option>
-                      <option value="POLITIQUE">Politique</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Version
-                    </label>
-                    <input
-                      name="version"
-                      required
-                      defaultValue="1.0"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                      placeholder="1.0"
-                    />
-                  </div>
-                  <div className="flex justify-end gap-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setModalOpen(false)}
-                      className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition"
-                    >
-                      Annuler
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={submitting}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition disabled:opacity-50"
-                    >
-                      {submitting ? "Cr\u00e9ation..." : "Cr\u00e9er"}
-                    </button>
-                  </div>
-                </form>
-              )}
-
-              {/* ---- NC Form ---- */}
-              {activeTab === "nc" && (
-                <form onSubmit={handleCreateNC} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Titre
-                    </label>
-                    <input
-                      name="titre"
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                      placeholder="Titre de la non-conformit\u00e9"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Description
-                    </label>
-                    <textarea
-                      name="description"
-                      required
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                      placeholder="Description d\u00e9taill\u00e9e..."
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Type
-                      </label>
-                      <select
-                        name="type_nc"
-                        required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                      >
-                        <option value="PRODUIT">Produit</option>
-                        <option value="PROCESSUS">Processus</option>
-                        <option value="EQUIPEMENT">\u00c9quipement</option>
-                        <option value="DOCUMENT">Document</option>
-                        <option value="PERSONNEL">Personnel</option>
-                        <option value="AUTRE">Autre</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Gravit\u00e9
-                      </label>
-                      <select
-                        name="gravite"
-                        required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                      >
-                        <option value="MINEURE">Mineure</option>
-                        <option value="MAJEURE">Majeure</option>
-                        <option value="CRITIQUE">Critique</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="flex justify-end gap-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setModalOpen(false)}
-                      className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition"
-                    >
-                      Annuler
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={submitting}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition disabled:opacity-50"
-                    >
-                      {submitting ? "Cr\u00e9ation..." : "Cr\u00e9er"}
-                    </button>
-                  </div>
-                </form>
-              )}
-
-              {/* ---- CAPA Form ---- */}
-              {activeTab === "capa" && (
-                <form onSubmit={handleCreateCAPA} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Type d&apos;action
-                    </label>
-                    <select
-                      name="type_action"
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                    >
-                      <option value="CORRECTIVE">Corrective</option>
-                      <option value="PREVENTIVE">Pr\u00e9ventive</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Description
-                    </label>
-                    <textarea
-                      name="description"
-                      required
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                      placeholder="Description de l\u2019action..."
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Date d&apos;\u00e9ch\u00e9ance
-                    </label>
-                    <input
-                      name="date_echeance"
-                      type="date"
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Non-conformit\u00e9 associ\u00e9e (optionnel)
-                    </label>
-                    <select
-                      name="non_conformite_id"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                    >
-                      <option value="">Aucune</option>
-                      {ncs.map((nc) => (
-                        <option key={nc.id} value={nc.id}>
-                          {nc.code} - {nc.titre}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="flex justify-end gap-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setModalOpen(false)}
-                      className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition"
-                    >
-                      Annuler
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={submitting}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition disabled:opacity-50"
-                    >
-                      {submitting ? "Cr\u00e9ation..." : "Cr\u00e9er"}
-                    </button>
-                  </div>
-                </form>
-              )}
-
-              {/* ---- Audit Form ---- */}
-              {activeTab === "audits" && (
-                <form onSubmit={handleCreateAudit} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Titre
-                    </label>
-                    <input
-                      name="titre"
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                      placeholder="Titre de l\u2019audit"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Processus audit\u00e9
-                    </label>
-                    <input
-                      name="processus_audite"
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                      placeholder="Ex: Collecte, Laboratoire, Distribution..."
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Date de l&apos;audit
-                    </label>
-                    <input
-                      name="date_audit"
-                      type="date"
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                    />
-                  </div>
-                  <div className="flex justify-end gap-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setModalOpen(false)}
-                      className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition"
-                    >
-                      Annuler
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={submitting}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition disabled:opacity-50"
-                    >
-                      {submitting ? "Cr\u00e9ation..." : "Cr\u00e9er"}
-                    </button>
-                  </div>
-                </form>
-              )}
-            </div>
-          </div>
+            );
+          })}
         </div>
-      )}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="mb-1.5"
+          onClick={fetchAll}
+          loading={loading}
+          icon={<RefreshCw className="h-4 w-4" aria-hidden="true" />}
+        >
+          Actualiser
+        </Button>
+      </div>
+
+      <Card role="tabpanel" id="qualite-panel" aria-labelledby={`qualite-tab-${activeTab}`}>
+        {loading ? (
+          <LoadingState />
+        ) : error ? (
+          <ErrorState message={error} onRetry={fetchAll} />
+        ) : (
+          <>
+            {/* ==================== DOCUMENTS ==================== */}
+            {activeTab === "documents" &&
+              (documents.length === 0 ? (
+                <EmptyState
+                  icon={<FileText className="h-6 w-6" aria-hidden="true" />}
+                  title="Aucun document qualité enregistré"
+                  action={createAction}
+                />
+              ) : (
+                <Table>
+                  <THead>
+                    <tr>
+                      <Th>Code</Th>
+                      <Th>Titre</Th>
+                      <Th>Type</Th>
+                      <Th>Version</Th>
+                      <Th>Statut</Th>
+                      <Th>Date de révision</Th>
+                      <Th align="right"><span className="sr-only">Fichier</span></Th>
+                    </tr>
+                  </THead>
+                  <TBody>
+                    {documents.map((doc) => (
+                      <Tr key={doc.id}>
+                        <Td className="whitespace-nowrap font-medium text-gray-900">{doc.code}</Td>
+                        <Td className="text-gray-900">{doc.titre}</Td>
+                        <Td>
+                          <Badge tone={DOC_TYPE_TONES[doc.type_document] ?? "neutral"}>{label(doc.type_document)}</Badge>
+                        </Td>
+                        <Td className="tabular-nums">{doc.version}</Td>
+                        <Td>
+                          <StatutSelect
+                            value={doc.statut}
+                            options={DOC_STATUTS}
+                            tone={DOC_STATUT_TONES[doc.statut] ?? "neutral"}
+                            label={`Statut du document ${doc.code}`}
+                            disabled={statutBusy === doc.id}
+                            onChange={(v) => changerStatut("documents", doc.id, v)}
+                          />
+                        </Td>
+                        <Td className="whitespace-nowrap">{formatDate(doc.date_revision)}</Td>
+                        <Td align="right">
+                          {doc.fichier_url ? (
+                            <a
+                              href={doc.fichier_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-blue-700 hover:bg-gray-100 hover:text-blue-900"
+                              title="Voir le document"
+                              aria-label={`Voir le document ${doc.code} (nouvel onglet)`}
+                            >
+                              <Eye className="h-4 w-4" aria-hidden="true" />
+                            </a>
+                          ) : (
+                            <span className="text-xs text-gray-500">Aucun fichier</span>
+                          )}
+                        </Td>
+                      </Tr>
+                    ))}
+                  </TBody>
+                </Table>
+              ))}
+
+            {/* ==================== NON-CONFORMITES ==================== */}
+            {activeTab === "nc" &&
+              (ncs.length === 0 ? (
+                <EmptyState
+                  icon={<AlertTriangle className="h-6 w-6" aria-hidden="true" />}
+                  title="Aucune non-conformité enregistrée"
+                  action={createAction}
+                />
+              ) : (
+                <Table>
+                  <THead>
+                    <tr>
+                      <Th>Code</Th>
+                      <Th>Titre</Th>
+                      <Th>Type</Th>
+                      <Th>Gravité</Th>
+                      <Th>Statut</Th>
+                      <Th>Date</Th>
+                    </tr>
+                  </THead>
+                  <TBody>
+                    {ncs.map((nc) => (
+                      <Tr key={nc.id}>
+                        <Td className="whitespace-nowrap font-medium text-gray-900">{nc.code}</Td>
+                        <Td className="text-gray-900">{nc.titre}</Td>
+                        <Td className="whitespace-nowrap">{label(nc.type_nc)}</Td>
+                        <Td>
+                          <Badge tone={NC_GRAVITE_TONES[nc.gravite] ?? "neutral"} dot>{label(nc.gravite)}</Badge>
+                        </Td>
+                        <Td>
+                          <StatutSelect
+                            value={nc.statut}
+                            options={NC_STATUTS}
+                            tone={NC_STATUT_TONES[nc.statut] ?? "neutral"}
+                            label={`Statut de la non-conformité ${nc.code}`}
+                            disabled={statutBusy === nc.id}
+                            onChange={(v) => changerStatut("non-conformites", nc.id, v)}
+                          />
+                        </Td>
+                        <Td className="whitespace-nowrap">{formatDate(nc.created_at)}</Td>
+                      </Tr>
+                    ))}
+                  </TBody>
+                </Table>
+              ))}
+
+            {/* ==================== CAPA ==================== */}
+            {activeTab === "capa" &&
+              (capas.length === 0 ? (
+                <EmptyState
+                  icon={<CheckSquare className="h-6 w-6" aria-hidden="true" />}
+                  title="Aucune action corrective ou préventive enregistrée"
+                  action={createAction}
+                />
+              ) : (
+                <Table>
+                  <THead>
+                    <tr>
+                      <Th>Code</Th>
+                      <Th>Type</Th>
+                      <Th>Description</Th>
+                      <Th>Échéance</Th>
+                      <Th>Statut</Th>
+                    </tr>
+                  </THead>
+                  <TBody>
+                    {capas.map((capa) => (
+                      <Tr key={capa.id}>
+                        <Td className="whitespace-nowrap font-medium text-gray-900">{capa.code}</Td>
+                        <Td>
+                          <Badge tone={capa.type_action === "CORRECTIVE" ? "info" : "success"}>{label(capa.type_action)}</Badge>
+                        </Td>
+                        <Td className="max-w-xs truncate" title={capa.description}>{capa.description}</Td>
+                        <Td className="whitespace-nowrap">{formatDate(capa.date_echeance)}</Td>
+                        <Td>
+                          <StatutSelect
+                            value={capa.statut}
+                            options={CAPA_STATUTS}
+                            tone={CAPA_STATUT_TONES[capa.statut] ?? "neutral"}
+                            label={`Statut de la CAPA ${capa.code}`}
+                            disabled={statutBusy === capa.id}
+                            onChange={(v) => changerStatut("capa", capa.id, v)}
+                          />
+                        </Td>
+                      </Tr>
+                    ))}
+                  </TBody>
+                </Table>
+              ))}
+
+            {/* ==================== AUDITS ==================== */}
+            {activeTab === "audits" &&
+              (audits.length === 0 ? (
+                <EmptyState
+                  icon={<ClipboardCheck className="h-6 w-6" aria-hidden="true" />}
+                  title="Aucun audit interne enregistré"
+                  action={createAction}
+                />
+              ) : (
+                <Table>
+                  <THead>
+                    <tr>
+                      <Th>Code</Th>
+                      <Th>Titre</Th>
+                      <Th>Processus</Th>
+                      <Th>Date</Th>
+                      <Th>Statut</Th>
+                    </tr>
+                  </THead>
+                  <TBody>
+                    {audits.map((audit) => (
+                      <Tr key={audit.id}>
+                        <Td className="whitespace-nowrap font-medium text-gray-900">{audit.code}</Td>
+                        <Td className="text-gray-900">{audit.titre}</Td>
+                        <Td>{audit.processus_audite}</Td>
+                        <Td className="whitespace-nowrap">{formatDate(audit.date_audit)}</Td>
+                        <Td>
+                          <StatutSelect
+                            value={audit.statut}
+                            options={AUDIT_STATUTS}
+                            tone={AUDIT_STATUT_TONES[audit.statut] ?? "neutral"}
+                            label={`Statut de l’audit ${audit.code}`}
+                            disabled={statutBusy === audit.id}
+                            onChange={(v) => changerStatut("audits", audit.id, v)}
+                          />
+                        </Td>
+                      </Tr>
+                    ))}
+                  </TBody>
+                </Table>
+              ))}
+
+            <p className="border-t border-gray-100 px-4 py-3 text-sm text-gray-600">{countLabel[activeTab]}</p>
+          </>
+        )}
+      </Card>
+
+      {/* ==================== MODALE DE CRÉATION ==================== */}
+      <Modal
+        open={modalOpen}
+        onClose={closeModal}
+        title={MODAL_TITLES[activeTab]}
+        footer={
+          <>
+            <Button variant="secondary" onClick={closeModal}>
+              Annuler
+            </Button>
+            <Button type="submit" form={FORM_ID} loading={submitting}>
+              Créer
+            </Button>
+          </>
+        }
+      >
+        {activeTab === "documents" && (
+          <form id={FORM_ID} onSubmit={handleCreateDocument} className="space-y-4">
+            <Field label="Titre" required>
+              <Input name="titre" placeholder="Titre du document" />
+            </Field>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Type de document" required>
+                <Select name="type_document">
+                  <option value="PROCEDURE">Procédure</option>
+                  <option value="MODE_OPERATOIRE">Mode opératoire</option>
+                  <option value="FORMULAIRE">Formulaire</option>
+                  <option value="ENREGISTREMENT">Enregistrement</option>
+                  <option value="POLITIQUE">Politique</option>
+                </Select>
+              </Field>
+              <Field label="Version" required>
+                <Input name="version" defaultValue="1.0" placeholder="1.0" />
+              </Field>
+            </div>
+          </form>
+        )}
+
+        {activeTab === "nc" && (
+          <form id={FORM_ID} onSubmit={handleCreateNC} className="space-y-4">
+            <Field label="Titre" required>
+              <Input name="titre" placeholder="Titre de la non-conformité" />
+            </Field>
+            <Field label="Description" required>
+              <Textarea name="description" rows={3} placeholder="Description détaillée…" />
+            </Field>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Type" required>
+                <Select name="type_nc">
+                  <option value="PRODUIT">Produit</option>
+                  <option value="PROCESSUS">Processus</option>
+                  <option value="EQUIPEMENT">Équipement</option>
+                  <option value="DOCUMENT">Document</option>
+                  <option value="PERSONNEL">Personnel</option>
+                  <option value="AUTRE">Autre</option>
+                </Select>
+              </Field>
+              <Field label="Gravité" required>
+                <Select name="gravite">
+                  <option value="MINEURE">Mineure</option>
+                  <option value="MAJEURE">Majeure</option>
+                  <option value="CRITIQUE">Critique</option>
+                </Select>
+              </Field>
+            </div>
+          </form>
+        )}
+
+        {activeTab === "capa" && (
+          <form id={FORM_ID} onSubmit={handleCreateCAPA} className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Type d’action" required>
+                <Select name="type_action">
+                  <option value="CORRECTIVE">Corrective</option>
+                  <option value="PREVENTIVE">Préventive</option>
+                </Select>
+              </Field>
+              <Field label="Date d’échéance" required>
+                <Input name="date_echeance" type="date" />
+              </Field>
+            </div>
+            <Field label="Description" required>
+              <Textarea name="description" rows={3} placeholder="Description de l’action…" />
+            </Field>
+            <Field label="Non-conformité associée" hint="Facultatif.">
+              <Select name="non_conformite_id">
+                <option value="">Aucune</option>
+                {ncs.map((nc) => (
+                  <option key={nc.id} value={nc.id}>
+                    {nc.code} - {nc.titre}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          </form>
+        )}
+
+        {activeTab === "audits" && (
+          <form id={FORM_ID} onSubmit={handleCreateAudit} className="space-y-4">
+            <Field label="Titre" required>
+              <Input name="titre" placeholder="Titre de l’audit" />
+            </Field>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Processus audité" required>
+                <Input name="processus_audite" placeholder="Ex. : collecte, laboratoire, distribution…" />
+              </Field>
+              <Field label="Date de l’audit" required>
+                <Input name="date_audit" type="date" />
+              </Field>
+            </div>
+          </form>
+        )}
+      </Modal>
     </div>
   );
 }

@@ -4,7 +4,11 @@ import { useCreateRecette } from "@cnts/api";
 import type { ComposantRecette } from "@cnts/api";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Plus, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { apiClient } from "@/lib/api-client";
+import { apiErrorMessage } from "@/lib/api-error";
+import { Alert, Button, Card, CardBody, CardHeader, Field, Input, PageHeader, Select } from "@/components/ui";
 
 export default function NouvelleRecettePage() {
     const router = useRouter();
@@ -70,10 +74,10 @@ export default function NouvelleRecettePage() {
                 actif: formData.actif,
                 composants,
             });
-            alert("Recette créée avec succès");
+            toast.success("Recette créée");
             router.push("/parametrage/recettes");
-        } catch (error: any) {
-            alert(`Erreur: ${error?.body?.detail || "Échec de la création"}`);
+        } catch (err) {
+            toast.error(apiErrorMessage(err, "Échec de la création"));
         }
     };
 
@@ -92,190 +96,141 @@ export default function NouvelleRecettePage() {
     };
 
     return (
-        <div className="p-6 max-w-3xl mx-auto">
-            {/* Header */}
-            <div className="mb-6">
-                <h1 className="text-2xl font-bold text-gray-900">Nouvelle Recette de Fractionnement</h1>
-                <p className="text-gray-700 mt-1">
-                    Créer une nouvelle recette prédéfinie pour le fractionnement
-                </p>
-            </div>
+        <div className="max-w-3xl">
+            <PageHeader
+                title="Nouvelle recette"
+                description="Recette prédéfinie pour le fractionnement du sang total."
+                back={{ href: "/parametrage/recettes", label: "Recettes de fractionnement" }}
+            />
 
-            {/* Form */}
-            <div className="bg-white rounded-lg shadow p-6">
-                <form onSubmit={handleSubmit}>
-                    {/* Code */}
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Code <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                            type="text"
-                            value={formData.code}
-                            onChange={(e) =>
-                                setFormData({ ...formData, code: e.target.value.toUpperCase() })
-                            }
-                            placeholder="ex: ST_STANDARD"
-                            className={`w-full font-mono px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 ${errors.code ? "border-red-500" : "border-gray-300"
-                                }`}
-                        />
-                        {errors.code && <p className="text-red-500 text-sm mt-1">{errors.code}</p>}
-                        <p className="text-gray-500 text-xs mt-1">
-                            Identifiant unique (majuscules, chiffres, underscore uniquement)
-                        </p>
-                    </div>
-
-                    {/* Libellé */}
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Libellé <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                            type="text"
-                            value={formData.libelle}
-                            onChange={(e) => setFormData({ ...formData, libelle: e.target.value })}
-                            placeholder="ex: Fractionnement standard du sang total"
-                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.libelle ? "border-red-500" : "border-gray-300"
-                                }`}
-                        />
-                        {errors.libelle && (
-                            <p className="text-red-500 text-sm mt-1">{errors.libelle}</p>
-                        )}
-                    </div>
-
-                    {/* Site Code */}
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Code Site (optionnel)
-                        </label>
-                        <input
-                            type="text"
-                            value={formData.site_code}
-                            onChange={(e) => setFormData({ ...formData, site_code: e.target.value })}
-                            placeholder="Laisser vide pour une recette globale"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                        <p className="text-gray-500 text-xs mt-1">
-                            Si spécifié, la recette ne sera disponible que pour ce site
-                        </p>
-                    </div>
-
-                    {/* Type Source */}
-                    <div className="mb-6">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Type Source
-                        </label>
-                        <select
-                            value={formData.type_source}
-                            onChange={(e) => setFormData({ ...formData, type_source: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            <form onSubmit={handleSubmit} noValidate className="space-y-6">
+                <Card>
+                    <CardHeader title="Informations générales" />
+                    <CardBody className="grid gap-4 sm:grid-cols-2">
+                        <Field
+                            label="Code"
+                            required
+                            error={errors.code}
+                            hint="Identifiant unique (majuscules, chiffres, underscore uniquement)"
                         >
-                            <option value="ST">Sang Total (ST)</option>
-                        </select>
-                    </div>
+                            <Input
+                                type="text"
+                                value={formData.code}
+                                onChange={(e) =>
+                                    setFormData({ ...formData, code: e.target.value.toUpperCase() })
+                                }
+                                placeholder="ex. ST_STANDARD"
+                                className="font-mono"
+                            />
+                        </Field>
 
-                    {/* Composants */}
-                    <div className="mb-6">
-                        <div className="flex justify-between items-center mb-2">
-                            <label className="block text-sm font-medium text-gray-700">
-                                Composants <span className="text-red-500">*</span>
-                            </label>
-                            <button
-                                type="button"
-                                onClick={addComposant}
-                                className="text-sm text-blue-600 hover:text-blue-700"
+                        <Field label="Libellé" required error={errors.libelle}>
+                            <Input
+                                type="text"
+                                value={formData.libelle}
+                                onChange={(e) => setFormData({ ...formData, libelle: e.target.value })}
+                                placeholder="ex. Fractionnement standard du sang total"
+                            />
+                        </Field>
+
+                        <Field label="Code site" hint="Laisser vide pour une recette globale ; sinon, réservée à ce site.">
+                            <Input
+                                type="text"
+                                value={formData.site_code}
+                                onChange={(e) => setFormData({ ...formData, site_code: e.target.value })}
+                                placeholder="Optionnel"
+                            />
+                        </Field>
+
+                        <Field label="Type source">
+                            <Select
+                                value={formData.type_source}
+                                onChange={(e) => setFormData({ ...formData, type_source: e.target.value })}
                             >
-                                + Ajouter composant
-                            </button>
-                        </div>
+                                <option value="ST">Sang total (ST)</option>
+                            </Select>
+                        </Field>
+                    </CardBody>
+                </Card>
 
-                        {errors.composants && (
-                            <p className="text-red-500 text-sm mb-2">{errors.composants}</p>
-                        )}
+                <Card>
+                    <CardHeader
+                        title="Composants"
+                        description="Produits obtenus à partir d’une poche source."
+                        actions={
+                            <Button size="sm" variant="secondary" onClick={addComposant} icon={<Plus className="h-4 w-4" aria-hidden="true" />}>
+                                Ajouter un composant
+                            </Button>
+                        }
+                    />
+                    <CardBody className="space-y-3">
+                        {errors.composants && <Alert tone="danger">{errors.composants}</Alert>}
 
-                        <div className="space-y-3">
-                            {composants.map((composant, index) => (
-                                <div
-                                    key={index}
-                                    className="flex gap-3 items-start p-3 bg-gray-50 rounded border border-gray-200"
-                                >
-                                    <div className="flex-1">
-                                        <label className="block text-xs text-gray-800 mb-1">Type</label>
-                                        <select
-                                            value={composant.type_produit}
-                                            onChange={(e) =>
-                                                updateComposant(index, "type_produit", e.target.value)
-                                            }
-                                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        >
-                                            <option value="CGR">CGR</option>
-                                            <option value="PFC">PFC</option>
-                                            <option value="CP">CP</option>
-                                        </select>
-                                    </div>
-
-                                    <div className="flex-1">
-                                        <label className="block text-xs text-gray-800 mb-1">Volume (ml)</label>
-                                        <input
-                                            type="number"
-                                            value={composant.volume_ml}
-                                            onChange={(e) =>
-                                                updateComposant(index, "volume_ml", parseInt(e.target.value) || 0)
-                                            }
-                                            className={`w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors[`composant_${index}_volume`]
-                                                ? "border-red-500"
-                                                : "border-gray-300"
-                                                }`}
-                                        />
-                                    </div>
-
-                                    <div className="flex-1">
-                                        <label className="block text-xs text-gray-800 mb-1">Quantité</label>
-                                        <input
-                                            type="number"
-                                            value={composant.quantite}
-                                            onChange={(e) =>
-                                                updateComposant(index, "quantite", parseInt(e.target.value) || 0)
-                                            }
-                                            className={`w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors[`composant_${index}_quantite`]
-                                                ? "border-red-500"
-                                                : "border-gray-300"
-                                                }`}
-                                        />
-                                    </div>
-
-                                    <button
-                                        type="button"
-                                        onClick={() => removeComposant(index)}
-                                        disabled={composants.length === 1}
-                                        className="mt-5 text-red-600 hover:text-red-700 disabled:text-gray-400"
+                        {composants.map((composant, index) => (
+                            <fieldset
+                                key={index}
+                                className="grid items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 sm:grid-cols-[1fr_1fr_1fr_auto]"
+                            >
+                                <legend className="sr-only">Composant {index + 1}</legend>
+                                <Field label="Type">
+                                    <Select
+                                        value={composant.type_produit}
+                                        onChange={(e) =>
+                                            updateComposant(index, "type_produit", e.target.value)
+                                        }
                                     >
-                                        ✕
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+                                        <option value="CGR">CGR</option>
+                                        <option value="PFC">PFC</option>
+                                        <option value="CP">CP</option>
+                                    </Select>
+                                </Field>
 
-                    {/* Actions */}
-                    <div className="flex gap-3 mt-6">
-                        <button
-                            type="submit"
-                            disabled={createMutation.isLoading}
-                            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition disabled:bg-gray-400"
-                        >
-                            {createMutation.isLoading ? "Création..." : "Créer la Recette"}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => router.back()}
-                            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition"
-                        >
-                            Annuler
-                        </button>
-                    </div>
-                </form>
-            </div>
+                                <Field label="Volume (ml)" error={errors[`composant_${index}_volume`]}>
+                                    <Input
+                                        type="number"
+                                        min={1}
+                                        value={composant.volume_ml}
+                                        onChange={(e) =>
+                                            updateComposant(index, "volume_ml", parseInt(e.target.value) || 0)
+                                        }
+                                    />
+                                </Field>
+
+                                <Field label="Quantité" error={errors[`composant_${index}_quantite`]}>
+                                    <Input
+                                        type="number"
+                                        min={1}
+                                        value={composant.quantite}
+                                        onChange={(e) =>
+                                            updateComposant(index, "quantite", parseInt(e.target.value) || 0)
+                                        }
+                                    />
+                                </Field>
+
+                                <button
+                                    type="button"
+                                    onClick={() => removeComposant(index)}
+                                    disabled={composants.length === 1}
+                                    aria-label={`Retirer le composant ${index + 1}`}
+                                    title="Retirer"
+                                    className="justify-self-end rounded-lg p-2 text-gray-500 hover:bg-red-50 hover:text-red-600 disabled:opacity-40 sm:mt-7"
+                                >
+                                    <Trash2 className="h-4 w-4" aria-hidden="true" />
+                                </button>
+                            </fieldset>
+                        ))}
+                    </CardBody>
+                </Card>
+
+                <div className="flex flex-wrap justify-end gap-2">
+                    <Button type="button" variant="secondary" onClick={() => router.back()}>
+                        Annuler
+                    </Button>
+                    <Button type="submit" loading={createMutation.isLoading}>
+                        Créer la recette
+                    </Button>
+                </div>
+            </form>
         </div>
     );
 }

@@ -1,14 +1,86 @@
 "use client";
 
-import { usePoches, usePochesStock } from "@cnts/api";
-import Link from "next/link";
+import { usePochesStock, type MotifDestruction, type Poche } from "@cnts/api";
+import { AlertTriangle, CheckCircle2, Clock, Info, Package, RefreshCw, Settings2, Split } from "lucide-react";
+import { toast } from "sonner";
 import { useState } from "react";
 import { apiClient } from "@/lib/api-client";
+import { apiErrorMessage } from "@/lib/api-error";
+import {
+  Alert,
+  Badge,
+  Button,
+  ButtonLink,
+  Card,
+  EmptyState,
+  ErrorState,
+  Field,
+  LoadingState,
+  Modal,
+  PageHeader,
+  Select,
+  StatCard,
+  StatusBadge,
+  Table,
+  TBody,
+  Td,
+  Textarea,
+  Th,
+  THead,
+  Tr,
+  type BadgeTone,
+} from "@/components/ui";
+
+const TYPE_TONES: Record<string, BadgeTone> = {
+  ST: "danger",
+  CGR: "warning",
+  PFC: "info",
+  CP: "purple",
+};
+
+const MOTIFS_DESTRUCTION: Record<MotifDestruction, string> = {
+  PEREMPTION: "Péremption",
+  SEROLOGIE_POSITIVE: "Sérologie positive / non qualifiée",
+  NON_CONFORMITE: "Non-conformité (volume, aspect, étiquetage)",
+  RUPTURE_CHAINE_FROID: "Rupture de la chaîne du froid",
+  RAPPEL: "Rappel de lot",
+  CASSE_FUITE: "Casse / fuite",
+  AUTRE: "Autre",
+};
 
 export default function StockPage() {
   const [typeFilter, setTypeFilter] = useState<string>("");
   const [statutFilter, setStatutFilter] = useState<string>("EN_STOCK");
   const [sortByExpiration, setSortByExpiration] = useState(true);
+  const [aDetruire, setADetruire] = useState<Poche | null>(null);
+  const [motif, setMotif] = useState<MotifDestruction>("PEREMPTION");
+  const [commentaire, setCommentaire] = useState("");
+  const [destructionError, setDestructionError] = useState<string | null>(null);
+  const [destructionBusy, setDestructionBusy] = useState(false);
+
+  const ouvrirDestruction = (poche: Poche) => {
+    const perimee = new Date(poche.date_peremption).getTime() < Date.now();
+    setADetruire(poche);
+    setMotif(perimee ? "PEREMPTION" : poche.statut_stock === "RAPPELEE" ? "RAPPEL" : "NON_CONFORMITE");
+    setCommentaire("");
+    setDestructionError(null);
+  };
+
+  const confirmerDestruction = async () => {
+    if (!aDetruire) return;
+    setDestructionBusy(true);
+    setDestructionError(null);
+    try {
+      await apiClient.poches.detruire(aDetruire.id, { motif, commentaire: commentaire.trim() || undefined });
+      setADetruire(null);
+      toast.success("Poche mise au rebut");
+      refetch();
+    } catch (e) {
+      setDestructionError(apiErrorMessage(e, "La mise au rebut a échoué."));
+    } finally {
+      setDestructionBusy(false);
+    }
+  };
 
   // Charger les poches en stock
   const { data: poches, status, error, refetch } = usePochesStock(apiClient, {
@@ -72,308 +144,228 @@ export default function StockPage() {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Gestion du Stock</h1>
-          <p className="text-gray-700 mt-1">
-            Inventaire des poches de sang et fractionnement
-          </p>
-        </div>
-        <div className="flex gap-3">
-          <Link
-            href="/stock/regles"
-            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition"
-          >
-            Règles produits
-          </Link>
-          <Link
-            href="/stock/fractionnement"
-            className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition"
-          >
-            + Fractionner
-          </Link>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Stock"
+        description="Inventaire des poches de sang et fractionnement"
+        actions={
+          <>
+            <ButtonLink href="/stock/regles" variant="secondary" icon={<Settings2 className="h-4 w-4" aria-hidden="true" />}>
+              Règles produits
+            </ButtonLink>
+            <ButtonLink href="/stock/fractionnement" icon={<Split className="h-4 w-4" aria-hidden="true" />}>
+              Fractionner
+            </ButtonLink>
+          </>
+        }
+      />
 
       {/* Statistiques */}
       {status === "success" && poches && (
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="text-xs text-gray-500 mb-1">Total</div>
-            <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
-          </div>
-          <div className="bg-red-50 rounded-lg shadow p-4">
-            <div className="text-xs text-red-600 mb-1">ST</div>
-            <div className="text-2xl font-bold text-red-900">{stats.st}</div>
-          </div>
-          <div className="bg-orange-50 rounded-lg shadow p-4">
-            <div className="text-xs text-orange-600 mb-1">CGR</div>
-            <div className="text-2xl font-bold text-orange-900">{stats.cgr}</div>
-          </div>
-          <div className="bg-yellow-50 rounded-lg shadow p-4">
-            <div className="text-xs text-yellow-600 mb-1">PFC</div>
-            <div className="text-2xl font-bold text-yellow-900">{stats.pfc}</div>
-          </div>
-          <div className="bg-blue-50 rounded-lg shadow p-4">
-            <div className="text-xs text-blue-600 mb-1">CP</div>
-            <div className="text-2xl font-bold text-blue-900">{stats.cp}</div>
-          </div>
-          <div className="bg-green-50 rounded-lg shadow p-4">
-            <div className="text-xs text-green-600 mb-1">Disponible</div>
-            <div className="text-2xl font-bold text-green-900">
-              {stats.disponible}
-            </div>
-          </div>
-          <div className="bg-orange-50 rounded-lg shadow p-4">
-            <div className="text-xs text-orange-600 mb-1">Expire {"<"}7j</div>
-            <div className="text-2xl font-bold text-orange-900">
-              {stats.expiringSoon}
-            </div>
-          </div>
-          <div className="bg-red-50 rounded-lg shadow p-4">
-            <div className="text-xs text-red-600 mb-1">Expiré</div>
-            <div className="text-2xl font-bold text-red-900">{stats.expired}</div>
-          </div>
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          <StatCard label="Total" value={stats.total} icon={<Package className="h-5 w-5" aria-hidden="true" />} />
+          <StatCard label="Disponibles" value={stats.disponible} tone="success" icon={<CheckCircle2 className="h-5 w-5" aria-hidden="true" />} />
+          <StatCard
+            label="Expirent sous 7 j"
+            value={stats.expiringSoon}
+            tone={stats.expiringSoon > 0 ? "warning" : "neutral"}
+            icon={<Clock className="h-5 w-5" aria-hidden="true" />}
+          />
+          <StatCard
+            label="Expirées"
+            value={stats.expired}
+            tone={stats.expired > 0 ? "danger" : "neutral"}
+            icon={<AlertTriangle className="h-5 w-5" aria-hidden="true" />}
+          />
+          <StatCard label="Sang total (ST)" value={stats.st} />
+          <StatCard label="CGR" value={stats.cgr} />
+          <StatCard label="PFC" value={stats.pfc} />
+          <StatCard label="CP" value={stats.cp} />
         </div>
       )}
 
-      {/* Filtres */}
-      <div className="bg-white rounded-lg shadow p-4 mb-6">
-        <div className="flex gap-4 items-end flex-wrap">
-          <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Type de produit
-            </label>
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-            >
+      <Card>
+        {/* Filtres */}
+        <div className="grid gap-3 border-b border-gray-100 p-4 sm:grid-cols-2 lg:grid-cols-4 lg:items-end">
+          <Field label="Type de produit">
+            <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
               <option value="">Tous les types</option>
-              <option value="ST">Sang Total (ST)</option>
-              <option value="CGR">Concentré Globules Rouges (CGR)</option>
-              <option value="PFC">Plasma Frais Congelé (PFC)</option>
-              <option value="CP">Concentré Plaquettaire (CP)</option>
-            </select>
-          </div>
+              <option value="ST">Sang total (ST)</option>
+              <option value="CGR">Concentré de globules rouges (CGR)</option>
+              <option value="PFC">Plasma frais congelé (PFC)</option>
+              <option value="CP">Concentré plaquettaire (CP)</option>
+            </Select>
+          </Field>
 
-          <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Statut stock
-            </label>
-            <select
-              value={statutFilter}
-              onChange={(e) => setStatutFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-            >
+          <Field label="Statut stock">
+            <Select value={statutFilter} onChange={(e) => setStatutFilter(e.target.value)}>
               <option value="">Tous</option>
               <option value="EN_STOCK">En stock</option>
               <option value="FRACTIONNEE">Fractionnée</option>
-            </select>
-          </div>
+              <option value="RAPPELEE">Rappelée</option>
+              <option value="DETRUITE">Détruite (rebut)</option>
+            </Select>
+          </Field>
 
-          <div className="flex items-center gap-2">
+          <label htmlFor="sort-fefo" className="flex h-10 items-center gap-2 text-sm text-gray-800">
             <input
-              type="checkbox"
               id="sort-fefo"
+              type="checkbox"
               checked={sortByExpiration}
               onChange={(e) => setSortByExpiration(e.target.checked)}
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
             />
-            <label htmlFor="sort-fefo" className="text-sm text-gray-700">
-              Tri FEFO (péremption)
-            </label>
+            Tri FEFO (péremption)
+          </label>
+
+          <div className="flex lg:justify-end">
+            <Button variant="secondary" onClick={() => refetch()} icon={<RefreshCw className="h-4 w-4" aria-hidden="true" />}>
+              Actualiser
+            </Button>
           </div>
-
-          <button
-            onClick={() => refetch()}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition"
-          >
-            Actualiser
-          </button>
         </div>
-      </div>
 
-      {/* Liste des poches */}
-      <div className="bg-white rounded-lg shadow">
-        {status === "loading" && (
-          <div className="p-8 text-center text-gray-700">Chargement...</div>
-        )}
+        {/* Liste des poches */}
+        {status === "loading" && <LoadingState rows={6} />}
 
         {status === "error" && (
-          <div className="p-8 text-center">
-            <div className="text-red-600 mb-2">Erreur de chargement</div>
-            <div className="text-sm text-gray-800">
-              {error?.status ? `Erreur ${error.status}` : "Erreur inconnue"}
-            </div>
-            <button
-              onClick={() => refetch()}
-              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-            >
-              Réessayer
-            </button>
-          </div>
+          <ErrorState message={apiErrorMessage(error, "Le stock n’a pas pu être chargé.")} onRetry={() => refetch()} />
         )}
 
         {status === "success" && sortedPoches.length === 0 && (
-          <div className="p-8 text-center text-gray-700">
-            Aucune poche en stock
-          </div>
+          <EmptyState
+            title="Aucune poche"
+            description="Aucune poche ne correspond aux filtres sélectionnés."
+          />
         )}
 
         {status === "success" && sortedPoches.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
+          <>
+            <Table>
+              <THead>
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Type
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Groupe
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Volume
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Péremption
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Emplacement
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Statut Stock
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Statut Distrib.
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Actions
-                  </th>
+                  <Th>Type</Th>
+                  <Th>Groupe</Th>
+                  <Th>Volume</Th>
+                  <Th>Péremption</Th>
+                  <Th>Emplacement</Th>
+                  <Th>Statut stock</Th>
+                  <Th>Distribution</Th>
+                  <Th align="right">Actions</Th>
                 </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              </THead>
+              <TBody>
                 {sortedPoches.map((poche) => {
                   const daysUntilExpiry = getDaysUntilExpiry(poche.date_peremption);
                   const isExpiringSoon = daysUntilExpiry <= 7 && daysUntilExpiry >= 0;
                   const isExpired = daysUntilExpiry < 0;
 
                   return (
-                    <tr
-                      key={poche.id}
-                      className={`hover:bg-gray-50 transition ${isExpired
-                          ? "bg-red-50"
-                          : isExpiringSoon
-                            ? "bg-orange-50"
-                            : ""
-                        }`}
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`px-2 py-1 text-xs font-semibold rounded ${poche.type_produit === "ST"
-                              ? "bg-red-100 text-red-900"
-                              : poche.type_produit === "CGR"
-                                ? "bg-orange-100 text-orange-900"
-                                : poche.type_produit === "PFC"
-                                  ? "bg-yellow-100 text-yellow-900"
-                                  : "bg-blue-100 text-blue-900"
-                            }`}
-                        >
-                          {poche.type_produit}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {poche.groupe_sanguin || "-"}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                        {poche.volume_ml ? `${poche.volume_ml}ml` : "-"}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <Tr key={poche.id} className={isExpired ? "bg-red-50/60" : isExpiringSoon ? "bg-amber-50/60" : ""}>
+                      <Td className="whitespace-nowrap">
+                        <Badge tone={TYPE_TONES[poche.type_produit] ?? "neutral"}>{poche.type_produit}</Badge>
+                      </Td>
+                      <Td className="whitespace-nowrap font-medium text-gray-900">{poche.groupe_sanguin || "—"}</Td>
+                      <Td className="whitespace-nowrap">{poche.volume_ml ? `${poche.volume_ml} mL` : "—"}</Td>
+                      <Td className="whitespace-nowrap">
                         <div
                           className={
                             isExpired
-                              ? "text-red-600 font-semibold"
+                              ? "font-semibold text-red-700"
                               : isExpiringSoon
-                                ? "text-orange-600 font-semibold"
+                                ? "font-semibold text-amber-700"
                                 : "text-gray-900"
                           }
                         >
-                          {new Date(poche.date_peremption).toLocaleDateString(
-                            "fr-FR"
-                          )}
+                          {new Date(poche.date_peremption).toLocaleDateString("fr-FR")}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {isExpired
-                            ? `Expiré (${Math.abs(daysUntilExpiry)}j)`
-                            : `${daysUntilExpiry}j restant`}
+                          {isExpired ? `Expirée depuis ${Math.abs(daysUntilExpiry)} j` : `${daysUntilExpiry} j restant(s)`}
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                        {poche.emplacement_stock}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`px-2 py-1 text-xs font-semibold rounded-full ${poche.statut_stock === "EN_STOCK"
-                              ? "bg-blue-100 text-blue-900"
-                              : "bg-gray-100 text-gray-800"
-                            }`}
-                        >
-                          {poche.statut_stock}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`px-2 py-1 text-xs font-semibold rounded-full ${poche.statut_distribution === "DISPONIBLE"
-                              ? "bg-green-100 text-green-900"
-                              : poche.statut_distribution === "RESERVE"
-                                ? "bg-blue-100 text-blue-900"
-                                : poche.statut_distribution === "DISTRIBUE"
-                                  ? "bg-gray-100 text-gray-800"
-                                  : "bg-yellow-100 text-yellow-900"
-                            }`}
-                        >
-                          {poche.statut_distribution}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        {poche.type_produit === "ST" &&
-                          poche.statut_stock === "EN_STOCK" && (
-                            <Link
-                              href={`/stock/fractionnement?poche_id=${poche.id}`}
-                              className="text-purple-600 hover:text-purple-900 mr-4"
-                            >
+                      </Td>
+                      <Td className="whitespace-nowrap">{poche.emplacement_stock}</Td>
+                      <Td className="whitespace-nowrap">
+                        <StatusBadge status={poche.statut_stock} />
+                      </Td>
+                      <Td className="whitespace-nowrap">
+                        <StatusBadge status={poche.statut_distribution} />
+                      </Td>
+                      <Td align="right" className="whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1">
+                          {poche.type_produit === "ST" && poche.statut_stock === "EN_STOCK" && (
+                            <ButtonLink href={`/stock/fractionnement?poche_id=${poche.id}`} variant="ghost" size="sm">
                               Fractionner
-                            </Link>
+                            </ButtonLink>
                           )}
-                        <Link
-                          href={`/dons/${poche.don_id}`}
-                          className="text-blue-700 hover:text-blue-900 font-semibold hover:underline"
-                        >
-                          Voir don
-                        </Link>
-                      </td>
-                    </tr>
+                          <ButtonLink href={`/dons/${poche.don_id}`} variant="ghost" size="sm">
+                            Voir le don
+                          </ButtonLink>
+                          {(poche.statut_stock === "EN_STOCK" || poche.statut_stock === "RAPPELEE") &&
+                            poche.statut_distribution !== "RESERVE" && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-700 hover:bg-red-50"
+                                onClick={() => ouvrirDestruction(poche)}
+                              >
+                                Mettre au rebut
+                              </Button>
+                            )}
+                        </div>
+                      </Td>
+                    </Tr>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {/* Footer */}
-      {status === "success" && sortedPoches && (
-        <div className="mt-4 flex justify-between items-center text-sm text-gray-800">
-          <div>{sortedPoches.length} poche(s) affichée(s)</div>
-          {sortByExpiration && (
-            <div className="text-xs bg-blue-50 border border-blue-200 rounded px-3 py-1">
-              ℹ️ Tri FEFO activé (First Expired, First Out)
+              </TBody>
+            </Table>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 px-4 py-3 text-sm text-gray-600">
+              <span>{sortedPoches.length} poche(s) affichée(s)</span>
+              {sortByExpiration && (
+                <span className="inline-flex items-center gap-1.5 text-xs">
+                  <Info className="h-4 w-4 text-blue-600" aria-hidden="true" />
+                  Tri FEFO activé (premier périmé, premier sorti)
+                </span>
+              )}
             </div>
-          )}
+          </>
+        )}
+      </Card>
+
+      <Modal
+        open={aDetruire !== null}
+        onClose={() => setADetruire(null)}
+        title="Mettre la poche au rebut"
+        description={
+          aDetruire
+            ? `${aDetruire.type_produit} ${aDetruire.groupe_sanguin ?? ""} — péremption ${new Date(aDetruire.date_peremption).toLocaleDateString("fr-FR")}. Action tracée et irréversible.`
+            : undefined
+        }
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setADetruire(null)}>
+              Annuler
+            </Button>
+            <Button variant="danger" onClick={confirmerDestruction} loading={destructionBusy}>
+              Confirmer la mise au rebut
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          {destructionError ? <Alert tone="danger">{destructionError}</Alert> : null}
+          <Field label="Motif" required>
+            <Select value={motif} onChange={(e) => setMotif(e.target.value as MotifDestruction)}>
+              {(Object.keys(MOTIFS_DESTRUCTION) as MotifDestruction[]).map((m) => (
+                <option key={m} value={m}>{MOTIFS_DESTRUCTION[m]}</option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Commentaire">
+            <Textarea rows={2} maxLength={1000} value={commentaire} onChange={(e) => setCommentaire(e.target.value)} />
+          </Field>
         </div>
-      )}
+      </Modal>
     </div>
   );
 }

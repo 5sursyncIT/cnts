@@ -3,14 +3,26 @@
 import { useProductRule, useUpsertProductRule } from "@cnts/api";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 import { apiClient } from "@/lib/api-client";
+import { apiErrorMessage } from "@/lib/api-error";
+import { Alert, Button, Card, CardBody, ErrorState, Field, Input, LoadingState, PageHeader } from "@/components/ui";
+
+type FormKey = "shelf_life_days" | "default_volume_ml" | "min_volume_ml" | "max_volume_ml";
+
+const FIELDS: { key: FormKey; label: string }[] = [
+    { key: "shelf_life_days", label: "Durée de vie (jours)" },
+    { key: "default_volume_ml", label: "Volume par défaut (ml)" },
+    { key: "min_volume_ml", label: "Volume minimum (ml)" },
+    { key: "max_volume_ml", label: "Volume maximum (ml)" },
+];
 
 export default function EditRegleProduitPage() {
     const params = useParams();
     const router = useRouter();
     const typeProduit = params.type as string;
 
-    const { data: regle, status } = useProductRule(apiClient, typeProduit);
+    const { data: regle, status, error, refetch } = useProductRule(apiClient, typeProduit);
     const updateMutation = useUpsertProductRule(apiClient);
 
     const [formData, setFormData] = useState({
@@ -76,134 +88,88 @@ export default function EditRegleProduitPage() {
                 typeProduit,
                 data: formData,
             });
-            alert("Règle mise à jour avec succès");
+            toast.success("Règle mise à jour");
             router.push("/parametrage/regles-produits");
-        } catch (error: any) {
-            alert(`Erreur: ${error?.body?.detail || "Échec de la mise à jour"}`);
+        } catch (err) {
+            toast.error(apiErrorMessage(err, "Échec de la mise à jour"));
         }
     };
 
-    if (status === "loading") {
+    const header = (
+        <PageHeader
+            title={`Règle ${typeProduit}`}
+            description="Durée de vie et volumes de référence du produit."
+            back={{ href: "/parametrage/regles-produits", label: "Règles produits" }}
+        />
+    );
+
+    if (status === "loading" || status === "idle") {
         return (
-            <div className="p-6 max-w-2xl mx-auto">
-                <div className="text-center text-gray-700">Chargement...</div>
+            <div className="max-w-2xl">
+                {header}
+                <Card>
+                    <LoadingState rows={4} />
+                </Card>
+            </div>
+        );
+    }
+
+    // 404 : la règle n'existe pas encore, le formulaire permet de la créer (upsert).
+    const notFound = status === "error" && (error as { status?: number } | null)?.status === 404;
+
+    if (status === "error" && !notFound) {
+        return (
+            <div className="max-w-2xl">
+                {header}
+                <Card>
+                    <ErrorState message={apiErrorMessage(error, "Impossible de charger la règle.")} onRetry={() => refetch()} />
+                </Card>
             </div>
         );
     }
 
     return (
-        <div className="p-6 max-w-2xl mx-auto">
-            {/* Header */}
-            <div className="mb-6">
-                <h1 className="text-2xl font-bold text-gray-900">Modifier Règle - {typeProduit}</h1>
-                <p className="text-gray-700 mt-1">
-                    Configuration de la durée de vie et des volumes
-                </p>
-            </div>
+        <div className="max-w-2xl space-y-4">
+            {header}
 
-            {/* Form */}
-            <div className="bg-white rounded-lg shadow p-6">
-                <form onSubmit={handleSubmit}>
-                    {/* Shelf Life Days */}
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Durée de Vie (jours) <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                            type="number"
-                            value={formData.shelf_life_days}
-                            onChange={(e) =>
-                                setFormData({ ...formData, shelf_life_days: parseInt(e.target.value) || 0 })
-                            }
-                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 ${errors.shelf_life_days ? "border-red-500" : "border-gray-300"
-                                }`}
-                        />
-                        {errors.shelf_life_days && (
-                            <p className="text-red-500 text-sm mt-1">{errors.shelf_life_days}</p>
-                        )}
-                    </div>
+            {notFound && (
+                <Alert tone="info">Aucune règle n’existe encore pour ce produit : elle sera créée à l’enregistrement.</Alert>
+            )}
 
-                    {/* Default Volume */}
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Volume par Défaut (ml) <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                            type="number"
-                            value={formData.default_volume_ml}
-                            onChange={(e) =>
-                                setFormData({ ...formData, default_volume_ml: parseInt(e.target.value) || 0 })
-                            }
-                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 ${errors.default_volume_ml ? "border-red-500" : "border-gray-300"
-                                }`}
-                        />
-                        {errors.default_volume_ml && (
-                            <p className="text-red-500 text-sm mt-1">{errors.default_volume_ml}</p>
-                        )}
-                    </div>
+            <Card>
+                <CardBody>
+                    <form onSubmit={handleSubmit} noValidate className="space-y-5">
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            {FIELDS.map(({ key, label }) => (
+                                <Field key={key} label={label} required error={errors[key]}>
+                                    <Input
+                                        type="number"
+                                        inputMode="numeric"
+                                        min={1}
+                                        value={formData[key]}
+                                        onChange={(e) =>
+                                            setFormData({ ...formData, [key]: parseInt(e.target.value) || 0 })
+                                        }
+                                    />
+                                </Field>
+                            ))}
+                        </div>
 
-                    {/* Min Volume */}
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Volume Minimum (ml) <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                            type="number"
-                            value={formData.min_volume_ml}
-                            onChange={(e) =>
-                                setFormData({ ...formData, min_volume_ml: parseInt(e.target.value) || 0 })
-                            }
-                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 ${errors.min_volume_ml ? "border-red-500" : "border-gray-300"
-                                }`}
-                        />
-                        {errors.min_volume_ml && (
-                            <p className="text-red-500 text-sm mt-1">{errors.min_volume_ml}</p>
-                        )}
-                    </div>
+                        <div className="flex flex-wrap justify-end gap-2 border-t border-gray-100 pt-4">
+                            <Button type="button" variant="secondary" onClick={() => router.back()}>
+                                Annuler
+                            </Button>
+                            <Button type="submit" loading={updateMutation.isLoading}>
+                                Enregistrer
+                            </Button>
+                        </div>
+                    </form>
+                </CardBody>
+            </Card>
 
-                    {/* Max Volume */}
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Volume Maximum (ml) <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                            type="number"
-                            value={formData.max_volume_ml}
-                            onChange={(e) =>
-                                setFormData({ ...formData, max_volume_ml: parseInt(e.target.value) || 0 })
-                            }
-                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.max_volume_ml ? "border-red-500" : "border-gray-300"
-                                }`}
-                        />
-                        {errors.max_volume_ml && (
-                            <p className="text-red-500 text-sm mt-1">{errors.max_volume_ml}</p>
-                        )}
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex gap-3 mt-6">
-                        <button
-                            type="submit"
-                            disabled={updateMutation.isLoading}
-                            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition disabled:bg-gray-400"
-                        >
-                            {updateMutation.isLoading ? "Enregistrement..." : "Enregistrer"}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => router.back()}
-                            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition"
-                        >
-                            Annuler
-                        </button>
-                    </div>
-                </form>
-            </div>
-
-            {/* Info */}
-            <div className="mt-4 text-sm text-gray-800 bg-yellow-50 border border-yellow-200 rounded p-4">
-                <strong>⚠️ Attention:</strong> Les modifications s'appliqueront aux nouvelles poches créées, pas aux poches existantes.
-            </div>
+            <Alert tone="warning">
+                Les modifications s’appliqueront aux nouvelles poches créées, pas aux poches existantes.
+            </Alert>
         </div>
     );
 }

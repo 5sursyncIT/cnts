@@ -2,9 +2,31 @@
 
 import { useCreateReceveur, useReceveurs, useUpdateReceveur, useDeleteReceveur, useHopitaux } from "@cnts/api";
 import type { Receveur } from "@cnts/api";
-import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useState } from "react";
+import { Pencil, Plus, Trash2, UserRound } from "lucide-react";
+import { toast } from "sonner";
 import { apiClient } from "@/lib/api-client";
+import { apiErrorMessage } from "@/lib/api-error";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  ErrorState,
+  Field,
+  Input,
+  LoadingState,
+  Modal,
+  PageHeader,
+  Select,
+  Table,
+  TBody,
+  Td,
+  Th,
+  THead,
+  Tr,
+} from "@/components/ui";
 
 const GROUPES_SANGUINS = [
   "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"
@@ -18,7 +40,7 @@ export default function ReceveursPage() {
   const [formData, setFormData] = useState({
     nom: "",
     prenom: "",
-    sexe: "M",
+    sexe: "H",
     date_naissance: "",
     adresse: "",
     telephone: "",
@@ -47,7 +69,7 @@ export default function ReceveursPage() {
     setFormData({
       nom: "",
       prenom: "",
-      sexe: "M",
+      sexe: "H",
       date_naissance: "",
       adresse: "",
       telephone: "",
@@ -63,7 +85,7 @@ export default function ReceveursPage() {
     setFormData({
       nom: receveur.nom || "",
       prenom: receveur.prenom || "",
-      sexe: receveur.sexe || "M",
+      sexe: receveur.sexe || "H",
       date_naissance: receveur.date_naissance || "",
       adresse: receveur.adresse || "",
       telephone: receveur.telephone || "",
@@ -74,19 +96,20 @@ export default function ReceveursPage() {
     setShowModal(true);
   };
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setShowModal(false);
     setEditingReceveur(null);
     setFormError(null);
-  };
+  }, []);
 
   const handleDelete = async (id: string) => {
     if (confirm("Êtes-vous sûr de vouloir supprimer ce receveur ?")) {
       try {
         await deleteMutation.mutate(id);
         await refetch();
+        toast.success("Receveur supprimé");
       } catch (err) {
-        alert("Erreur lors de la suppression");
+        toast.error(apiErrorMessage(err, "Erreur lors de la suppression"));
       }
     }
   };
@@ -117,295 +140,213 @@ export default function ReceveursPage() {
       }
       
       await refetch();
+      toast.success(editingReceveur ? "Receveur mis à jour" : "Receveur ajouté");
       handleClose();
-    } catch (err: any) {
-      setFormError(err.body?.detail || "Une erreur est survenue");
+    } catch (err: unknown) {
+      const msg = apiErrorMessage(err, "Une erreur est survenue");
+      setFormError(msg);
+      toast.error(msg);
     }
   };
 
   const isLoading = createMutation.isLoading || updateMutation.isLoading;
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Link
-              href="/distribution"
-              className="text-gray-500 hover:text-gray-700 text-sm"
-            >
-              ← Retour distribution
-            </Link>
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900">Receveurs</h1>
-          <p className="text-gray-700 mt-1">
-            Gestion des patients receveurs de produits sanguins
-          </p>
-        </div>
-        <button
-          onClick={handleOpenCreate}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-        >
-          + Ajouter un receveur
-        </button>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Receveurs"
+        description="Patients receveurs de produits sanguins"
+        back={{ href: "/distribution", label: "Distribution" }}
+        actions={
+          <Button onClick={handleOpenCreate} icon={<Plus className="h-4 w-4" aria-hidden="true" />}>
+            Ajouter un receveur
+          </Button>
+        }
+      />
 
-      {/* Loading / Error States */}
-      {status === "loading" && (
-        <div className="text-center py-10 text-gray-500">Chargement...</div>
-      )}
+      <Card>
+        {status === "loading" && <LoadingState />}
 
-      {status === "error" && (
-        <div className="bg-red-50 text-red-600 p-4 rounded-md mb-6">
-          Erreur lors du chargement des receveurs.
-        </div>
-      )}
+        {status === "error" && (
+          <ErrorState message="Les receveurs n’ont pas pu être chargés." onRetry={() => refetch()} />
+        )}
 
-      {/* Table */}
-      {status === "success" && (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        {status === "success" && receveurs?.length === 0 && (
+          <EmptyState
+            title="Aucun receveur enregistré"
+            icon={<UserRound className="h-6 w-6" aria-hidden="true" />}
+            action={
+              <Button size="sm" onClick={handleOpenCreate} icon={<Plus className="h-4 w-4" aria-hidden="true" />}>
+                Ajouter un receveur
+              </Button>
+            }
+          />
+        )}
+
+        {status === "success" && receveurs && receveurs.length > 0 && (
+          <Table>
+            <THead>
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Nom du patient
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Groupe Sanguin
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Contact / Adresse
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Actions
-                </th>
+                <Th>Patient</Th>
+                <Th>Groupe sanguin</Th>
+                <Th>Établissement / contact</Th>
+                <Th align="right">
+                  <span className="sr-only">Actions</span>
+                </Th>
               </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {receveurs?.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="px-6 py-4 text-center text-gray-700">
-                    Aucun receveur trouvé.
-                  </td>
-                </tr>
-              )}
-              {receveurs?.map((receveur) => (
-                <tr key={receveur.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4">
-                    <div className="font-medium text-gray-900">
+            </THead>
+            <TBody>
+              {receveurs.map((receveur) => (
+                <Tr key={receveur.id}>
+                  <Td>
+                    <p className="font-medium text-gray-900">
                       {receveur.prenom} {receveur.nom}
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      {receveur.sexe === "H" ? "Homme" : "Femme"} • {receveur.date_naissance ? new Date(receveur.date_naissance).toLocaleDateString() : "Né(e) inconnu"}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
+                    </p>
+                    <p className="mt-0.5 text-xs text-gray-500">
+                      {receveur.sexe === "H" ? "Homme" : receveur.sexe === "F" ? "Femme" : "Sexe non renseigné"} ·{" "}
+                      {receveur.date_naissance
+                        ? new Date(receveur.date_naissance).toLocaleDateString("fr-FR")
+                        : "Date de naissance inconnue"}
+                    </p>
+                  </Td>
+                  <Td>
                     {receveur.groupe_sanguin ? (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-900">
-                        {receveur.groupe_sanguin}
-                      </span>
+                      <Badge tone="danger">{receveur.groupe_sanguin}</Badge>
                     ) : (
-                      <span className="text-gray-400 italic">Inconnu</span>
+                      <span className="italic text-gray-400">Inconnu</span>
                     )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                    <div className="font-medium text-gray-900">{receveur.hopital?.nom || "-"}</div>
-                    <div className="truncate max-w-xs">{receveur.adresse || "-"}</div>
-                    <div className="text-xs text-gray-400">{receveur.telephone}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button
-                      onClick={() => handleOpenEdit(receveur)}
-                      className="text-indigo-600 hover:text-indigo-900 mr-4"
-                    >
-                      Modifier
-                    </button>
-                    <button
-                      onClick={() => handleDelete(receveur.id)}
-                      className="text-red-700 hover:text-red-900 font-semibold hover:underline"
-                    >
-                      Supprimer
-                    </button>
-                  </td>
-                </tr>
+                  </Td>
+                  <Td>
+                    <p className="font-medium text-gray-900">{receveur.hopital?.nom || "—"}</p>
+                    <p className="max-w-xs truncate text-gray-600">{receveur.adresse || "—"}</p>
+                    {receveur.telephone ? <p className="text-xs text-gray-500">{receveur.telephone}</p> : null}
+                  </Td>
+                  <Td align="right" className="whitespace-nowrap">
+                    <div className="inline-flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleOpenEdit(receveur)}
+                        icon={<Pencil className="h-4 w-4" aria-hidden="true" />}
+                        aria-label={`Modifier ${receveur.prenom ?? ""} ${receveur.nom}`.trim()}
+                      >
+                        Modifier
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-brand-700 hover:bg-red-50"
+                        onClick={() => handleDelete(receveur.id)}
+                        icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
+                        aria-label={`Supprimer ${receveur.prenom ?? ""} ${receveur.nom}`.trim()}
+                      >
+                        Supprimer
+                      </Button>
+                    </div>
+                  </Td>
+                </Tr>
               ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+            </TBody>
+          </Table>
+        )}
+      </Card>
 
-      {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h2 className="text-xl font-bold mb-4">
-              {editingReceveur ? "Modifier le receveur" : "Ajouter un receveur"}
-            </h2>
+      <Modal
+        open={showModal}
+        onClose={handleClose}
+        title={editingReceveur ? "Modifier le receveur" : "Ajouter un receveur"}
+        size="lg"
+        footer={
+          <>
+            <Button variant="secondary" onClick={handleClose} disabled={isLoading}>
+              Annuler
+            </Button>
+            <Button type="submit" form="receveur-form" loading={isLoading}>
+              {isLoading ? "Enregistrement…" : "Enregistrer"}
+            </Button>
+          </>
+        }
+      >
+        <form id="receveur-form" onSubmit={handleSubmit} className="space-y-4">
+          {formError && <Alert tone="danger">{formError}</Alert>}
 
-            {formError && (
-              <div className="bg-red-50 text-red-600 p-3 rounded mb-4 text-sm">
-                {formError}
-              </div>
-            )}
+          <Field label="Établissement de soins (hôpital / clinique)">
+            <Select value={formData.hopital_id} onChange={(e) => setFormData({ ...formData, hopital_id: e.target.value })}>
+              <option value="">Aucun / non spécifié</option>
+              {hopitaux?.map((h) => (
+                <option key={h.id} value={h.id}>
+                  {h.nom}
+                </option>
+              ))}
+            </Select>
+          </Field>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Établissement de soin (Hôpital/Clinique)
-                </label>
-                <select
-                  value={formData.hopital_id}
-                  onChange={(e) =>
-                    setFormData({ ...formData, hopital_id: e.target.value })
-                  }
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Aucun / Non spécifié</option>
-                  {hopitaux?.map((h) => (
-                    <option key={h.id} value={h.id}>
-                      {h.nom}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Prénom *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.prenom}
-                    onChange={(e) =>
-                      setFormData({ ...formData, prenom: e.target.value })
-                    }
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Ex: Moussa"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Nom *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.nom}
-                    onChange={(e) =>
-                      setFormData({ ...formData, nom: e.target.value })
-                    }
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Ex: Diop"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Sexe *
-                  </label>
-                  <select
-                    value={formData.sexe}
-                    onChange={(e) =>
-                      setFormData({ ...formData, sexe: e.target.value })
-                    }
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="M">Homme</option>
-                    <option value="F">Femme</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Date de naissance
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.date_naissance}
-                    onChange={(e) =>
-                      setFormData({ ...formData, date_naissance: e.target.value })
-                    }
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Adresse
-                </label>
-                <input
-                  type="text"
-                  value={formData.adresse}
-                  onChange={(e) =>
-                    setFormData({ ...formData, adresse: e.target.value })
-                  }
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Adresse complète"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Téléphone
-                  </label>
-                  <input
-                    type="tel"
-                    value={formData.telephone}
-                    onChange={(e) =>
-                      setFormData({ ...formData, telephone: e.target.value })
-                    }
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Ex: 77 000 00 00"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Groupe Sanguin
-                  </label>
-                  <select
-                    value={formData.groupe_sanguin}
-                    onChange={(e) =>
-                      setFormData({ ...formData, groupe_sanguin: e.target.value })
-                    }
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Inconnu / A déterminer</option>
-                    {GROUPES_SANGUINS.map((g) => (
-                      <option key={g} value={g}>
-                        {g}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3 mt-6">
-                <button
-                  type="button"
-                  onClick={handleClose}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
-                  disabled={isLoading}
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-                  disabled={isLoading}
-                >
-                  {isLoading ? "Enregistrement..." : "Enregistrer"}
-                </button>
-              </div>
-            </form>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Prénom" required>
+              <Input
+                type="text"
+                value={formData.prenom}
+                onChange={(e) => setFormData({ ...formData, prenom: e.target.value })}
+                placeholder="Ex. : Moussa"
+              />
+            </Field>
+            <Field label="Nom" required>
+              <Input
+                type="text"
+                value={formData.nom}
+                onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
+                placeholder="Ex. : Diop"
+              />
+            </Field>
+            <Field label="Sexe" required>
+              <Select value={formData.sexe} onChange={(e) => setFormData({ ...formData, sexe: e.target.value })}>
+                <option value="H">Homme</option>
+                <option value="F">Femme</option>
+              </Select>
+            </Field>
+            <Field label="Date de naissance">
+              <Input
+                type="date"
+                value={formData.date_naissance}
+                onChange={(e) => setFormData({ ...formData, date_naissance: e.target.value })}
+              />
+            </Field>
           </div>
-        </div>
-      )}
+
+          <Field label="Adresse">
+            <Input
+              type="text"
+              value={formData.adresse}
+              onChange={(e) => setFormData({ ...formData, adresse: e.target.value })}
+              placeholder="Adresse complète"
+            />
+          </Field>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Téléphone">
+              <Input
+                type="tel"
+                value={formData.telephone}
+                onChange={(e) => setFormData({ ...formData, telephone: e.target.value })}
+                placeholder="Ex. : 77 000 00 00"
+              />
+            </Field>
+            <Field label="Groupe sanguin">
+              <Select
+                value={formData.groupe_sanguin}
+                onChange={(e) => setFormData({ ...formData, groupe_sanguin: e.target.value })}
+              >
+                <option value="">Inconnu / à déterminer</option>
+                {GROUPES_SANGUINS.map((g) => (
+                  <option key={g} value={g}>
+                    {g}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

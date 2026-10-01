@@ -7,7 +7,7 @@ export async function getCurrentUser(): Promise<User | null> {
   const token = (await cookies()).get(sessionCookieName)?.value;
   if (!token) return null;
   const session = await verifySessionToken(token); 
-  if (!session) return null;
+  if (!session || !session.mfa) return null;
 
   const resolvedRoles = session.roleIds
     .map((id) => {
@@ -33,6 +33,6 @@ export async function getCurrentUser(): Promise<User | null> {
     email: session.email,
     displayName: session.displayName,
     roles: resolvedRoles,
-    isMfaEnabled: true
+    isMfaEnabled: session.mfa
   };
 }

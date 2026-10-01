@@ -77,7 +77,7 @@ describe("api client", () => {
 
     await api.poches.list();
     await api.poches.get("00000000-0000-0000-0000-000000000000");
-    await api.poches.delete("00000000-0000-0000-0000-000000000000");
+    await api.poches.detruire("00000000-0000-0000-0000-000000000000", { motif: "AUTRE" });
     await api.poches.getAlertesPeremption();
     await api.poches.getStockSummary();
 
@@ -113,7 +113,8 @@ describe("api client", () => {
     await api.crossMatch.create({} as any);
 
     await api.hemovigilance.listActesTransfusionnels();
-    await api.hemovigilance.getActeTransfusionnel("00000000-0000-0000-0000-000000000000");
+    await api.eir.list();
+    await api.eir.statistiques();
     await api.hemovigilance.listRappels();
     await api.hemovigilance.getRappel("00000000-0000-0000-0000-000000000000");
 

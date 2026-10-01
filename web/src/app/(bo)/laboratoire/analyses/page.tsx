@@ -3,9 +3,27 @@
 import { useDon, useDons, useAnalyses, useCreateAnalyse } from "@cnts/api";
 import type { AnalyseCreate } from "@cnts/api";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { ArrowRight, Search } from "lucide-react";
+import { toast } from "sonner";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { apiClient } from "@/lib/api-client";
+import { apiErrorMessage } from "@/lib/api-error";
+import {
+  Alert,
+  Badge,
+  Button,
+  ButtonLink,
+  Card,
+  CardBody,
+  CardHeader,
+  EmptyState,
+  Field,
+  Input,
+  PageHeader,
+  Select,
+  StatusBadge,
+} from "@/components/ui";
 
 const TESTS_REQUIS = [
   { type: "ABO", label: "Groupe ABO", options: ["A", "B", "AB", "O", "EN_ATTENTE"] },
@@ -18,6 +36,7 @@ const TESTS_REQUIS = [
 
 export default function AnalysesPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const donIdFromUrl = searchParams.get("don_id");
 
   const [selectedDonId, setSelectedDonId] = useState<string>(donIdFromUrl || "");
@@ -31,9 +50,25 @@ export default function AnalysesPage() {
     SYPHILIS: { resultat: "", note: "" },
   });
   const [submitting, setSubmitting] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
 
   const { mutate: createAnalyse } = useCreateAnalyse(apiClient);
+  const [correction, setCorrection] = useState<{ id: string; resultat: string; note: string } | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionBusy, setActionBusy] = useState(false);
+
+  const runAnalyseAction = async (action: () => Promise<unknown>) => {
+    setActionBusy(true);
+    setActionError(null);
+    try {
+      await action();
+      setCorrection(null);
+      await refetchAnalyses();
+    } catch (err) {
+      setActionError(apiErrorMessage(err, "L’opération a échoué."));
+    } finally {
+      setActionBusy(false);
+    }
+  };
 
   // Charger les dons EN_ATTENTE
   const { data: donsEnAttente } = useDons(apiClient, {
@@ -48,10 +83,12 @@ export default function AnalysesPage() {
   );
 
   // Charger les analyses existantes
-  const { data: analysesExistantes, refetch: refetchAnalyses } = useAnalyses(
+  const { data: analysesData, refetch: refetchAnalyses } = useAnalyses(
     apiClient,
     { don_id: selectedDonId || undefined }
   );
+  // Sans don sélectionné, l'API renverrait toutes les analyses : on n'affiche rien.
+  const analysesExistantes = selectedDonId ? analysesData : null;
 
   // Réinitialiser le formulaire quand on change de don
   useEffect(() => {
@@ -63,7 +100,6 @@ export default function AnalysesPage() {
       VHC: { resultat: "", note: "" },
       SYPHILIS: { resultat: "", note: "" },
     });
-    setSuccessMessage("");
   }, [selectedDonId]);
 
   // Pré-remplir le groupe sanguin si disponible chez le donneur
@@ -103,7 +139,7 @@ export default function AnalysesPage() {
       setSelectedDonId(foundDon.id);
       setSearchDin("");
     } else {
-      alert("Don introuvable avec ce DIN");
+      toast.error("Don introuvable avec ce DIN");
     }
   };
 
@@ -111,12 +147,11 @@ export default function AnalysesPage() {
     e.preventDefault();
 
     if (!selectedDonId) {
-      alert("Veuillez sélectionner un don");
+      toast.error("Veuillez sélectionner un don");
       return;
     }
 
     setSubmitting(true);
-    setSuccessMessage("");
 
     try {
       const promises = TESTS_REQUIS.map(async (test) => {
@@ -127,14 +162,11 @@ export default function AnalysesPage() {
         const existante = analysesExistantes?.find(
           (a) => a.type_test === test.type
         );
-        if (existante) {
-          console.log(`Test ${test.type} déjà effectué, skip`);
-          return null;
-        }
+        if (existante) return null;
 
         const payload: AnalyseCreate = {
           don_id: selectedDonId,
-          type_test: test.type as any,
+          type_test: test.type,
           resultat: data.resultat,
           note: data.note || undefined,
         };
@@ -144,7 +176,7 @@ export default function AnalysesPage() {
 
       await Promise.all(promises);
 
-      setSuccessMessage("✓ Analyses enregistrées avec succès");
+      toast.success("Analyses enregistrées");
       setFormData({
         ABO: { resultat: "", note: "" },
         RH: { resultat: "", note: "" },
@@ -158,246 +190,264 @@ export default function AnalysesPage() {
 
       // Rediriger vers libération si toutes les analyses sont complètes
       setTimeout(() => {
-        window.location.href = `/laboratoire/liberation?don_id=${selectedDonId}`;
+        router.push(`/laboratoire/liberation?don_id=${selectedDonId}`);
       }, 1500);
     } catch (err) {
       console.error("Erreur création analyses:", err);
-      alert("Erreur lors de l'enregistrement des analyses");
+      toast.error(apiErrorMessage(err, "Erreur lors de l’enregistrement des analyses"));
     } finally {
       setSubmitting(false);
     }
   };
 
+  const setField = (type: string, key: "resultat" | "note", value: string) =>
+    setFormData({
+      ...formData,
+      [type]: { ...formData[type], [key]: value },
+    });
+
   return (
-    <div className="p-6 max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="mb-6">
-        <Link
-          href="/laboratoire"
-          className="text-blue-600 hover:text-blue-900 text-sm mb-2 inline-block"
-        >
-          ← Retour au laboratoire
-        </Link>
-        <h1 className="text-2xl font-bold text-gray-900">Saisie des Analyses Biologiques</h1>
-        <p className="text-gray-700 mt-1">
-          Enregistrement des résultats de tests pour validation biologique
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Analyses biologiques"
+        description="Enregistrement des résultats de tests pour validation biologique"
+        back={{ href: "/laboratoire", label: "Laboratoire" }}
+      />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Formulaire principal */}
-        <div className="lg:col-span-2">
-          {/* Sélection du don */}
-          <div className="bg-white rounded-lg shadow p-6 mb-6">
-            <h2 className="text-lg font-semibold mb-4">Sélectionner un don</h2>
-
-            {/* Recherche par DIN */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Recherche par DIN
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={searchDin}
-                  onChange={(e) => setSearchDin(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSearchByDin()}
-                  placeholder="Ex: CNTS2600X123456"
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                />
-                <button
-                  onClick={handleSearchByDin}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-                >
+        <div className="space-y-6 lg:col-span-2">
+          <Card>
+            <CardHeader title="Sélectionner un don" />
+            <CardBody className="space-y-4">
+              <div className="flex flex-wrap items-end gap-2">
+                <Field label="Recherche par DIN" className="min-w-0 flex-1">
+                  <Input
+                    type="text"
+                    value={searchDin}
+                    onChange={(e) => setSearchDin(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleSearchByDin();
+                      }
+                    }}
+                    placeholder="Ex. : CNTS2600X123456"
+                    className="font-mono"
+                  />
+                </Field>
+                <Button variant="secondary" onClick={handleSearchByDin} icon={<Search className="h-4 w-4" aria-hidden="true" />}>
                   Rechercher
-                </button>
+                </Button>
               </div>
-            </div>
 
-            {/* Ou sélection dans la liste */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Ou sélectionner dans la liste
-              </label>
-              <select
-                value={selectedDonId}
-                onChange={(e) => setSelectedDonId(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-              >
-                <option value="">-- Choisir un don --</option>
-                {donsEnAttente?.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.din} - {new Date(d.date_don).toLocaleDateString("fr-FR")}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
+              <Field label="Ou sélectionner dans la liste des dons en attente">
+                <Select value={selectedDonId} onChange={(e) => setSelectedDonId(e.target.value)}>
+                  <option value="">— Choisir un don —</option>
+                  {donsEnAttente?.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.din} — {new Date(d.date_don).toLocaleDateString("fr-FR")}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </CardBody>
+          </Card>
 
           {/* Formulaire de saisie */}
-          {selectedDonId && don && (
-            <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6">
-              {successMessage && (
-                <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-md">
-                  <div className="text-sm font-medium text-green-900">
-                    {successMessage}
-                  </div>
-                </div>
-              )}
+          {selectedDonId && don ? (
+            <Card>
+              <form onSubmit={handleSubmit}>
+                <CardHeader title="Résultats des analyses" description="Les tests déjà saisis peuvent être validés ou corrigés." />
+                <CardBody className="space-y-4">
+                  {actionError ? <Alert tone="danger">{actionError}</Alert> : null}
 
-              <h2 className="text-lg font-semibold mb-4">
-                Résultats des analyses
-              </h2>
+                  <div className="divide-y divide-gray-100">
+                    {TESTS_REQUIS.map((test) => {
+                      const existante = analysesExistantes?.find((a) => a.type_test === test.type);
 
-              <div className="space-y-6">
-                {TESTS_REQUIS.map((test) => {
-                  const existante = analysesExistantes?.find(
-                    (a) => a.type_test === test.type
-                  );
+                      return (
+                        <div key={test.type} className="py-4 first:pt-0 last:pb-0">
+                          {existante ? (
+                            <>
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <span className="text-sm font-medium text-gray-900">{test.label}</span>
+                                <div className="flex flex-wrap items-center justify-end gap-2">
+                                  <Badge tone={existante.resultat === "POSITIF" ? "danger" : existante.resultat === "EN_ATTENTE" ? "warning" : "success"}>
+                                    Résultat : {existante.resultat}
+                                  </Badge>
+                                  {existante.validateur_id ? (
+                                    <Badge tone="info" dot>Validé</Badge>
+                                  ) : (
+                                    <Button
+                                      variant="secondary"
+                                      size="sm"
+                                      disabled={actionBusy || existante.resultat === "EN_ATTENTE"}
+                                      onClick={() => runAnalyseAction(() => apiClient.analyses.valider(existante.id))}
+                                    >
+                                      Valider
+                                    </Button>
+                                  )}
+                                  {don?.statut_qualification !== "LIBERE" && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      disabled={actionBusy}
+                                      onClick={() => setCorrection({ id: existante.id, resultat: existante.resultat, note: existante.note ?? "" })}
+                                    >
+                                      Corriger
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
 
-                  return (
-                    <div key={test.type} className="border-b pb-4 last:border-b-0">
-                      <div className="flex justify-between items-start mb-2">
-                        <label className="block text-sm font-medium text-gray-900">
-                          {test.label}
-                          {!existante && (
-                            <span className="text-red-600 ml-1">*</span>
+                              {correction?.id === existante.id && (
+                                <div className="mt-3 space-y-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                                  <Field label="Nouveau résultat" hint="Une revalidation sera requise.">
+                                    <Select
+                                      value={correction.resultat}
+                                      onChange={(e) => setCorrection({ ...correction, resultat: e.target.value })}
+                                    >
+                                      {test.options.map((opt) => (
+                                        <option key={opt} value={opt}>{opt}</option>
+                                      ))}
+                                    </Select>
+                                  </Field>
+                                  <Field label="Motif de la correction" required>
+                                    <Input
+                                      type="text"
+                                      value={correction.note}
+                                      onChange={(e) => setCorrection({ ...correction, note: e.target.value })}
+                                    />
+                                  </Field>
+                                  <div className="flex flex-wrap justify-end gap-2">
+                                    <Button variant="secondary" size="sm" onClick={() => setCorrection(null)}>
+                                      Annuler
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      loading={actionBusy}
+                                      disabled={!correction.note.trim()}
+                                      onClick={() =>
+                                        runAnalyseAction(() =>
+                                          apiClient.analyses.update(correction.id, { resultat: correction.resultat, note: correction.note.trim() })
+                                        )
+                                      }
+                                    >
+                                      Enregistrer la correction
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <div className="grid gap-3 sm:grid-cols-2">
+                              <Field label={test.label}>
+                                <Select
+                                  value={formData[test.type].resultat}
+                                  onChange={(e) => setField(test.type, "resultat", e.target.value)}
+                                >
+                                  <option value="">— Sélectionner —</option>
+                                  {test.options.map((opt) => (
+                                    <option key={opt} value={opt}>{opt}</option>
+                                  ))}
+                                </Select>
+                              </Field>
+                              <Field label="Note (facultative)">
+                                <Input
+                                  type="text"
+                                  value={formData[test.type].note}
+                                  onChange={(e) => setField(test.type, "note", e.target.value)}
+                                />
+                              </Field>
+                            </div>
                           )}
-                        </label>
-                        {existante && (
-                          <span className="text-xs bg-green-100 text-green-900 px-2 py-1 rounded">
-                            ✓ Déjà effectué: {existante.resultat}
-                          </span>
-                        )}
-                      </div>
-
-                      {!existante && (
-                        <>
-                          <select
-                            value={formData[test.type].resultat}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                [test.type]: {
-                                  ...formData[test.type],
-                                  resultat: e.target.value,
-                                },
-                              })
-                            }
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2 text-gray-900"
-                          >
-                            <option value="">-- Sélectionner --</option>
-                            {test.options.map((opt) => (
-                              <option key={opt} value={opt}>
-                                {opt}
-                              </option>
-                            ))}
-                          </select>
-
-                          <input
-                            type="text"
-                            value={formData[test.type].note}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                [test.type]: {
-                                  ...formData[test.type],
-                                  note: e.target.value,
-                                },
-                              })
-                            }
-                            placeholder="Note (optionnelle)"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                          />
-                        </>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="flex justify-end gap-3 mt-6 pt-6 border-t">
-                <Link
-                  href="/laboratoire"
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition"
-                >
-                  Annuler
-                </Link>
-                <button
-                  type="submit"
-                  disabled={submitting || !selectedDonId}
-                  className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition disabled:opacity-50"
-                >
-                  {submitting ? "Enregistrement..." : "Enregistrer les analyses"}
-                </button>
-              </div>
-            </form>
-          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardBody>
+                <div className="flex flex-wrap justify-end gap-2 border-t border-gray-100 px-5 py-4">
+                  <ButtonLink href="/laboratoire" variant="secondary">
+                    Annuler
+                  </ButtonLink>
+                  <Button type="submit" loading={submitting} disabled={!selectedDonId}>
+                    Enregistrer les analyses
+                  </Button>
+                </div>
+              </form>
+            </Card>
+          ) : !selectedDonId ? (
+            <Card>
+              <EmptyState
+                title="Aucun don sélectionné"
+                description="Recherchez un don par son DIN ou choisissez-le dans la liste pour saisir ses résultats."
+              />
+            </Card>
+          ) : null}
         </div>
 
-        {/* Sidebar */}
+        {/* Colonne latérale */}
         <div className="space-y-6">
           {don && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="font-semibold mb-4">Don sélectionné</h3>
-              <dl className="space-y-3 text-sm">
-                <div>
-                  <dt className="text-gray-500">DIN</dt>
-                  <dd className="font-mono text-gray-900">{don.din}</dd>
-                </div>
-                <div>
-                  <dt className="text-gray-500">Date</dt>
-                  <dd className="text-gray-900">
-                    {new Date(don.date_don).toLocaleDateString("fr-FR")}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-gray-500">Type</dt>
-                  <dd className="text-gray-900">{don.type_don}</dd>
-                </div>
-                <div>
-                  <dt className="text-gray-500">Statut</dt>
-                  <dd>
-                    <span className="px-2 py-1 bg-yellow-100 text-yellow-900 rounded text-xs">
-                      {don.statut_qualification}
-                    </span>
-                  </dd>
-                </div>
-              </dl>
-              <Link
-                href={`/dons/${don.id}`}
-                className="block mt-4 text-sm text-blue-600 hover:text-blue-900"
-              >
-                Voir la fiche complète →
-              </Link>
-            </div>
+            <Card>
+              <CardHeader title="Don sélectionné" />
+              <CardBody>
+                <dl className="space-y-3 text-sm">
+                  <div>
+                    <dt className="text-gray-500">DIN</dt>
+                    <dd className="font-mono text-gray-900">{don.din}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-gray-500">Date</dt>
+                    <dd className="text-gray-900">{new Date(don.date_don).toLocaleDateString("fr-FR")}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-gray-500">Type</dt>
+                    <dd className="text-gray-900">{don.type_don}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-gray-500">Statut</dt>
+                    <dd className="mt-0.5">
+                      <StatusBadge status={don.statut_qualification} />
+                    </dd>
+                  </div>
+                </dl>
+                <Link
+                  href={`/dons/${don.id}`}
+                  className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700"
+                >
+                  Voir la fiche complète
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </Link>
+              </CardBody>
+            </Card>
           )}
 
           {analysesExistantes && analysesExistantes.length > 0 && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <h3 className="font-medium text-green-900 mb-2 text-sm">
-                Analyses déjà effectuées
-              </h3>
-              <ul className="text-xs text-green-900 space-y-1">
-                {analysesExistantes.map((a) => (
-                  <li key={a.id}>
-                    • {a.type_test}: {a.resultat}
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <Card>
+              <CardHeader title="Analyses déjà effectuées" />
+              <CardBody>
+                <ul className="space-y-2 text-sm">
+                  {analysesExistantes.map((a) => (
+                    <li key={a.id} className="flex items-center justify-between gap-2">
+                      <span className="text-gray-700">{a.type_test}</span>
+                      <span className="font-medium text-gray-900">{a.resultat}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardBody>
+            </Card>
           )}
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 className="font-medium text-blue-900 mb-2 text-sm">
-              Tests obligatoires
-            </h3>
-            <ul className="text-xs text-blue-900 space-y-1">
-              <li>• Groupage: ABO + Rhésus</li>
-              <li>• Sérologie: VIH, VHB, VHC, Syphilis</li>
-              <li>• Tous doivent être NÉGATIF pour libération</li>
+          <Alert tone="info">
+            <p className="font-medium">Tests obligatoires</p>
+            <ul className="mt-1 list-disc space-y-0.5 pl-5">
+              <li>Groupage : ABO + Rhésus</li>
+              <li>Sérologie : VIH, VHB, VHC, Syphilis</li>
+              <li>Tous doivent être négatifs pour la libération</li>
             </ul>
-          </div>
+          </Alert>
         </div>
       </div>
     </div>

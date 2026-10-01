@@ -1,71 +1,36 @@
-import Link from "next/link";
+import { AuthLayout } from "@/components/auth-layout";
+import { SubmitButton } from "@/components/submit-button";
+import { Alert, Field, Input } from "@/components/ui";
 
 export default async function LoginPage(props: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const searchParams = (await props.searchParams) ?? {};
-  const error = searchParams.error === "1";
+  const error =
+    searchParams.error === "locked"
+      ? "Trop de tentatives échouées : le compte est verrouillé pendant 15 minutes."
+      : searchParams.error
+        ? "Adresse email ou mot de passe incorrect."
+        : null;
   const next = typeof searchParams.next === "string" ? searchParams.next : "/dashboard";
 
   return (
-    <main className="min-h-screen bg-zinc-50 px-4 py-10 text-zinc-900">
-      <div className="mx-auto w-full max-w-md rounded-xl bg-white p-6 shadow-sm">
-        <h1 className="text-xl font-semibold">Connexion Back Office</h1>
-        <p className="mt-1 text-sm text-zinc-600">Accès réservé au personnel autorisé.</p>
-
-        {error ? (
-          <div className="mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
-            Identifiants invalides.
-          </div>
-        ) : null}
-
-        <form className="mt-6 space-y-4" action="/admin/api/auth/login" method="post">
-          <input type="hidden" name="next" value={next} />
-
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium">
-              Email
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="username"
-              required
-              className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium">
-              Mot de passe
-            </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="inline-flex w-full items-center justify-center rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-900/20"
-          >
-            Se connecter
-          </button>
-        </form>
-
-        <p className="mt-6 text-xs text-zinc-600">
-          Documentation technique :{" "}
-          <Link className="underline" href="file:///home/youssoupha/project/cnts/docs/DEVBOOK.md">
-            DEVBOOK
-          </Link>
-        </p>
-      </div>
-    </main>
+    <AuthLayout title="Connexion" description="Identifiez-vous avec votre compte professionnel CNTS.">
+      {error ? <Alert className="mb-5">{error}</Alert> : null}
+      <form className="space-y-5" action="/admin/api/auth/login" method="post">
+        <input type="hidden" name="next" value={next} />
+        <Field label="Adresse email">
+          <Input name="email" type="email" autoComplete="username" required autoFocus placeholder="prenom.nom@cnts.gouv.sn" />
+        </Field>
+        <Field label="Mot de passe">
+          <Input name="password" type="password" autoComplete="current-password" required />
+        </Field>
+        <SubmitButton pendingLabel="Connexion…">Se connecter</SubmitButton>
+      </form>
+      <p className="mt-6 text-xs text-gray-500">
+        Un second facteur (application d’authentification) vous sera demandé à l’étape suivante. Mot de passe
+        oublié : contactez l’administrateur du système.
+      </p>
+    </AuthLayout>
   );
 }
-

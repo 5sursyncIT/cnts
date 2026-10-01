@@ -1,18 +1,35 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useEffect, useCallback } from "react";
+import { Calendar, CalendarCheck, Eye, MapPin, Plus, RefreshCw, Target, Timer } from "lucide-react";
+import { toast } from "sonner";
+
 import {
-  ChevronLeft,
-  ChevronRight,
-  Plus,
-  X,
-  Eye,
-  RefreshCw,
-  MapPin,
-  Calendar,
-  Target,
-  Loader2,
-} from "lucide-react";
+  Alert,
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  ErrorState,
+  Field,
+  Input,
+  LoadingState,
+  Modal,
+  PageHeader,
+  Pagination,
+  Select,
+  StatCard,
+  StatusBadge,
+  Table,
+  TBody,
+  Td,
+  Textarea,
+  Th,
+  THead,
+  Tr,
+  type BadgeTone,
+} from "@/components/ui";
 
 const API = "/api";
 
@@ -39,6 +56,7 @@ interface CampagneCollecte {
 }
 
 interface CampagneCollecteCreate {
+  code: string;
   nom: string;
   type_campagne: "FIXE" | "MOBILE" | "ENTREPRISE" | "UNIVERSITE";
   lieu: string;
@@ -53,32 +71,18 @@ interface CampagneCollecteCreate {
 
 const ITEMS_PER_PAGE = 20;
 
-const STATUT_COLORS: Record<CampagneCollecte["statut"], string> = {
-  PLANIFIEE: "bg-blue-100 text-blue-900",
-  EN_COURS: "bg-green-100 text-green-900",
-  TERMINEE: "bg-gray-100 text-gray-800",
-  ANNULEE: "bg-red-100 text-red-900",
-};
-
-const STATUT_LABELS: Record<CampagneCollecte["statut"], string> = {
-  PLANIFIEE: "Planifi\u00e9e",
-  EN_COURS: "En cours",
-  TERMINEE: "Termin\u00e9e",
-  ANNULEE: "Annul\u00e9e",
-};
-
-const TYPE_COLORS: Record<CampagneCollecte["type_campagne"], string> = {
-  FIXE: "bg-blue-100 text-blue-900",
-  MOBILE: "bg-green-100 text-green-900",
-  ENTREPRISE: "bg-purple-100 text-purple-900",
-  UNIVERSITE: "bg-amber-100 text-amber-900",
+const TYPE_TONES: Record<CampagneCollecte["type_campagne"], BadgeTone> = {
+  FIXE: "info",
+  MOBILE: "success",
+  ENTREPRISE: "purple",
+  UNIVERSITE: "warning",
 };
 
 const TYPE_LABELS: Record<CampagneCollecte["type_campagne"], string> = {
   FIXE: "Fixe",
   MOBILE: "Mobile",
   ENTREPRISE: "Entreprise",
-  UNIVERSITE: "Universit\u00e9",
+  UNIVERSITE: "Université",
 };
 
 // ---------- Helpers ----------
@@ -92,7 +96,7 @@ function formatDate(dateStr: string): string {
 }
 
 function formatDateRange(debut: string, fin: string): string {
-  return `${formatDate(debut)} - ${formatDate(fin)}`;
+  return `${formatDate(debut)} – ${formatDate(fin)}`;
 }
 
 // ---------- Component ----------
@@ -113,6 +117,7 @@ export default function CollectesPage() {
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formData, setFormData] = useState<CampagneCollecteCreate>({
+    code: "",
     nom: "",
     type_campagne: "MOBILE",
     lieu: "",
@@ -158,6 +163,7 @@ export default function CollectesPage() {
 
   const handleOpenCreate = () => {
     setFormData({
+      code: "",
       nom: "",
       type_campagne: "MOBILE",
       lieu: "",
@@ -171,10 +177,11 @@ export default function CollectesPage() {
     setShowModal(true);
   };
 
-  const handleClose = () => {
+  // Stable : la Modal ré-exécute son effet (focus) quand onClose change.
+  const handleClose = useCallback(() => {
     setShowModal(false);
     setFormError(null);
-  };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -186,6 +193,7 @@ export default function CollectesPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          code: formData.code.trim() || undefined,
           nom: formData.nom,
           type_campagne: formData.type_campagne,
           lieu: formData.lieu,
@@ -203,6 +211,7 @@ export default function CollectesPage() {
       }
 
       handleClose();
+      toast.success("Collecte créée");
       await fetchCollectes();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Une erreur est survenue";
@@ -214,444 +223,287 @@ export default function CollectesPage() {
 
   // ---------- Render ----------
 
-  return (
-    <div className="p-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Collectes Mobiles</h1>
-          <p className="text-gray-700 mt-1">
-            Planification et suivi des campagnes de collecte de sang
-          </p>
-        </div>
-        <button
-          onClick={handleOpenCreate}
-          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition"
-        >
-          <Plus className="w-4 h-4" />
-          Nouvelle Collecte
-        </button>
-      </div>
+  const hasFilters = Boolean(statutFilter || typeFilter);
 
-      {/* Filtres */}
-      <div className="bg-white rounded-lg shadow p-4 mb-6">
-        <div className="flex gap-4 items-end flex-wrap">
-          <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Statut
-            </label>
-            <select
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Collectes"
+        description="Planification et suivi des campagnes de collecte de sang"
+        actions={
+          <Button variant="success" onClick={handleOpenCreate} icon={<Plus className="h-4 w-4" aria-hidden="true" />}>
+            Nouvelle collecte
+          </Button>
+        }
+      />
+
+      <Card className="p-4">
+        <div className="grid items-end gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Field label="Statut">
+            <Select
               value={statutFilter}
               onChange={(e) => {
                 setStatutFilter(e.target.value);
                 setPage(1);
               }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             >
               <option value="">Toutes</option>
-              <option value="PLANIFIEE">Planifi\u00e9e</option>
+              <option value="PLANIFIEE">Planifiée</option>
               <option value="EN_COURS">En cours</option>
-              <option value="TERMINEE">Termin\u00e9e</option>
-              <option value="ANNULEE">Annul\u00e9e</option>
-            </select>
-          </div>
-
-          <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Type de campagne
-            </label>
-            <select
+              <option value="TERMINEE">Terminée</option>
+              <option value="ANNULEE">Annulée</option>
+            </Select>
+          </Field>
+          <Field label="Type de campagne">
+            <Select
               value={typeFilter}
               onChange={(e) => {
                 setTypeFilter(e.target.value);
                 setPage(1);
               }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             >
               <option value="">Tous les types</option>
               <option value="FIXE">Fixe</option>
               <option value="MOBILE">Mobile</option>
               <option value="ENTREPRISE">Entreprise</option>
-              <option value="UNIVERSITE">Universit\u00e9</option>
-            </select>
+              <option value="UNIVERSITE">Université</option>
+            </Select>
+          </Field>
+          <div>
+            <Button
+              variant="secondary"
+              onClick={() => fetchCollectes()}
+              icon={<RefreshCw className="h-4 w-4" aria-hidden="true" />}
+            >
+              Actualiser
+            </Button>
           </div>
-
-          <button
-            onClick={() => fetchCollectes()}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition"
-          >
-            <RefreshCw className="w-4 h-4" />
-            Actualiser
-          </button>
         </div>
-      </div>
+      </Card>
 
-      {/* Statistiques rapides */}
       {status === "success" && collectes.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="flex items-center gap-2 text-sm text-gray-700 mb-1">
-              <Calendar className="w-4 h-4" />
-              Total
-            </div>
-            <div className="text-2xl font-bold text-gray-900">{collectes.length}</div>
-          </div>
-          <div className="bg-blue-50 rounded-lg shadow p-4">
-            <div className="text-sm text-blue-700 mb-1">Planifi\u00e9es</div>
-            <div className="text-2xl font-bold text-blue-900">
-              {collectes.filter((c) => c.statut === "PLANIFIEE").length}
-            </div>
-          </div>
-          <div className="bg-green-50 rounded-lg shadow p-4">
-            <div className="text-sm text-green-700 mb-1">En cours</div>
-            <div className="text-2xl font-bold text-green-900">
-              {collectes.filter((c) => c.statut === "EN_COURS").length}
-            </div>
-          </div>
-          <div className="bg-gray-50 rounded-lg shadow p-4">
-            <div className="flex items-center gap-2 text-sm text-gray-700 mb-1">
-              <Target className="w-4 h-4" />
-              Objectif total
-            </div>
-            <div className="text-2xl font-bold text-gray-900">
-              {collectes.reduce((sum, c) => sum + c.objectif_dons, 0)}
-            </div>
-          </div>
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <StatCard label="Collectes affichées" value={collectes.length} icon={<Calendar className="h-5 w-5" aria-hidden="true" />} />
+          <StatCard
+            label="Planifiées"
+            value={collectes.filter((c) => c.statut === "PLANIFIEE").length}
+            tone="info"
+            icon={<CalendarCheck className="h-5 w-5" aria-hidden="true" />}
+          />
+          <StatCard
+            label="En cours"
+            value={collectes.filter((c) => c.statut === "EN_COURS").length}
+            tone="success"
+            icon={<Timer className="h-5 w-5" aria-hidden="true" />}
+          />
+          <StatCard
+            label="Objectif total"
+            value={collectes.reduce((sum, c) => sum + c.objectif_dons, 0)}
+            hint="dons"
+            icon={<Target className="h-5 w-5" aria-hidden="true" />}
+          />
         </div>
       )}
 
-      {/* Table */}
-      <div className="bg-white rounded-lg shadow">
-        {status === "loading" && (
-          <div className="p-8 text-center text-gray-700 flex items-center justify-center gap-2">
-            <Loader2 className="w-5 h-5 animate-spin" />
-            Chargement...
-          </div>
-        )}
+      <Card className="overflow-hidden">
+        {(status === "loading" || status === "idle") && <LoadingState rows={8} />}
 
-        {status === "error" && (
-          <div className="p-8 text-center">
-            <div className="text-red-600 mb-2">Erreur de chargement</div>
-            <div className="text-sm text-gray-800">{error}</div>
-            <button
-              onClick={() => fetchCollectes()}
-              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-            >
-              R\u00e9essayer
-            </button>
-          </div>
-        )}
+        {status === "error" && <ErrorState message={error} onRetry={() => fetchCollectes()} />}
 
         {status === "success" && collectes.length === 0 && (
-          <div className="p-8 text-center text-gray-700">
-            <MapPin className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-            <div className="mb-2">Aucune collecte trouv\u00e9e</div>
-            <button
-              onClick={handleOpenCreate}
-              className="text-sm text-green-600 hover:text-green-900 font-medium"
-            >
-              Planifier une nouvelle collecte
-            </button>
-          </div>
+          <EmptyState
+            icon={<MapPin className="h-6 w-6" aria-hidden="true" />}
+            title="Aucune collecte trouvée"
+            description={hasFilters ? "Aucune collecte ne correspond à ces critères." : undefined}
+            action={
+              <Button variant="success" size="sm" onClick={handleOpenCreate} icon={<Plus className="h-4 w-4" aria-hidden="true" />}>
+                Planifier une collecte
+              </Button>
+            }
+          />
         )}
 
         {status === "success" && collectes.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
+          <>
+            <Table>
+              <THead>
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Code
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Nom
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Type
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Lieu
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Dates
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Objectif
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Statut
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Actions
-                  </th>
+                  <Th>Code</Th>
+                  <Th>Nom</Th>
+                  <Th>Type</Th>
+                  <Th>Lieu</Th>
+                  <Th>Dates</Th>
+                  <Th>Objectif</Th>
+                  <Th>Statut</Th>
+                  <Th align="right">Actions</Th>
                 </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              </THead>
+              <TBody>
                 {collectes.map((collecte) => (
-                  <tr key={collecte.id} className="hover:bg-gray-50 transition">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-mono text-gray-900">
-                        {collecte.code}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-medium text-gray-900">
+                  <Tr key={collecte.id}>
+                    <Td className="whitespace-nowrap font-mono text-gray-900">{collecte.code}</Td>
+                    <Td className="whitespace-nowrap">
+                      <Link href={`/collectes/${collecte.id}`} className="font-medium text-gray-900 hover:text-blue-700">
                         {collecte.nom}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 py-1 text-xs font-semibold rounded-full ${TYPE_COLORS[collecte.type_campagne]}`}
-                      >
-                        {TYPE_LABELS[collecte.type_campagne]}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-1 text-sm text-gray-800">
-                        <MapPin className="w-3 h-3 text-gray-400" />
+                      </Link>
+                    </Td>
+                    <Td>
+                      <Badge tone={TYPE_TONES[collecte.type_campagne]}>{TYPE_LABELS[collecte.type_campagne]}</Badge>
+                    </Td>
+                    <Td className="whitespace-nowrap">
+                      <span className="flex items-center gap-1 text-gray-700">
+                        <MapPin className="h-3 w-3 text-gray-400" aria-hidden="true" />
                         {collecte.lieu}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                      {formatDateRange(collecte.date_debut, collecte.date_fin)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-1 text-sm text-gray-900">
-                        <Target className="w-3 h-3 text-gray-400" />
-                        {collecte.objectif_dons} dons
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 py-1 text-xs font-semibold rounded-full ${STATUT_COLORS[collecte.statut]}`}
-                      >
-                        {STATUT_LABELS[collecte.statut]}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <a
+                    </Td>
+                    <Td className="whitespace-nowrap text-gray-600">
+                      {formatDateRange(collecte.date_debut, collecte.date_fin)}
+                    </Td>
+                    <Td className="whitespace-nowrap tabular-nums">{collecte.objectif_dons} dons</Td>
+                    <Td>
+                      <StatusBadge status={collecte.statut} />
+                    </Td>
+                    <Td align="right" className="whitespace-nowrap">
+                      <Link
                         href={`/collectes/${collecte.id}`}
-                        className="inline-flex items-center gap-1 text-blue-700 hover:text-blue-900 font-semibold hover:underline"
+                        className="inline-flex items-center gap-1 font-medium text-blue-600 hover:text-blue-800"
                       >
-                        <Eye className="w-4 h-4" />
+                        <Eye className="h-4 w-4" aria-hidden="true" />
                         Voir
-                      </a>
-                    </td>
-                  </tr>
+                      </Link>
+                    </Td>
+                  </Tr>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </TBody>
+            </Table>
+            <Pagination
+              page={page}
+              hasNext={collectes.length >= ITEMS_PER_PAGE}
+              onPrev={() => setPage((p) => Math.max(1, p - 1))}
+              onNext={() => setPage((p) => p + 1)}
+              summary={`Page ${page} · ${collectes.length} résultat${collectes.length > 1 ? "s" : ""} affiché${collectes.length > 1 ? "s" : ""}`}
+            />
+          </>
         )}
-      </div>
+      </Card>
 
-      {/* Pagination */}
-      {status === "success" && (
-        <div className="flex justify-between items-center mt-4 bg-white p-4 rounded-lg shadow">
-          <div className="text-sm text-gray-800">
-            Page {page} &bull; {collectes.length} r\u00e9sultat(s) affich\u00e9(s)
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="px-3 py-1 border border-gray-300 rounded-md disabled:opacity-50 hover:bg-gray-50 flex items-center gap-1 text-sm font-medium text-gray-700"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              Pr\u00e9c\u00e9dent
-            </button>
-            <button
-              onClick={() => setPage((p) => p + 1)}
-              disabled={collectes.length < ITEMS_PER_PAGE}
-              className="px-3 py-1 border border-gray-300 rounded-md disabled:opacity-50 hover:bg-gray-50 flex items-center gap-1 text-sm font-medium text-gray-700"
-            >
-              Suivant
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
+      <Modal
+        open={showModal}
+        onClose={handleClose}
+        title="Nouvelle collecte"
+        footer={
+          <>
+            <Button variant="secondary" onClick={handleClose} disabled={formLoading}>
+              Annuler
+            </Button>
+            <Button type="submit" form="collecte-create-form" variant="success" loading={formLoading}>
+              {formLoading ? "Création…" : "Créer la collecte"}
+            </Button>
+          </>
+        }
+      >
+        <form id="collecte-create-form" onSubmit={handleSubmit} className="space-y-4">
+          {formError && <Alert tone="danger">{formError}</Alert>}
 
-      {/* Modal: Nouvelle Collecte */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-gray-900">
-                Nouvelle Collecte
-              </h2>
-              <button
-                onClick={handleClose}
-                className="text-gray-400 hover:text-gray-600"
+          <Field label="Nom de la campagne" required>
+            <Input
+              type="text"
+              value={formData.nom}
+              onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
+              placeholder="Ex. : Collecte UCAD janvier 2026"
+            />
+          </Field>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Code" hint="Généré automatiquement si vide">
+              <Input
+                id="collecte-code"
+                type="text"
+                maxLength={32}
+                value={formData.code}
+                onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                className="font-mono"
+              />
+            </Field>
+            <Field label="Type de campagne" required>
+              <Select
+                value={formData.type_campagne}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    type_campagne: e.target.value as CampagneCollecteCreate["type_campagne"],
+                  })
+                }
               >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {formError && (
-              <div className="bg-red-50 text-red-600 p-3 rounded mb-4 text-sm">
-                {formError}
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nom de la campagne *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.nom}
-                  onChange={(e) =>
-                    setFormData({ ...formData, nom: e.target.value })
-                  }
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                  placeholder="Ex: Collecte UCAD Janvier 2026"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Type de campagne *
-                </label>
-                <select
-                  required
-                  value={formData.type_campagne}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      type_campagne: e.target.value as CampagneCollecteCreate["type_campagne"],
-                    })
-                  }
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                >
-                  <option value="FIXE">Fixe</option>
-                  <option value="MOBILE">Mobile</option>
-                  <option value="ENTREPRISE">Entreprise</option>
-                  <option value="UNIVERSITE">Universit\u00e9</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Lieu *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.lieu}
-                  onChange={(e) =>
-                    setFormData({ ...formData, lieu: e.target.value })
-                  }
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                  placeholder="Ex: Campus UCAD, Dakar"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Adresse
-                </label>
-                <input
-                  type="text"
-                  value={formData.adresse}
-                  onChange={(e) =>
-                    setFormData({ ...formData, adresse: e.target.value })
-                  }
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                  placeholder="Adresse compl\u00e8te..."
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Date de d\u00e9but *
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={formData.date_debut}
-                    onChange={(e) =>
-                      setFormData({ ...formData, date_debut: e.target.value })
-                    }
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Date de fin *
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={formData.date_fin}
-                    onChange={(e) =>
-                      setFormData({ ...formData, date_fin: e.target.value })
-                    }
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Objectif de dons *
-                </label>
-                <input
-                  type="number"
-                  required
-                  min={1}
-                  value={formData.objectif_dons}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      objectif_dons: parseInt(e.target.value, 10) || 0,
-                    })
-                  }
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                  placeholder="50"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Notes mat\u00e9riel
-                </label>
-                <textarea
-                  value={formData.materiel_notes}
-                  onChange={(e) =>
-                    setFormData({ ...formData, materiel_notes: e.target.value })
-                  }
-                  rows={3}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                  placeholder="Poches, aiguilles, tables, tentes..."
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 mt-6">
-                <button
-                  type="button"
-                  onClick={handleClose}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
-                  disabled={formLoading}
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
-                  disabled={formLoading}
-                >
-                  {formLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-                  {formLoading ? "Cr\u00e9ation..." : "Cr\u00e9er la collecte"}
-                </button>
-              </div>
-            </form>
+                <option value="FIXE">Fixe</option>
+                <option value="MOBILE">Mobile</option>
+                <option value="ENTREPRISE">Entreprise</option>
+                <option value="UNIVERSITE">Université</option>
+              </Select>
+            </Field>
           </div>
-        </div>
-      )}
+
+          <Field label="Lieu" required>
+            <Input
+              type="text"
+              value={formData.lieu}
+              onChange={(e) => setFormData({ ...formData, lieu: e.target.value })}
+              placeholder="Ex. : Campus UCAD, Dakar"
+            />
+          </Field>
+
+          <Field label="Adresse">
+            <Input
+              type="text"
+              value={formData.adresse}
+              onChange={(e) => setFormData({ ...formData, adresse: e.target.value })}
+              placeholder="Adresse complète…"
+            />
+          </Field>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Date de début" required>
+              <Input
+                type="date"
+                value={formData.date_debut}
+                onChange={(e) => setFormData({ ...formData, date_debut: e.target.value })}
+              />
+            </Field>
+            <Field label="Date de fin" required>
+              <Input
+                type="date"
+                min={formData.date_debut || undefined}
+                value={formData.date_fin}
+                onChange={(e) => setFormData({ ...formData, date_fin: e.target.value })}
+              />
+            </Field>
+          </div>
+
+          <Field label="Objectif de dons" required>
+            <Input
+              type="number"
+              min={1}
+              inputMode="numeric"
+              value={formData.objectif_dons}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  objectif_dons: parseInt(e.target.value, 10) || 0,
+                })
+              }
+              placeholder="50"
+            />
+          </Field>
+
+          <Field label="Notes matériel">
+            <Textarea
+              value={formData.materiel_notes}
+              onChange={(e) => setFormData({ ...formData, materiel_notes: e.target.value })}
+              placeholder="Poches, aiguilles, tables, tentes…"
+            />
+          </Field>
+        </form>
+      </Modal>
     </div>
   );
 }

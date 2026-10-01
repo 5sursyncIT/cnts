@@ -9,10 +9,27 @@ import {
   useAnnulerCommande,
   useServirCommande,
 } from "@cnts/api";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiClient } from "@/lib/api-client";
+import { apiErrorMessage } from "@/lib/api-error";
+import { AlertTriangle, CheckCircle2, Circle, ClipboardCheck, MapPin, Phone, Truck, XCircle } from "lucide-react";
+import { toast } from "sonner";
+import {
+  Alert,
+  Button,
+  Card,
+  CardBody,
+  CardHeader,
+  ErrorState,
+  LoadingState,
+  Modal,
+  PageHeader,
+  StatusBadge,
+  statusLabel,
+} from "@/components/ui";
+
+import { AffectationPanel } from "./affectation-panel";
 
 export default function CommandeDetailPage() {
   const params = useParams();
@@ -110,15 +127,45 @@ export default function CommandeDetailPage() {
     };
   }, [autoRefreshEnabled, refreshData]);
 
+  const closeValidation = useCallback(() => {
+    if (validerStatus !== "loading") setShowConfirmValidation(false);
+  }, [validerStatus]);
+  const closeReservation = useCallback(() => {
+    if (confirmerStatus !== "loading") setShowConfirmReservation(false);
+  }, [confirmerStatus]);
+  const closeService = useCallback(() => {
+    if (servirStatus !== "loading") setShowConfirmService(false);
+  }, [servirStatus]);
+  const closeAnnulation = useCallback(() => {
+    if (annulerStatus !== "loading") setShowConfirmAnnulation(false);
+  }, [annulerStatus]);
+
+  const refreshDotClass =
+    refreshState === "loading"
+      ? "bg-blue-500 animate-pulse"
+      : refreshState === "error"
+      ? "bg-red-500"
+      : autoRefreshEnabled
+      ? "bg-emerald-500"
+      : "bg-gray-400";
+  const refreshLabel = autoRefreshEnabled
+    ? refreshState === "loading"
+      ? "Mise à jour…"
+      : refreshState === "error"
+      ? "Connexion interrompue"
+      : "Données à jour"
+    : "Rafraîchissement désactivé";
+
   // Valider la commande
   const handleValider = async () => {
     try {
       await validerCommande({ id: commandeId });
       setShowConfirmValidation(false);
+      toast.success("Commande validée, poches réservées");
       refetch();
     } catch (err) {
       console.error("Erreur validation:", err);
-      alert("Erreur lors de la validation");
+      toast.error(apiErrorMessage(err, "Erreur lors de la validation"));
     }
   };
 
@@ -127,10 +174,11 @@ export default function CommandeDetailPage() {
     try {
       await servirCommande(commandeId);
       setShowConfirmService(false);
+      toast.success("Commande servie");
       refetch();
     } catch (err) {
       console.error("Erreur service:", err);
-      alert("Erreur lors du service");
+      toast.error(apiErrorMessage(err, "Erreur lors du service"));
     }
   };
 
@@ -139,10 +187,11 @@ export default function CommandeDetailPage() {
     try {
       await annulerCommande(commandeId);
       setShowConfirmAnnulation(false);
+      toast.success("Commande annulée");
       refetch();
     } catch (err) {
       console.error("Erreur annulation:", err);
-      alert("Erreur lors de l'annulation");
+      toast.error(apiErrorMessage(err, "Erreur lors de l’annulation"));
     }
   };
 
@@ -150,543 +199,429 @@ export default function CommandeDetailPage() {
     try {
       await confirmerCommande({ id: commandeId, data: {} });
       setShowConfirmReservation(false);
+      toast.success("Réservation confirmée");
       refetch();
       refetchEvents();
     } catch (err) {
       console.error("Erreur confirmation:", err);
-      alert("Erreur lors de la confirmation");
+      toast.error(apiErrorMessage(err, "Erreur lors de la confirmation"));
     }
   };
 
   if (status === "loading") {
     return (
-      <div className="p-6 max-w-7xl mx-auto">
-        <div className="text-center py-12 text-gray-500">Chargement...</div>
+      <div className="space-y-6">
+        <PageHeader title="Commande" back={{ href: "/distribution/commandes", label: "Commandes" }} />
+        <Card>
+          <LoadingState rows={6} />
+        </Card>
       </div>
     );
   }
 
   if (status === "error" || !commande) {
     return (
-      <div className="p-6 max-w-7xl mx-auto">
-        <div className="text-center py-12">
-          <div className="text-red-600 mb-2">Erreur de chargement</div>
-          <div className="text-sm text-gray-800">
-            {error?.status === 404
-              ? "Commande introuvable"
-              : "Erreur inconnue"}
-          </div>
-          <Link
-            href="/distribution/commandes"
-            className="mt-4 inline-block text-blue-600 hover:text-blue-900"
-          >
-            ← Retour aux commandes
-          </Link>
-        </div>
+      <div className="space-y-6">
+        <PageHeader title="Commande" back={{ href: "/distribution/commandes", label: "Commandes" }} />
+        <Card>
+          <ErrorState
+            title={error?.status === 404 ? "Commande introuvable" : "Chargement impossible"}
+            message={error?.status === 404 ? "Cette commande n’existe pas ou a été supprimée." : "Erreur inconnue."}
+            onRetry={error?.status === 404 ? undefined : () => refetch()}
+          />
+        </Card>
       </div>
     );
   }
 
   const totalPoches = commande.lignes.reduce((sum, l) => sum + l.quantite, 0);
+  const etapeFaite = (etape: "BROUILLON" | "VALIDEE" | "SERVIE") =>
+    etape === "BROUILLON"
+      ? commande.statut !== "BROUILLON"
+      : etape === "VALIDEE"
+      ? commande.statut === "VALIDEE" || commande.statut === "SERVIE"
+      : commande.statut === "SERVIE";
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="mb-6">
-        <Link
-          href="/distribution/commandes"
-          className="text-blue-600 hover:text-blue-900 text-sm mb-2 inline-block"
-        >
-          ← Retour aux commandes
-        </Link>
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Commande - {hopital?.nom || "Chargement..."}
-            </h1>
-            <div className="flex gap-3 mt-2">
-              <span
-                className={`px-3 py-1 text-sm font-semibold rounded-full ${
-                  commande.statut === "BROUILLON"
-                    ? "bg-gray-100 text-gray-800"
-                    : commande.statut === "VALIDEE"
-                    ? "bg-blue-100 text-blue-900"
-                    : commande.statut === "SERVIE"
-                    ? "bg-green-100 text-green-900"
-                    : "bg-red-100 text-red-900"
-                }`}
-              >
-                {commande.statut}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-xs text-gray-700" title={refreshError ?? undefined}>
-              <span
-                className={`h-2 w-2 rounded-full ${
-                  refreshState === "loading"
-                    ? "bg-blue-500 animate-pulse"
-                    : refreshState === "error"
-                    ? "bg-red-500"
-                    : autoRefreshEnabled
-                    ? "bg-green-500"
-                    : "bg-gray-400"
-                }`}
-              />
-              <span>
-                {autoRefreshEnabled
-                  ? refreshState === "loading"
-                    ? "Mise à jour..."
-                    : refreshState === "error"
-                    ? "Connexion interrompue"
-                    : "Données à jour"
-                  : "Rafraîchissement désactivé"}
-              </span>
-            </div>
-            <div className="flex gap-3">
-              {commande.statut === "BROUILLON" && (
-                <>
-                  <button
-                    onClick={() => setShowConfirmValidation(true)}
-                    disabled={validerStatus === "loading"}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition disabled:opacity-50"
-                  >
-                    {validerStatus === "loading"
-                      ? "Validation..."
-                      : "Valider la commande"}
-                  </button>
-                  <button
-                    onClick={() => setShowConfirmAnnulation(true)}
-                    disabled={annulerStatus === "loading"}
-                    className="px-4 py-2 border border-red-600 text-red-600 rounded-md hover:bg-red-50 transition disabled:opacity-50"
-                  >
-                    Annuler
-                  </button>
-                </>
-              )}
-
-              {commande.statut === "VALIDEE" && (
-                <>
-                  <button
-                    onClick={() => setShowConfirmReservation(true)}
-                    disabled={confirmerStatus === "loading"}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition disabled:opacity-50"
-                  >
-                    {confirmerStatus === "loading"
-                      ? "Confirmation..."
-                      : "Confirmer la réservation"}
-                  </button>
-                  <button
-                    onClick={() => setShowConfirmService(true)}
-                    disabled={servirStatus === "loading"}
-                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition disabled:opacity-50"
-                  >
-                    {servirStatus === "loading"
-                      ? "Service..."
-                      : "Servir la commande"}
-                  </button>
-                  <button
-                    onClick={() => setShowConfirmAnnulation(true)}
-                    disabled={annulerStatus === "loading"}
-                    className="px-4 py-2 border border-red-600 text-red-600 rounded-md hover:bg-red-50 transition disabled:opacity-50"
-                  >
-                    Annuler
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Informations principales */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Informations générales */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold mb-4">
-              Informations générales
-            </h2>
-            <dl className="grid grid-cols-2 gap-4">
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Hôpital</dt>
-                <dd className="mt-1 text-sm text-gray-900">
-                  {hopital?.nom || "Chargement..."}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">
-                  Date de demande
-                </dt>
-                <dd className="mt-1 text-sm text-gray-900">
-                  {new Date(commande.date_demande).toLocaleDateString("fr-FR", {
-                    weekday: "long",
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">
-                  Livraison prévue
-                </dt>
-                <dd className="mt-1 text-sm text-gray-900">
-                  {commande.date_livraison_prevue
-                    ? new Date(
-                        commande.date_livraison_prevue
-                      ).toLocaleDateString("fr-FR")
-                    : "Non spécifiée"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">
-                  Créée le
-                </dt>
-                <dd className="mt-1 text-sm text-gray-900">
-                  {new Date(commande.created_at).toLocaleDateString("fr-FR")}
-                </dd>
-              </div>
-            </dl>
-
-            {hopital && (
-              <div className="mt-4 pt-4 border-t">
-                <div className="text-sm font-medium text-gray-500 mb-2">
-                  Contact hôpital
-                </div>
-                <div className="text-sm text-gray-900">
-                  {hopital.adresse && (
-                    <div className="mb-1">📍 {hopital.adresse}</div>
-                  )}
-                  {hopital.contact && <div>📞 {hopital.contact}</div>}
-                  {!hopital.adresse && !hopital.contact && (
-                    <div className="text-gray-500">Aucune information</div>
-                  )}
-                </div>
-              </div>
+    <div className="space-y-6">
+      <PageHeader
+        title={
+          <span className="flex flex-wrap items-center gap-3">
+            Commande — {hopital?.nom || "…"}
+            <StatusBadge status={commande.statut} />
+          </span>
+        }
+        description={
+          <span className="inline-flex items-center gap-2" title={refreshError ?? undefined} role="status" aria-live="polite">
+            <span className={`h-2 w-2 rounded-full ${refreshDotClass}`} aria-hidden="true" />
+            {refreshLabel}
+          </span>
+        }
+        back={{ href: "/distribution/commandes", label: "Commandes" }}
+        actions={
+          <>
+            {commande.statut === "BROUILLON" && (
+              <>
+                <Button
+                  onClick={() => setShowConfirmValidation(true)}
+                  loading={validerStatus === "loading"}
+                  icon={<CheckCircle2 className="h-4 w-4" aria-hidden="true" />}
+                >
+                  Valider la commande
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => setShowConfirmAnnulation(true)}
+                  loading={annulerStatus === "loading"}
+                  className="text-brand-700"
+                >
+                  Annuler la commande
+                </Button>
+              </>
             )}
-          </div>
 
-          {/* Lignes de commande */}
-          <div className="bg-white rounded-lg shadow">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Lignes de commande</h2>
-            </div>
+            {commande.statut === "VALIDEE" && (
+              <>
+                <Button
+                  onClick={() => setShowConfirmReservation(true)}
+                  loading={confirmerStatus === "loading"}
+                  icon={<ClipboardCheck className="h-4 w-4" aria-hidden="true" />}
+                >
+                  Confirmer la réservation
+                </Button>
+                <Button
+                  variant="success"
+                  onClick={() => setShowConfirmService(true)}
+                  loading={servirStatus === "loading"}
+                  icon={<Truck className="h-4 w-4" aria-hidden="true" />}
+                >
+                  Servir la commande
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => setShowConfirmAnnulation(true)}
+                  loading={annulerStatus === "loading"}
+                  className="text-brand-700"
+                >
+                  Annuler la commande
+                </Button>
+              </>
+            )}
+          </>
+        }
+      />
 
-            <div className="divide-y divide-gray-200">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
+          <Card>
+            <CardHeader title="Informations générales" />
+            <CardBody>
+              <dl className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Hôpital</dt>
+                  <dd className="mt-1 text-sm text-gray-900">{hopital?.nom || "…"}</dd>
+                </div>
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Date de demande</dt>
+                  <dd className="mt-1 text-sm text-gray-900">
+                    {new Date(commande.date_demande).toLocaleDateString("fr-FR", {
+                      weekday: "long",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Livraison prévue</dt>
+                  <dd className="mt-1 text-sm text-gray-900">
+                    {commande.date_livraison_prevue
+                      ? new Date(commande.date_livraison_prevue).toLocaleDateString("fr-FR")
+                      : "Non spécifiée"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Créée le</dt>
+                  <dd className="mt-1 text-sm text-gray-900">{new Date(commande.created_at).toLocaleDateString("fr-FR")}</dd>
+                </div>
+              </dl>
+
+              {hopital && (
+                <div className="mt-4 border-t border-gray-100 pt-4">
+                  <p className="mb-2 text-sm font-medium text-gray-500">Contact hôpital</p>
+                  <div className="space-y-1 text-sm text-gray-900">
+                    {hopital.adresse && (
+                      <p className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                        {hopital.adresse}
+                      </p>
+                    )}
+                    {hopital.contact && (
+                      <p className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                        {hopital.contact}
+                      </p>
+                    )}
+                    {!hopital.adresse && !hopital.contact && <p className="text-gray-500">Aucune information</p>}
+                  </div>
+                </div>
+              )}
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardHeader title="Lignes de commande" />
+            <ul className="divide-y divide-gray-100">
               {commande.lignes.map((ligne) => (
-                <div key={ligne.id} className="p-6 flex justify-between items-center">
+                <li key={ligne.id} className="flex items-center justify-between gap-4 px-5 py-4">
                   <div>
-                    <div className="font-medium text-gray-900">
+                    <p className="font-medium text-gray-900">
                       {ligne.type_produit}
-                      {ligne.groupe_sanguin && ` - ${ligne.groupe_sanguin}`}
-                    </div>
-                    <div className="text-sm text-gray-800 mt-1">
-                      Ligne #{ligne.id.slice(0, 8)}
-                    </div>
+                      {ligne.groupe_sanguin && ` — ${ligne.groupe_sanguin}`}
+                    </p>
+                    <p className="mt-0.5 font-mono text-xs text-gray-500">Ligne #{ligne.id.slice(0, 8)}</p>
                   </div>
                   <div className="text-right">
-                    <div className="text-lg font-bold text-gray-900">
-                      {ligne.quantite}
-                    </div>
-                    <div className="text-xs text-gray-500">poche(s)</div>
+                    <p className="text-lg font-semibold tabular-nums text-gray-900">{ligne.quantite}</p>
+                    <p className="text-xs text-gray-500">poche(s)</p>
                   </div>
-                </div>
+                </li>
               ))}
+            </ul>
+            <div className="flex items-center justify-between rounded-b-xl border-t border-gray-100 bg-gray-50 px-5 py-4">
+              <span className="text-sm font-medium text-gray-700">Total de poches</span>
+              <span className="text-xl font-semibold tabular-nums text-gray-900">{totalPoches}</span>
             </div>
+          </Card>
 
-            <div className="p-6 bg-gray-50 border-t border-gray-200">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-gray-700">
-                  Total de poches
-                </span>
-                <span className="text-xl font-bold text-gray-900">
-                  {totalPoches}
-                </span>
-              </div>
-            </div>
-          </div>
+          {(commande.statut === "VALIDEE" || commande.statut === "SERVIE") && (
+            <AffectationPanel
+              key={commande.statut}
+              commandeId={commandeId}
+              lignes={commande.lignes}
+              editable={commande.statut === "VALIDEE"}
+              onChanged={() => refetchEvents()}
+            />
+          )}
         </div>
 
-        {/* Sidebar - Workflow */}
-        <div className="space-y-6">
+        <aside className="space-y-4">
           {commande.statut === "BROUILLON" && (
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-              <h3 className="font-medium text-gray-900 mb-2 text-sm">
-                Prochaine étape
-              </h3>
-              <p className="text-xs text-gray-700 mb-3">
-                Valider la commande pour réserver automatiquement les poches
-                disponibles selon FEFO.
-              </p>
-              <button
-                onClick={() => setShowConfirmValidation(true)}
-                className="w-full px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition"
-              >
-                Valider maintenant
-              </button>
-            </div>
+            <Card>
+              <CardBody>
+                <h2 className="mb-1 text-sm font-semibold text-gray-900">Prochaine étape</h2>
+                <p className="mb-3 text-sm text-gray-600">
+                  Validez la commande pour réserver automatiquement les poches disponibles selon la règle FEFO.
+                </p>
+                <Button className="w-full" onClick={() => setShowConfirmValidation(true)}>
+                  Valider maintenant
+                </Button>
+              </CardBody>
+            </Card>
           )}
 
           {commande.statut === "VALIDEE" && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h3 className="font-medium text-blue-900 mb-2 text-sm">
-                Commande validée
-              </h3>
-              <p className="text-xs text-blue-900 mb-3">
-                Les poches ont été réservées. Vous pouvez maintenant affecter
-                les receveurs et servir la commande.
+            <Alert tone="info">
+              <p className="mb-1 font-medium">Commande validée</p>
+              <p className="mb-3 text-xs">
+                Les poches ont été réservées (FEFO). Affectez les receveurs et enregistrez les cross-matchs CGR, puis
+                servez la commande.
               </p>
-              <button
-                onClick={() => setShowConfirmReservation(true)}
-                className="w-full px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition mb-2"
-              >
-                Confirmer la réservation
-              </button>
-              <button
-                onClick={() => setShowConfirmService(true)}
-                className="w-full px-4 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition"
-              >
-                Servir maintenant
-              </button>
-            </div>
+              <div className="space-y-2">
+                <Button className="w-full" onClick={() => setShowConfirmReservation(true)}>
+                  Confirmer la réservation
+                </Button>
+                <Button variant="success" className="w-full" onClick={() => setShowConfirmService(true)}>
+                  Servir maintenant
+                </Button>
+              </div>
+            </Alert>
           )}
 
           {commande.statut === "SERVIE" && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <h3 className="font-medium text-green-900 mb-2 text-sm">
-                ✓ Commande servie
-              </h3>
-              <p className="text-xs text-green-900">
-                Les poches ont été distribuées et marquées DISTRIBUE. La
-                commande est terminée.
+            <Alert tone="success">
+              <p className="mb-1 flex items-center gap-2 font-medium">
+                <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                Commande servie
               </p>
-            </div>
+              <p className="text-xs">Les poches ont été distribuées. La commande est terminée.</p>
+            </Alert>
           )}
 
           {commande.statut === "ANNULEE" && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <h3 className="font-medium text-red-900 mb-2 text-sm">
-                ✗ Commande annulée
-              </h3>
-              <p className="text-xs text-red-900">
-                Cette commande a été annulée. Les réservations ont été libérées.
+            <Alert tone="danger">
+              <p className="mb-1 flex items-center gap-2 font-medium">
+                <XCircle className="h-4 w-4" aria-hidden="true" />
+                Commande annulée
               </p>
-            </div>
+              <p className="text-xs">Cette commande a été annulée. Les réservations ont été libérées.</p>
+            </Alert>
           )}
 
-          <div className="bg-white border border-gray-200 rounded-lg p-4">
-            <h3 className="font-medium text-gray-900 mb-2 text-sm">
-              Suivi temps réel
-            </h3>
-            {!commandeEvents || commandeEvents.length === 0 ? (
-              <p className="text-xs text-gray-500">Aucun événement récent</p>
-            ) : (
-              <div className="space-y-2">
-                {commandeEvents.slice(0, 10).map((evt) => (
-                  <div
-                    key={evt.id}
-                    className="text-xs text-gray-700 flex items-center justify-between"
-                  >
-                    <span className="font-medium">{evt.event_type}</span>
-                    <span className="text-gray-500">
-                      {new Date(evt.created_at).toLocaleString("fr-FR")}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <Card>
+            <CardHeader title="Suivi en temps réel" />
+            <CardBody className="py-4">
+              {!commandeEvents || commandeEvents.length === 0 ? (
+                <p className="text-sm text-gray-500">Aucun événement récent</p>
+              ) : (
+                <ul className="space-y-2">
+                  {commandeEvents.slice(0, 10).map((evt) => (
+                    <li key={evt.id} className="flex items-center justify-between gap-3 text-xs text-gray-700">
+                      <span className="font-medium">{statusLabel(evt.event_type)}</span>
+                      <span className="whitespace-nowrap text-gray-500">
+                        {new Date(evt.created_at).toLocaleString("fr-FR")}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardBody>
+          </Card>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 className="font-medium text-blue-900 mb-2 text-sm">
-              Workflow de distribution
-            </h3>
-            <ul className="text-xs text-blue-900 space-y-1">
-              <li
-                className={
-                  commande.statut !== "BROUILLON" ? "line-through" : ""
-                }
-              >
-                1. <strong>BROUILLON</strong>: Commande créée
-              </li>
-              <li
-                className={
-                  commande.statut === "VALIDEE" || commande.statut === "SERVIE"
-                    ? "line-through"
-                    : ""
-                }
-              >
-                2. <strong>VALIDEE</strong>: Poches réservées
-              </li>
-              <li className={commande.statut === "SERVIE" ? "line-through" : ""}>
-                3. <strong>SERVIE</strong>: Poches distribuées
-              </li>
-            </ul>
-          </div>
+          <Card>
+            <CardHeader title="Circuit de distribution" />
+            <CardBody className="py-4">
+              <ol className="space-y-2 text-sm">
+                {(
+                  [
+                    ["BROUILLON", "Brouillon", "Commande créée"],
+                    ["VALIDEE", "Validée", "Poches réservées"],
+                    ["SERVIE", "Servie", "Poches distribuées"],
+                  ] as const
+                ).map(([key, label, desc], i) => {
+                  const fait = etapeFaite(key);
+                  return (
+                    <li key={key} className="flex items-start gap-2">
+                      {fait ? (
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" aria-hidden="true" />
+                      ) : (
+                        <Circle className="mt-0.5 h-4 w-4 shrink-0 text-gray-300" aria-hidden="true" />
+                      )}
+                      <span className={fait ? "text-gray-500" : "text-gray-900"}>
+                        {i + 1}. <strong>{label}</strong> : {desc}
+                        {fait ? <span className="sr-only"> (étape franchie)</span> : null}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ol>
+            </CardBody>
+          </Card>
 
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <h3 className="font-medium text-yellow-900 mb-2 text-sm">
-              ⚠️ Règles de distribution
-            </h3>
-            <ul className="text-xs text-yellow-900 space-y-1">
-              <li>• Seules les poches DISPONIBLE sont réservables</li>
-              <li>• Réservation automatique FEFO (péremption)</li>
-              <li>• Réservations expireront après délai (default: 24h)</li>
-              <li>• Service marque poches DISTRIBUE (irréversible)</li>
+          <Alert tone="warning">
+            <p className="mb-1 flex items-center gap-2 font-medium">
+              <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+              Règles de distribution
+            </p>
+            <ul className="list-inside list-disc space-y-1 text-xs">
+              <li>Seules les poches disponibles sont réservables</li>
+              <li>Réservation automatique FEFO (péremption)</li>
+              <li>Les réservations expirent après un délai (24 h par défaut)</li>
+              <li>Le service marque les poches distribuées (irréversible)</li>
             </ul>
-          </div>
-        </div>
+          </Alert>
+        </aside>
       </div>
 
-      {/* Modal de confirmation validation */}
-      {showConfirmValidation && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">
-              Confirmer la validation
-            </h3>
-            <div className="mb-6 space-y-3">
-              <p className="text-sm text-gray-700">
-                La validation va automatiquement réserver les poches disponibles
-                selon FEFO (First Expired, First Out).
-              </p>
-              <div className="p-3 bg-blue-50 rounded-md">
-                <div className="text-sm font-medium text-blue-900">
-                  {totalPoches} poche(s) seront réservées
-                </div>
-              </div>
-            </div>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowConfirmValidation(false)}
-                disabled={validerStatus === "loading"}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition disabled:opacity-50"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleValider}
-                disabled={validerStatus === "loading"}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition disabled:opacity-50"
-              >
-                {validerStatus === "loading" ? "Validation..." : "Confirmer"}
-              </button>
-            </div>
-          </div>
+      <Modal
+        open={showConfirmValidation}
+        onClose={closeValidation}
+        title="Confirmer la validation"
+        footer={
+          <>
+            <Button variant="secondary" onClick={closeValidation} disabled={validerStatus === "loading"}>
+              Annuler
+            </Button>
+            <Button onClick={handleValider} loading={validerStatus === "loading"}>
+              {validerStatus === "loading" ? "Validation…" : "Confirmer"}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-gray-700">
+            La validation va réserver automatiquement les poches disponibles selon la règle FEFO (premier périmé, premier
+            sorti).
+          </p>
+          <Alert tone="info">
+            <strong>{totalPoches}</strong> poche(s) seront réservées.
+          </Alert>
         </div>
-      )}
+      </Modal>
 
-      {showConfirmReservation && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">
-              Confirmer la réservation
-            </h3>
-            <div className="mb-6 space-y-3">
-              <p className="text-sm text-gray-700">
-                La confirmation enregistre l'accord de l'hôpital pour les
-                poches réservées et déclenche le suivi.
-              </p>
-              <div className="p-3 bg-blue-50 rounded-md">
-                <div className="text-sm font-medium text-blue-900">
-                  {totalPoches} poche(s) confirmées
-                </div>
-              </div>
-            </div>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowConfirmReservation(false)}
-                disabled={confirmerStatus === "loading"}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition disabled:opacity-50"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleConfirmerReservation}
-                disabled={confirmerStatus === "loading"}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition disabled:opacity-50"
-              >
-                {confirmerStatus === "loading" ? "Confirmation..." : "Confirmer"}
-              </button>
-            </div>
-          </div>
+      <Modal
+        open={showConfirmReservation}
+        onClose={closeReservation}
+        title="Confirmer la réservation"
+        footer={
+          <>
+            <Button variant="secondary" onClick={closeReservation} disabled={confirmerStatus === "loading"}>
+              Annuler
+            </Button>
+            <Button onClick={handleConfirmerReservation} loading={confirmerStatus === "loading"}>
+              {confirmerStatus === "loading" ? "Confirmation…" : "Confirmer"}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-gray-700">
+            La confirmation enregistre l’accord de l’hôpital pour les poches réservées et déclenche le suivi.
+          </p>
+          <Alert tone="info">
+            <strong>{totalPoches}</strong> poche(s) confirmées.
+          </Alert>
         </div>
-      )}
+      </Modal>
 
-      {/* Modal de confirmation service */}
-      {showConfirmService && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">Confirmer le service</h3>
-            <div className="mb-6 space-y-3">
-              <p className="text-sm text-gray-700">
-                Le service va marquer les poches comme DISTRIBUE. Cette action
-                est <strong>irréversible</strong>.
-              </p>
-              <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-                <div className="text-sm font-medium text-red-900">
-                  ⚠️ Action irréversible
-                </div>
-                <div className="text-xs text-red-700 mt-1">
-                  Les poches ne pourront plus être utilisées pour d'autres
-                  commandes
-                </div>
-              </div>
-            </div>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowConfirmService(false)}
-                disabled={servirStatus === "loading"}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition disabled:opacity-50"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleServir}
-                disabled={servirStatus === "loading"}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition disabled:opacity-50"
-              >
-                {servirStatus === "loading" ? "Service..." : "Confirmer"}
-              </button>
-            </div>
-          </div>
+      <Modal
+        open={showConfirmService}
+        onClose={closeService}
+        title="Confirmer le service"
+        footer={
+          <>
+            <Button variant="secondary" onClick={closeService} disabled={servirStatus === "loading"}>
+              Annuler
+            </Button>
+            <Button variant="success" onClick={handleServir} loading={servirStatus === "loading"}>
+              {servirStatus === "loading" ? "Service…" : "Confirmer le service"}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-gray-700">
+            Le service va marquer les poches comme distribuées. Cette action est <strong>irréversible</strong>.
+          </p>
+          <Alert tone="danger">
+            <p className="flex items-center gap-2 font-medium">
+              <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+              Action irréversible
+            </p>
+            <p className="mt-1 text-xs">Les poches ne pourront plus être utilisées pour d’autres commandes.</p>
+          </Alert>
         </div>
-      )}
+      </Modal>
 
-      {/* Modal de confirmation annulation */}
-      {showConfirmAnnulation && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">
-              Confirmer l'annulation
-            </h3>
-            <div className="mb-6">
-              <p className="text-sm text-gray-700">
-                L'annulation va libérer toutes les réservations associées à cette
-                commande.
-              </p>
-            </div>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowConfirmAnnulation(false)}
-                disabled={annulerStatus === "loading"}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition disabled:opacity-50"
-              >
-                Non, garder
-              </button>
-              <button
-                onClick={handleAnnuler}
-                disabled={annulerStatus === "loading"}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition disabled:opacity-50"
-              >
-                {annulerStatus === "loading" ? "Annulation..." : "Oui, annuler"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        open={showConfirmAnnulation}
+        onClose={closeAnnulation}
+        title="Annuler la commande ?"
+        footer={
+          <>
+            <Button variant="secondary" onClick={closeAnnulation} disabled={annulerStatus === "loading"}>
+              Non, garder
+            </Button>
+            <Button variant="danger" onClick={handleAnnuler} loading={annulerStatus === "loading"}>
+              {annulerStatus === "loading" ? "Annulation…" : "Oui, annuler"}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-gray-700">
+          L’annulation va libérer toutes les réservations associées à cette commande.
+        </p>
+      </Modal>
     </div>
   );
 }

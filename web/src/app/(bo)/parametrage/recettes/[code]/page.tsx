@@ -4,14 +4,18 @@ import { useRecette, useUpdateRecette, useDeleteRecette } from "@cnts/api";
 import type { ComposantRecette } from "@cnts/api";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
+import { Plus, Power, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { apiClient } from "@/lib/api-client";
+import { apiErrorMessage } from "@/lib/api-error";
+import { Alert, Button, Card, CardBody, CardHeader, ErrorState, Field, Input, LoadingState, PageHeader, Select } from "@/components/ui";
 
 export default function EditRecettePage() {
     const params = useParams();
     const router = useRouter();
     const code = params.code as string;
 
-    const { data: recette, status } = useRecette(apiClient, code);
+    const { data: recette, status, error, refetch } = useRecette(apiClient, code);
     const updateMutation = useUpdateRecette(apiClient);
     const deleteMutation = useDeleteRecette(apiClient);
 
@@ -23,6 +27,7 @@ export default function EditRecettePage() {
     });
 
     const [composants, setComposants] = useState<ComposantRecette[]>([]);
+
     const [errors, setErrors] = useState<Record<string, string>>({});
 
     const [prevRecette, setPrevRecette] = useState(recette);
@@ -80,10 +85,10 @@ export default function EditRecettePage() {
                     composants,
                 },
             });
-            alert("Recette mise à jour avec succès");
+            toast.success("Recette mise à jour");
             router.push("/parametrage/recettes");
-        } catch (error: any) {
-            alert(`Erreur: ${error?.body?.detail || "Échec de la mise à jour"}`);
+        } catch (err) {
+            toast.error(apiErrorMessage(err, "Échec de la mise à jour"));
         }
     };
 
@@ -94,10 +99,10 @@ export default function EditRecettePage() {
 
         try {
             await deleteMutation.mutate(code);
-            alert("Recette désactivée avec succès");
+            toast.success("Recette désactivée");
             router.push("/parametrage/recettes");
-        } catch (error: any) {
-            alert(`Erreur: ${error?.body?.detail || "Échec de la désactivation"}`);
+        } catch (err) {
+            toast.error(apiErrorMessage(err, "Échec de la désactivation"));
         }
     };
 
@@ -115,207 +120,171 @@ export default function EditRecettePage() {
         setComposants(updated);
     };
 
-    if (status === "loading") {
+    const header = (
+        <PageHeader
+            title={`Recette ${code}`}
+            description="Modification de la recette de fractionnement."
+            back={{ href: "/parametrage/recettes", label: "Recettes de fractionnement" }}
+        />
+    );
+
+    if (status === "loading" || status === "idle") {
         return (
-            <div className="p-6 max-w-3xl mx-auto">
-                <div className="text-center text-gray-700">Chargement...</div>
+            <div className="max-w-3xl">
+                {header}
+                <Card>
+                    <LoadingState />
+                </Card>
             </div>
         );
     }
 
     if (status === "error") {
         return (
-            <div className="p-6 max-w-3xl mx-auto">
-                <div className="text-center text-red-600">Erreur: Recette introuvable</div>
+            <div className="max-w-3xl">
+                {header}
+                <Card>
+                    <ErrorState title="Recette introuvable" message={apiErrorMessage(error, "Impossible de charger la recette.")} onRetry={() => refetch()} />
+                </Card>
             </div>
         );
     }
 
     return (
-        <div className="p-6 max-w-3xl mx-auto">
-            {/* Header */}
-            <div className="mb-6">
-                <h1 className="text-2xl font-bold text-gray-900">Modifier Recette - {code}</h1>
-                <p className="text-gray-700 mt-1">
-                    Modification de la recette de fractionnement
-                </p>
-            </div>
+        <div className="max-w-3xl">
+            {header}
 
-            {/* Form */}
-            <div className="bg-white rounded-lg shadow p-6">
-                <form onSubmit={handleSubmit}>
-                    {/* Code (read-only) */}
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Code
-                        </label>
-                        <input
-                            type="text"
-                            value={code}
-                            disabled
-                            className="w-full font-mono px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-800"
-                        />
-                        <p className="text-gray-500 text-xs mt-1">
-                            Le code ne peut pas être modifié
-                        </p>
-                    </div>
+            <form onSubmit={handleSubmit} noValidate className="space-y-6">
+                <Card>
+                    <CardHeader title="Informations générales" />
+                    <CardBody className="grid gap-4 sm:grid-cols-2">
+                        <Field label="Code" hint="Le code ne peut pas être modifié">
+                            <Input type="text" value={code} disabled className="font-mono" />
+                        </Field>
 
-                    {/* Libellé */}
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Libellé <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                            type="text"
-                            value={formData.libelle}
-                            onChange={(e) => setFormData({ ...formData, libelle: e.target.value })}
-                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.libelle ? "border-red-500" : "border-gray-300"
-                                }`}
-                        />
-                        {errors.libelle && (
-                            <p className="text-red-500 text-sm mt-1">{errors.libelle}</p>
-                        )}
-                    </div>
+                        <Field label="Libellé" required error={errors.libelle}>
+                            <Input
+                                type="text"
+                                value={formData.libelle}
+                                onChange={(e) => setFormData({ ...formData, libelle: e.target.value })}
+                            />
+                        </Field>
 
-                    {/* Site Code */}
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Code Site (optionnel)
-                        </label>
-                        <input
-                            type="text"
-                            value={formData.site_code}
-                            onChange={(e) => setFormData({ ...formData, site_code: e.target.value })}
-                            placeholder="Laisser vide pour une recette globale"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                    </div>
+                        <Field label="Code site" hint="Laisser vide pour une recette globale.">
+                            <Input
+                                type="text"
+                                value={formData.site_code}
+                                onChange={(e) => setFormData({ ...formData, site_code: e.target.value })}
+                                placeholder="Optionnel"
+                            />
+                        </Field>
 
-                    {/* Actif */}
-                    <div className="mb-6">
-                        <label className="flex items-center gap-2">
+                        <label htmlFor="recette-active" className="flex items-center gap-2 self-end pb-2 text-sm font-medium text-gray-800">
                             <input
+                                id="recette-active"
                                 type="checkbox"
                                 checked={formData.actif}
                                 onChange={(e) => setFormData({ ...formData, actif: e.target.checked })}
-                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                             />
-                            <span className="text-sm font-medium text-gray-700">Recette active</span>
+                            Recette active
                         </label>
-                    </div>
+                    </CardBody>
+                </Card>
 
-                    {/* Composants */}
-                    <div className="mb-6">
-                        <div className="flex justify-between items-center mb-2">
-                            <label className="block text-sm font-medium text-gray-700">
-                                Composants <span className="text-red-500">*</span>
-                            </label>
-                            <button
-                                type="button"
-                                onClick={addComposant}
-                                className="text-sm text-blue-600 hover:text-blue-700"
+                <Card>
+                    <CardHeader
+                        title="Composants"
+                        description="Produits obtenus à partir d’une poche source."
+                        actions={
+                            <Button size="sm" variant="secondary" onClick={addComposant} icon={<Plus className="h-4 w-4" aria-hidden="true" />}>
+                                Ajouter un composant
+                            </Button>
+                        }
+                    />
+                    <CardBody className="space-y-3">
+                        {errors.composants && <Alert tone="danger">{errors.composants}</Alert>}
+
+                        {composants.map((composant, index) => (
+                            <fieldset
+                                key={index}
+                                className="grid items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 sm:grid-cols-[1fr_1fr_1fr_auto]"
                             >
-                                + Ajouter composant
-                            </button>
-                        </div>
-
-                        {errors.composants && (
-                            <p className="text-red-500 text-sm mb-2">{errors.composants}</p>
-                        )}
-
-                        <div className="space-y-3">
-                            {composants.map((composant, index) => (
-                                <div
-                                    key={index}
-                                    className="flex gap-3 items-start p-3 bg-gray-50 rounded border border-gray-200"
-                                >
-                                    <div className="flex-1">
-                                        <label className="block text-xs text-gray-800 mb-1">Type</label>
-                                        <select
-                                            value={composant.type_produit}
-                                            onChange={(e) =>
-                                                updateComposant(index, "type_produit", e.target.value)
-                                            }
-                                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                                        >
-                                            <option value="CGR">CGR</option>
-                                            <option value="PFC">PFC</option>
-                                            <option value="CP">CP</option>
-                                        </select>
-                                    </div>
-
-                                    <div className="flex-1">
-                                        <label className="block text-xs text-gray-800 mb-1">Volume (ml)</label>
-                                        <input
-                                            type="number"
-                                            value={composant.volume_ml}
-                                            onChange={(e) =>
-                                                updateComposant(index, "volume_ml", parseInt(e.target.value) || 0)
-                                            }
-                                            className={`w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 ${errors[`composant_${index}_volume`]
-                                                ? "border-red-500"
-                                                : "border-gray-300"
-                                                }`}
-                                        />
-                                    </div>
-
-                                    <div className="flex-1">
-                                        <label className="block text-xs text-gray-800 mb-1">Quantité</label>
-                                        <input
-                                            type="number"
-                                            value={composant.quantite}
-                                            onChange={(e) =>
-                                                updateComposant(index, "quantite", parseInt(e.target.value) || 0)
-                                            }
-                                            className={`w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 ${errors[`composant_${index}_quantite`]
-                                                ? "border-red-500"
-                                                : "border-gray-300"
-                                                }`}
-                                        />
-                                    </div>
-
-                                    <button
-                                        type="button"
-                                        onClick={() => removeComposant(index)}
-                                        disabled={composants.length === 1}
-                                        className="mt-5 text-red-600 hover:text-red-700 disabled:text-gray-400"
+                                <legend className="sr-only">Composant {index + 1}</legend>
+                                <Field label="Type">
+                                    <Select
+                                        value={composant.type_produit}
+                                        onChange={(e) =>
+                                            updateComposant(index, "type_produit", e.target.value)
+                                        }
                                     >
-                                        ✕
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+                                        <option value="CGR">CGR</option>
+                                        <option value="PFC">PFC</option>
+                                        <option value="CP">CP</option>
+                                    </Select>
+                                </Field>
 
-                    {/* Actions */}
-                    <div className="flex gap-3 mt-6">
-                        <button
-                            type="submit"
-                            disabled={updateMutation.isLoading}
-                            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition disabled:bg-gray-400"
-                        >
-                            {updateMutation.isLoading ? "Enregistrement..." : "Enregistrer"}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => router.back()}
-                            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition"
-                        >
-                            Annuler
-                        </button>
+                                <Field label="Volume (ml)" error={errors[`composant_${index}_volume`]}>
+                                    <Input
+                                        type="number"
+                                        min={1}
+                                        value={composant.volume_ml}
+                                        onChange={(e) =>
+                                            updateComposant(index, "volume_ml", parseInt(e.target.value) || 0)
+                                        }
+                                    />
+                                </Field>
+
+                                <Field label="Quantité" error={errors[`composant_${index}_quantite`]}>
+                                    <Input
+                                        type="number"
+                                        min={1}
+                                        value={composant.quantite}
+                                        onChange={(e) =>
+                                            updateComposant(index, "quantite", parseInt(e.target.value) || 0)
+                                        }
+                                    />
+                                </Field>
+
+                                <button
+                                    type="button"
+                                    onClick={() => removeComposant(index)}
+                                    disabled={composants.length === 1}
+                                    aria-label={`Retirer le composant ${index + 1}`}
+                                    title="Retirer"
+                                    className="justify-self-end rounded-lg p-2 text-gray-500 hover:bg-red-50 hover:text-red-600 disabled:opacity-40 sm:mt-7"
+                                >
+                                    <Trash2 className="h-4 w-4" aria-hidden="true" />
+                                </button>
+                            </fieldset>
+                        ))}
+                    </CardBody>
+                </Card>
+
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
                         {formData.actif && (
-                            <button
+                            <Button
                                 type="button"
+                                variant="danger"
                                 onClick={handleDelete}
-                                disabled={deleteMutation.isLoading}
-                                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition disabled:bg-gray-400"
+                                loading={deleteMutation.isLoading}
+                                icon={<Power className="h-4 w-4" aria-hidden="true" />}
                             >
                                 Désactiver
-                            </button>
+                            </Button>
                         )}
                     </div>
-                </form>
-            </div>
+                    <div className="flex flex-wrap gap-2">
+                        <Button type="button" variant="secondary" onClick={() => router.back()}>
+                            Annuler
+                        </Button>
+                        <Button type="submit" loading={updateMutation.isLoading}>
+                            Enregistrer
+                        </Button>
+                    </div>
+                </div>
+            </form>
         </div>
     );
 }

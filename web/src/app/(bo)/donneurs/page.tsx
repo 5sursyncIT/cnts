@@ -3,8 +3,38 @@
 import { useDonneurs } from "@cnts/api";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { Plus, RefreshCw, Users } from "lucide-react";
+
 import { apiClient } from "@/lib/api-client";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { apiErrorMessage } from "@/lib/api-error";
+import {
+  Badge,
+  Button,
+  ButtonLink,
+  Card,
+  EmptyState,
+  ErrorState,
+  Field,
+  Input,
+  LoadingState,
+  PageHeader,
+  Pagination,
+  Select,
+  Table,
+  TBody,
+  Td,
+  Th,
+  THead,
+  Tr,
+} from "@/components/ui";
+
+const REGIONS_SENEGAL = [
+  "Dakar", "Diourbel", "Fatick", "Kaffrine", "Kaolack", "Kédougou",
+  "Kolda", "Louga", "Matam", "Saint-Louis", "Sédhiou", "Tambacounda",
+  "Thiès", "Ziguinchor",
+];
+
+const GROUPES_SANGUINS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
 export default function DonneursPage() {
   const [searchInput, setSearchInput] = useState("");
@@ -25,14 +55,6 @@ export default function DonneursPage() {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  const REGIONS_SENEGAL = [
-    "Dakar", "Diourbel", "Fatick", "Kaffrine", "Kaolack", "Kédougou",
-    "Kolda", "Louga", "Matam", "Saint-Louis", "Sédhiou", "Tambacounda",
-    "Thiès", "Ziguinchor"
-  ];
-
-  const GROUPES_SANGUINS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
-
   const { data, status, error, refetch } = useDonneurs(apiClient, {
     q: searchQuery || undefined,
     sexe: (sexeFilter || undefined) as "H" | "F" | undefined,
@@ -46,70 +68,59 @@ export default function DonneursPage() {
 
   const hasNext = (data?.length ?? 0) > ITEMS_PER_PAGE;
   const donneurs = data?.slice(0, ITEMS_PER_PAGE);
+  const hasFilters = Boolean(searchQuery || sexeFilter || groupeFilter || regionFilter);
+
+  const resetFilters = () => {
+    setSearchInput("");
+    setSearchQuery("");
+    setSexeFilter("");
+    setGroupeFilter("");
+    setRegionFilter("");
+    setPage(1);
+  };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Gestion des Donneurs</h1>
-          <p className="text-gray-700 mt-1">
-            Liste des donneurs enregistrés dans le système
-          </p>
-        </div>
-        <Link
-          href="/donneurs/nouveau"
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-        >
-          + Nouveau Donneur
-        </Link>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Donneurs"
+        description="Liste des donneurs enregistrés dans le système"
+        actions={
+          <ButtonLink href="/donneurs/nouveau" icon={<Plus className="h-4 w-4" aria-hidden="true" />}>
+            Nouveau donneur
+          </ButtonLink>
+        }
+      />
 
-      {/* Filtres */}
-      <div className="bg-white rounded-lg shadow p-4 mb-6">
-        <div className="flex gap-4 items-end">
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Rechercher
-            </label>
-            <input
-              type="text"
+      <Card className="p-4">
+        <div className="grid items-end gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <Field label="Rechercher" className="sm:col-span-2 lg:col-span-2">
+            <Input
+              type="search"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="N° carte, nom, prénom, téléphone..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+              placeholder="N° carte, nom, prénom, téléphone…"
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Sexe
-            </label>
-            <select
+          </Field>
+          <Field label="Sexe">
+            <Select
               value={sexeFilter}
               onChange={(e) => {
                 setSexeFilter(e.target.value as "H" | "F" | "");
                 setPage(1);
               }}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             >
               <option value="">Tous</option>
               <option value="H">Homme</option>
               <option value="F">Femme</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Groupe
-            </label>
-            <select
+            </Select>
+          </Field>
+          <Field label="Groupe sanguin">
+            <Select
               value={groupeFilter}
               onChange={(e) => {
                 setGroupeFilter(e.target.value);
                 setPage(1);
               }}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             >
               <option value="">Tous</option>
               {GROUPES_SANGUINS.map((g) => (
@@ -117,193 +128,128 @@ export default function DonneursPage() {
                   {g}
                 </option>
               ))}
-            </select>
+            </Select>
+          </Field>
+          <div className="flex items-end gap-2">
+            <Field label="Région" className="flex-1">
+              <Select
+                value={regionFilter}
+                onChange={(e) => {
+                  setRegionFilter(e.target.value);
+                  setPage(1);
+                }}
+              >
+                <option value="">Toutes</option>
+                {REGIONS_SENEGAL.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Button
+              variant="secondary"
+              onClick={() => refetch()}
+              aria-label="Actualiser la liste"
+              title="Actualiser"
+              className="px-3"
+              icon={<RefreshCw className="h-4 w-4" aria-hidden="true" />}
+            />
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Région
-            </label>
-            <select
-              value={regionFilter}
-              onChange={(e) => {
-                setRegionFilter(e.target.value);
-                setPage(1);
-              }}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-            >
-              <option value="">Toutes</option>
-              {REGIONS_SENEGAL.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <button
-            onClick={() => refetch()}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition"
-          >
-            Actualiser
-          </button>
         </div>
-      </div>
+      </Card>
 
-      {/* Liste des donneurs */}
-      <div className="bg-white rounded-lg shadow">
-        {status === "loading" && (
-          <div className="p-8 text-center text-gray-700">
-            Chargement...
-          </div>
-        )}
+      <Card className="overflow-hidden">
+        {status === "loading" && <LoadingState rows={8} />}
 
         {status === "error" && (
-          <div className="p-8 text-center">
-            <div className="text-red-600 mb-2">Erreur de chargement</div>
-            <div className="text-sm text-gray-800">
-              {error?.status ? `Erreur ${error.status}` : "Erreur inconnue"}
-            </div>
-            <button
-              onClick={() => refetch()}
-              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-            >
-              Réessayer
-            </button>
-          </div>
+          <ErrorState message={apiErrorMessage(error, "Impossible de charger les donneurs.")} onRetry={() => refetch()} />
         )}
 
         {status === "success" && donneurs && donneurs.length === 0 && (
-          <div className="p-8 text-center text-gray-700">
-            Aucun donneur trouvé
-          </div>
+          <EmptyState
+            icon={<Users className="h-6 w-6" aria-hidden="true" />}
+            title="Aucun donneur trouvé"
+            description={hasFilters ? "Aucun résultat ne correspond à ces critères." : "Aucun donneur n’est encore enregistré."}
+            action={
+              hasFilters ? (
+                <Button variant="secondary" size="sm" onClick={resetFilters}>
+                  Réinitialiser les filtres
+                </Button>
+              ) : (
+                <ButtonLink href="/donneurs/nouveau" size="sm" icon={<Plus className="h-4 w-4" aria-hidden="true" />}>
+                  Nouveau donneur
+                </ButtonLink>
+              )
+            }
+          />
         )}
 
         {status === "success" && donneurs && donneurs.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
+          <>
+            <Table>
+              <THead>
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Nom & Prénom
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Sexe
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Groupe
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Région
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    N° Carte
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Téléphone
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Dernier Don
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Actions
-                  </th>
+                  <Th>Nom et prénom</Th>
+                  <Th>Sexe</Th>
+                  <Th>Groupe</Th>
+                  <Th>Région</Th>
+                  <Th>N° carte</Th>
+                  <Th>Téléphone</Th>
+                  <Th>Dernier don</Th>
+                  <Th align="right">Actions</Th>
                 </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              </THead>
+              <TBody>
                 {donneurs.map((donneur) => (
-                  <tr
-                    key={donneur.id}
-                    className="hover:bg-gray-50 transition"
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
+                  <Tr key={donneur.id}>
+                    <Td className="whitespace-nowrap">
+                      <Link href={`/donneurs/${donneur.id}`} className="font-medium text-gray-900 hover:text-blue-700">
                         {donneur.nom}, {donneur.prenom}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${donneur.sexe === "H"
-                            ? "bg-blue-100 text-blue-900"
-                            : "bg-pink-100 text-pink-800"
-                          }`}
-                      >
+                      </Link>
+                    </Td>
+                    <Td>
+                      <Badge tone={donneur.sexe === "H" ? "info" : "purple"}>
                         {donneur.sexe === "H" ? "Homme" : "Femme"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                      {donneur.groupe_sanguin || "-"}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                      {donneur.region || "-"}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      </Badge>
+                    </Td>
+                    <Td className="whitespace-nowrap font-medium">{donneur.groupe_sanguin || "—"}</Td>
+                    <Td className="whitespace-nowrap text-gray-600">{donneur.region || "—"}</Td>
+                    <Td className="whitespace-nowrap">
                       {donneur.numero_carte ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          {donneur.numero_carte}
-                        </span>
+                        <span className="font-mono text-xs text-gray-800">{donneur.numero_carte}</span>
                       ) : (
-                        <span className="text-gray-400 text-xs italic">Non attribuée</span>
+                        <span className="text-xs italic text-gray-400">Non attribuée</span>
                       )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                      {donneur.telephone || "-"}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                      {donneur.dernier_don
-                        ? new Date(donneur.dernier_don).toLocaleDateString(
-                          "fr-FR"
-                        )
-                        : "Jamais"}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <Link
-                        href={`/donneurs/${donneur.id}`}
-                        className="text-blue-600 hover:text-blue-900 mr-4"
-                      >
-                        Voir
-                      </Link>
-                      <Link
-                        href={`/donneurs/${donneur.id}/eligibilite`}
-                        className="text-green-600 hover:text-green-900"
-                      >
-                        Éligibilité
-                      </Link>
-                    </td>
-                  </tr>
+                    </Td>
+                    <Td className="whitespace-nowrap text-gray-600">{donneur.telephone || "—"}</Td>
+                    <Td className="whitespace-nowrap text-gray-600">
+                      {donneur.dernier_don ? new Date(donneur.dernier_don).toLocaleDateString("fr-FR") : "Jamais"}
+                    </Td>
+                    <Td align="right" className="whitespace-nowrap">
+                      <div className="flex justify-end gap-3 text-sm font-medium">
+                        <Link href={`/donneurs/${donneur.id}`} className="text-blue-600 hover:text-blue-800">
+                          Voir
+                        </Link>
+                        <Link href={`/donneurs/${donneur.id}/eligibilite`} className="text-emerald-700 hover:text-emerald-900">
+                          Éligibilité
+                        </Link>
+                      </div>
+                    </Td>
+                  </Tr>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </TBody>
+            </Table>
+            <Pagination
+              page={page}
+              hasNext={hasNext}
+              onPrev={() => setPage((p) => Math.max(1, p - 1))}
+              onNext={() => setPage((p) => p + 1)}
+              summary={`Page ${page} · ${donneurs.length} résultat${donneurs.length > 1 ? "s" : ""} affiché${donneurs.length > 1 ? "s" : ""}`}
+            />
+          </>
         )}
-      </div>
-
-      {/* Pagination */}
-      {status === "success" && (
-        <div className="flex justify-between items-center mt-4 bg-white p-4 rounded-lg shadow">
-          <div className="text-sm text-gray-800">
-            Page {page} • {donneurs?.length || 0} résultats affichés
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="px-3 py-1 border border-gray-300 rounded-md disabled:opacity-50 hover:bg-gray-50 flex items-center gap-1 text-sm font-medium text-gray-700"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              Précédent
-            </button>
-            <button
-              onClick={() => setPage((p) => p + 1)}
-              disabled={!hasNext}
-              className="px-3 py-1 border border-gray-300 rounded-md disabled:opacity-50 hover:bg-gray-50 flex items-center gap-1 text-sm font-medium text-gray-700"
-            >
-              Suivant
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
+      </Card>
     </div>
   );
 }

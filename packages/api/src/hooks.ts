@@ -175,8 +175,8 @@ export function useAlertesPeremption(api: ApiClient, jours: number = 7) {
   return useQuery(["alertes-peremption", String(jours)], () => api.poches.getAlertesPeremption(jours));
 }
 
-export function useDeletePoche(api: ApiClient) {
-  return useMutation((id: T.UUID) => api.poches.delete(id));
+export function useDetruirePoche(api: ApiClient) {
+  return useMutation((input: { id: T.UUID; data: T.PocheDestruction }) => api.poches.detruire(input.id, input.data));
 }
 
 // ============================================================================
@@ -410,10 +410,6 @@ export function useLibererDon(api: ApiClient) {
 
 export function useActesTransfusionnels(api: ApiClient, params?: Parameters<ApiClient["hemovigilance"]["listActesTransfusionnels"]>[0]) {
   return useQuery(["actes-transfusionnels", JSON.stringify(params)], () => api.hemovigilance.listActesTransfusionnels(params));
-}
-
-export function useActeTransfusionnel(api: ApiClient, id: T.UUID) {
-  return useQuery(["acte-transfusionnel", id], () => api.hemovigilance.getActeTransfusionnel(id), { enabled: !!id });
 }
 
 export function useRappels(api: ApiClient, params?: Parameters<ApiClient["hemovigilance"]["listRappels"]>[0]) {

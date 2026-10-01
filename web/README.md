@@ -49,3 +49,9 @@ BACKOFFICE_SHOW_MFA_CODE=1
 
 ## Proxy API (anti-CORS)
 Les appels navigateur peuvent passer par `/api/backend/*` (proxy Next.js) vers `BACKOFFICE_API_BASE_URL`.
+
+## Notifications par e-mail
+Le conteneur du backoffice reçoit `CNTS_SMTP_HOST`, `CNTS_SMTP_PORT` et `CNTS_SMTP_SENDER`
+depuis le `.env` racine. Le relais configuré est `smtp-appli1.sec.gouv.sn:25`, sans
+authentification, avec `noreply-cnts@gouv.sn` comme expéditeur. L'envoi des notifications
+est effectué par le worker de l'API ; le backoffice n'a pas de module d'envoi direct.

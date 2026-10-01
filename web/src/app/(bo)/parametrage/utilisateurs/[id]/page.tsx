@@ -4,14 +4,31 @@ import { useUser, useUpdateUser, useResetUserPassword, useDeleteUser } from "@cn
 import type { UserRole } from "@cnts/api";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
+import { Copy, Eye, EyeOff, KeyRound, Power, ShieldCheck } from "lucide-react";
+import { toast } from "sonner";
 import { apiClient } from "@/lib/api-client";
+import { apiErrorMessage } from "@/lib/api-error";
+import {
+    Alert,
+    Button,
+    Card,
+    CardBody,
+    CardHeader,
+    ErrorState,
+    Field,
+    Input,
+    LoadingState,
+    Modal,
+    PageHeader,
+    Select,
+} from "@/components/ui";
 
 export default function EditUtilisateurPage() {
     const params = useParams();
     const router = useRouter();
     const userId = params.id as string;
 
-    const { data: user, status, refetch } = useUser(apiClient, userId);
+    const { data: user, status, error, refetch } = useUser(apiClient, userId);
     const updateMutation = useUpdateUser(apiClient);
     const resetPasswordMutation = useResetUserPassword(apiClient);
     const deleteMutation = useDeleteUser(apiClient);
@@ -25,6 +42,9 @@ export default function EditUtilisateurPage() {
     const [newPassword, setNewPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
+    const [passwordError, setPasswordError] = useState<string | null>(null);
+    // Mot de passe réinitialisé, affiché une seule fois.
+    const [resetDone, setResetDone] = useState<string | null>(null);
 
     const [prevUser, setPrevUser] = useState(user);
     if (user && user !== prevUser) {
@@ -44,15 +64,16 @@ export default function EditUtilisateurPage() {
         }
         setNewPassword(password);
         setShowPassword(true);
+        setPasswordError(null);
     };
 
     const validate = () => {
         const newErrors: Record<string, string> = {};
 
         if (!formData.email.trim()) {
-            newErrors.email = "L'email est requis";
+            newErrors.email = "L'e-mail est requis";
         } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-            newErrors.email = "Format d'email invalide";
+            newErrors.email = "Format d'e-mail invalide";
         }
 
         setErrors(newErrors);
@@ -75,16 +96,16 @@ export default function EditUtilisateurPage() {
                     is_active: formData.is_active,
                 },
             });
-            alert("Utilisateur mis à jour avec succès");
+            toast.success("Utilisateur mis à jour");
             refetch();
-        } catch (error: any) {
-            alert(`Erreur: ${error?.body?.detail || "Échec de la mise à jour"}`);
+        } catch (err) {
+            toast.error(apiErrorMessage(err, "Échec de la mise à jour"));
         }
     };
 
     const handleResetPassword = async () => {
         if (!newPassword) {
-            alert("Veuillez générer ou saisir un nouveau mot de passe");
+            setPasswordError("Veuillez générer ou saisir un nouveau mot de passe");
             return;
         }
 
@@ -97,13 +118,22 @@ export default function EditUtilisateurPage() {
                 id: userId,
                 data: { password: newPassword },
             });
-            alert(
-                `Mot de passe réinitialisé avec succès!\n\nNouveau mot de passe: ${newPassword}\n\nVeuillez communiquer ce mot de passe à l'utilisateur de manière sécurisée.`
-            );
+            toast.success("Mot de passe réinitialisé");
+            setResetDone(newPassword);
             setNewPassword("");
             setShowPassword(false);
-        } catch (error: any) {
-            alert(`Erreur: ${error?.body?.detail || "Échec de la réinitialisation"}`);
+        } catch (err) {
+            toast.error(apiErrorMessage(err, "Échec de la réinitialisation"));
+        }
+    };
+
+    const copyPassword = async () => {
+        if (!resetDone) return;
+        try {
+            await navigator.clipboard.writeText(resetDone);
+            toast.success("Mot de passe copié");
+        } catch {
+            toast.error("Copie impossible : sélectionnez le texte manuellement.");
         }
     };
 
@@ -114,181 +144,188 @@ export default function EditUtilisateurPage() {
 
         try {
             await deleteMutation.mutate(userId);
-            alert("Utilisateur désactivé avec succès");
+            toast.success("Utilisateur désactivé");
             router.push("/parametrage/utilisateurs");
-        } catch (error: any) {
-            alert(`Erreur: ${error?.body?.detail || "Échec de la désactivation"}`);
+        } catch (err) {
+            toast.error(apiErrorMessage(err, "Échec de la désactivation"));
         }
     };
 
-    if (status === "loading") {
+    const back = { href: "/parametrage/utilisateurs", label: "Utilisateurs" };
+
+    if (status === "loading" || status === "idle") {
         return (
-            <div className="p-6 max-w-2xl mx-auto">
-                <div className="text-center text-gray-700">Chargement...</div>
+            <div className="max-w-2xl">
+                <PageHeader title="Modifier l’utilisateur" back={back} />
+                <Card>
+                    <LoadingState />
+                </Card>
             </div>
         );
     }
 
     if (status === "error") {
         return (
-            <div className="p-6 max-w-2xl mx-auto">
-                <div className="text-center text-red-600">Erreur: Utilisateur introuvable</div>
+            <div className="max-w-2xl">
+                <PageHeader title="Modifier l’utilisateur" back={back} />
+                <Card>
+                    <ErrorState title="Utilisateur introuvable" message={apiErrorMessage(error, "Impossible de charger l’utilisateur.")} onRetry={() => refetch()} />
+                </Card>
             </div>
         );
     }
 
     return (
-        <div className="p-6 max-w-2xl mx-auto">
-            {/* Header */}
-            <div className="mb-6">
-                <h1 className="text-2xl font-bold text-gray-900">Modifier Utilisateur</h1>
-                <p className="text-gray-700 mt-1">{user?.email}</p>
-            </div>
+        <div className="max-w-2xl space-y-6">
+            <PageHeader title="Modifier l’utilisateur" description={<span className="break-all">{user?.email}</span>} back={back} />
 
-            {/* Form - User Info */}
-            <div className="bg-white rounded-lg shadow p-6 mb-6">
-                <h2 className="text-lg font-semibold mb-4">Informations du Compte</h2>
-                <form onSubmit={handleUpdate}>
-                    {/* Email */}
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Email <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                            type="email"
-                            value={formData.email}
-                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 ${errors.email ? "border-red-500" : "border-gray-300"
-                                }`}
-                        />
-                        {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
-                    </div>
+            {/* Informations du compte */}
+            <Card>
+                <CardHeader title="Informations du compte" />
+                <CardBody>
+                    <form onSubmit={handleUpdate} noValidate className="space-y-5">
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <Field label="E-mail" required error={errors.email}>
+                                <Input
+                                    type="email"
+                                    autoComplete="off"
+                                    value={formData.email}
+                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                />
+                            </Field>
 
-                    {/* Role */}
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Rôle <span className="text-red-500">*</span>
-                        </label>
-                        <select
-                            value={formData.role}
-                            onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                        >
-                            <option value="admin">Administrateur</option>
-                            <option value="biologiste">Biologiste</option>
-                            <option value="technicien_labo">Technicien Laboratoire</option>
-                            <option value="agent_distribution">Agent Distribution</option>
-                            <option value="agent_accueil">Agent Accueil</option>
-                        </select>
-                    </div>
+                            <Field label="Rôle" required>
+                                <Select
+                                    value={formData.role}
+                                    onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })}
+                                >
+                                    <option value="admin">Administrateur</option>
+                                    <option value="biologiste">Biologiste</option>
+                                    <option value="technicien_labo">Technicien laboratoire</option>
+                                    <option value="agent_distribution">Agent distribution</option>
+                                    <option value="agent_accueil">Agent accueil</option>
+                                </Select>
+                            </Field>
+                        </div>
 
-                    {/* Active */}
-                    <div className="mb-6">
-                        <label className="flex items-center gap-2">
+                        <label htmlFor="user-active" className="flex items-center gap-2 text-sm font-medium text-gray-800">
                             <input
+                                id="user-active"
                                 type="checkbox"
                                 checked={formData.is_active}
                                 onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                             />
-                            <span className="text-sm font-medium text-gray-700">Compte actif</span>
+                            Compte actif
                         </label>
-                    </div>
 
-                    {/* MFA Info */}
-                    {user && user.mfa_enabled && (
-                        <div className="mb-6 p-3 bg-green-50 border border-green-200 rounded">
-                            <div className="flex justify-between items-center">
-                                <div>
-                                    <p className="text-sm font-medium text-green-900">MFA Activé</p>
-                                    <p className="text-xs text-green-700 mt-1">
-                                        Depuis le {new Date(user.mfa_enabled_at!).toLocaleDateString("fr-FR")}
-                                    </p>
-                                </div>
-                            </div>
+                        {user && user.mfa_enabled && (
+                            <Alert tone="success">
+                                <span className="flex items-center gap-2 font-medium">
+                                    <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+                                    Authentification à deux facteurs activée
+                                </span>
+                                {user.mfa_enabled_at && (
+                                    <span className="mt-0.5 block text-xs">
+                                        Depuis le {new Date(user.mfa_enabled_at).toLocaleDateString("fr-FR")}
+                                    </span>
+                                )}
+                            </Alert>
+                        )}
+
+                        <div className="flex flex-wrap justify-end gap-2 border-t border-gray-100 pt-4">
+                            <Button type="button" variant="secondary" onClick={() => router.back()}>
+                                Annuler
+                            </Button>
+                            <Button type="submit" loading={updateMutation.isLoading}>
+                                Enregistrer
+                            </Button>
                         </div>
-                    )}
+                    </form>
+                </CardBody>
+            </Card>
 
-                    {/* Actions */}
-                    <div className="flex gap-3">
-                        <button
-                            type="submit"
-                            disabled={updateMutation.isLoading}
-                            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition disabled:bg-gray-400"
-                        >
-                            {updateMutation.isLoading ? "Enregistrement..." : "Enregistrer"}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => router.back()}
-                            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition"
-                        >
-                            Annuler
-                        </button>
-                    </div>
-                </form>
-            </div>
-
-            {/* Password Reset Section */}
-            <div className="bg-white rounded-lg shadow p-6 mb-6">
-                <h2 className="text-lg font-semibold mb-4">Réinitialiser le Mot de Passe</h2>
-
-                <div className="mb-4">
-                    <div className="flex justify-between items-center mb-1">
-                        <label className="block text-sm font-medium text-gray-700">
-                            Nouveau Mot de Passe
-                        </label>
-                        <button
-                            type="button"
-                            onClick={generatePassword}
-                            className="text-sm text-blue-600 hover:text-blue-700"
-                        >
-                            Générer sécurisé
-                        </button>
-                    </div>
-                    <div className="relative">
-                        <input
+            {/* Réinitialisation du mot de passe */}
+            <Card>
+                <CardHeader
+                    title="Réinitialiser le mot de passe"
+                    description="Le nouveau mot de passe devra être communiqué à l’utilisateur de manière sécurisée."
+                />
+                <CardBody className="space-y-4">
+                    <Field label="Nouveau mot de passe" error={passwordError ?? undefined}>
+                        <Input
                             type={showPassword ? "text" : "password"}
+                            autoComplete="new-password"
                             value={newPassword}
-                            onChange={(e) => setNewPassword(e.target.value)}
+                            onChange={(e) => {
+                                setNewPassword(e.target.value);
+                                setPasswordError(null);
+                            }}
                             placeholder="Générer ou saisir un mot de passe"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="font-mono"
                         />
-                        <button
-                            type="button"
+                    </Field>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                            size="sm"
+                            variant="secondary"
                             onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm"
+                            aria-pressed={showPassword}
+                            icon={showPassword ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
                         >
                             {showPassword ? "Masquer" : "Afficher"}
-                        </button>
+                        </Button>
+                        <Button size="sm" variant="secondary" onClick={generatePassword} icon={<KeyRound className="h-4 w-4" aria-hidden="true" />}>
+                            Générer un mot de passe sûr
+                        </Button>
+                        <Button
+                            className="sm:ml-auto"
+                            onClick={handleResetPassword}
+                            disabled={!newPassword}
+                            loading={resetPasswordMutation.isLoading}
+                        >
+                            Réinitialiser le mot de passe
+                        </Button>
                     </div>
-                </div>
+                </CardBody>
+            </Card>
 
-                <button
-                    onClick={handleResetPassword}
-                    disabled={!newPassword || resetPasswordMutation.isLoading}
-                    className="w-full px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition disabled:bg-gray-400"
-                >
-                    {resetPasswordMutation.isLoading ? "Réinitialisation..." : "Réinitialiser le Mot de Passe"}
-                </button>
-            </div>
-
-            {/* Danger Zone */}
+            {/* Zone dangereuse */}
             {formData.is_active && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-                    <h2 className="text-lg font-semibold text-red-900 mb-2">Zone Dangereuse</h2>
-                    <p className="text-sm text-red-700 mb-4">
-                        La désactivation empêchera l'utilisateur de se connecter au système.
-                    </p>
-                    <button
-                        onClick={handleDeactivate}
-                        disabled={deleteMutation.isLoading}
-                        className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition disabled:bg-gray-400"
-                    >
-                        Désactiver l'Utilisateur
-                    </button>
-                </div>
+                <Card className="border-red-200">
+                    <CardHeader
+                        title={<span className="text-red-800">Zone dangereuse</span>}
+                        description="La désactivation empêchera l’utilisateur de se connecter au système."
+                    />
+                    <CardBody>
+                        <Button
+                            variant="danger"
+                            onClick={handleDeactivate}
+                            loading={deleteMutation.isLoading}
+                            icon={<Power className="h-4 w-4" aria-hidden="true" />}
+                        >
+                            Désactiver l’utilisateur
+                        </Button>
+                    </CardBody>
+                </Card>
             )}
+
+            <Modal
+                open={resetDone !== null}
+                onClose={() => setResetDone(null)}
+                title="Mot de passe réinitialisé"
+                description="Communiquez ce mot de passe à l’utilisateur de manière sécurisée. Il ne sera plus affiché."
+                footer={
+                    <>
+                        <Button variant="secondary" onClick={copyPassword} icon={<Copy className="h-4 w-4" aria-hidden="true" />}>
+                            Copier
+                        </Button>
+                        <Button onClick={() => setResetDone(null)}>Terminer</Button>
+                    </>
+                }
+            >
+                <p className="break-all rounded-lg bg-gray-50 px-3 py-2 font-mono text-sm text-gray-900 select-all">{resetDone}</p>
+            </Modal>
         </div>
     );
 }

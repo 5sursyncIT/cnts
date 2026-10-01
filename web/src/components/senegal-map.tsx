@@ -2,13 +2,6 @@
 
 import { useState } from "react";
 
-type RegionData = {
-  id: string;
-  name: string;
-  path: string;
-  value: number;
-};
-
 const SENEGAL_REGIONS = [
   {
     id: "MATAM",
@@ -125,7 +118,7 @@ export function SenegalMap(props: {
                 stroke="white"
                 strokeWidth={isHovered ? 2 : 1}
                 className="transition-all duration-200 ease-in-out cursor-pointer hover:opacity-80"
-                onMouseEnter={(e) => {
+                onMouseEnter={() => {
                   setHoveredRegion(region.id);
                 }}
                 onMouseLeave={() => setHoveredRegion(null)}

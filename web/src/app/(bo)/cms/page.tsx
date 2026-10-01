@@ -1,5 +1,6 @@
 import { ExternalLink, FileText, HelpCircle, Users, Handshake, Download } from "lucide-react";
 import { ContentNav } from "@/components/content-nav";
+import { PageHeader, buttonClasses } from "@/components/ui";
 
 // Le contenu éditorial du portail est géré dans le CMS Strapi (service `cms`),
 // servi sous /cms. Cette page oriente les éditeurs vers son administration.
@@ -15,25 +16,19 @@ const SECTIONS = [
 
 export default function CmsPage() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <ContentNav />
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-zinc-900 tracking-tight">Contenus du portail</h1>
-          <p className="text-zinc-500 mt-1">
-            Le contenu éditorial du portail public est géré dans le CMS Strapi. Les modifications publiées
-            y apparaissent immédiatement sur le portail.
-          </p>
-        </div>
-        <a
-          href={CMS_ADMIN_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
-        >
-          Ouvrir le CMS <ExternalLink className="h-4 w-4" />
-        </a>
-      </div>
+      <PageHeader
+        title="Contenus du portail"
+        description="Le contenu éditorial du portail public est géré dans le CMS Strapi. Les modifications publiées y apparaissent immédiatement sur le portail."
+        actions={
+          <a href={CMS_ADMIN_URL} target="_blank" rel="noopener noreferrer" className={buttonClasses("primary")}>
+            Ouvrir le CMS
+            <ExternalLink className="h-4 w-4" aria-hidden="true" />
+            <span className="sr-only">(nouvel onglet)</span>
+          </a>
+        }
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {SECTIONS.map(({ icon: Icon, label, desc, type }) => (
@@ -42,11 +37,19 @@ export default function CmsPage() {
             href={`${CMS_ADMIN_URL}/content-manager/collection-types/api::${type}.${type}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="group rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition-colors hover:border-zinc-400"
+            className="group flex gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition-colors hover:border-blue-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           >
-            <Icon className="h-6 w-6 text-zinc-500 group-hover:text-zinc-900" />
-            <div className="mt-3 font-semibold text-zinc-900">{label}</div>
-            <div className="mt-1 text-sm text-zinc-500">{desc}</div>
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+              <Icon className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <span className="min-w-0">
+              <span className="flex items-center gap-1.5 font-semibold text-gray-900 group-hover:text-blue-700">
+                {label}
+                <ExternalLink className="h-3.5 w-3.5 text-gray-400" aria-hidden="true" />
+                <span className="sr-only">(nouvel onglet)</span>
+              </span>
+              <span className="mt-1 block text-sm text-gray-600">{desc}</span>
+            </span>
           </a>
         ))}
       </div>

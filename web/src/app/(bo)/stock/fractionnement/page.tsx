@@ -10,7 +10,11 @@ import type { ComposantFractionnement } from "@cnts/api";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
+import { AlertTriangle, ArrowRight, Plus, Split, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { apiClient } from "@/lib/api-client";
+import { apiErrorMessage } from "@/lib/api-error";
+import { Alert, Button, ButtonLink, Card, CardBody, CardHeader, Field, Input, PageHeader, Select } from "@/components/ui";
 
 export default function FractionnementPage() {
   const router = useRouter();
@@ -97,12 +101,12 @@ export default function FractionnementPage() {
     e.preventDefault();
 
     if (!selectedPocheId) {
-      alert("Veuillez sélectionner une poche source");
+      toast.error("Veuillez sélectionner une poche source");
       return;
     }
 
     if (composants.length === 0) {
-      alert("Veuillez ajouter au moins un composant");
+      toast.error("Veuillez ajouter au moins un composant");
       return;
     }
 
@@ -119,378 +123,277 @@ export default function FractionnementPage() {
             source_poche_id: selectedPocheId,
           },
         });
-        setSuccessMessage(
-          `✓ Fractionnement réussi: ${result.poches.length} poche(s) créée(s)`
-        );
+        setSuccessMessage(`Fractionnement réussi : ${result.poches.length} poche(s) créée(s)`);
+        toast.success("Fractionnement enregistré");
       } else {
         // Fractionnement manuel
         const result = await fractionner({
           source_poche_id: selectedPocheId,
           composants,
         });
-        setSuccessMessage(
-          `✓ Fractionnement réussi: ${result.poches.length} poche(s) créée(s)`
-        );
+        setSuccessMessage(`Fractionnement réussi : ${result.poches.length} poche(s) créée(s)`);
+        toast.success("Fractionnement enregistré");
       }
 
       // Rediriger vers le stock après 2 secondes
       setTimeout(() => {
         router.push("/stock");
       }, 2000);
-    } catch (err: any) {
+    } catch (err) {
       console.error("Erreur fractionnement:", err);
-      setErrorMessage(
-        err.message || "Erreur lors du fractionnement"
-      );
+      setErrorMessage(apiErrorMessage(err, "Erreur lors du fractionnement"));
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="mb-6">
-        <Link
-          href="/stock"
-          className="text-blue-600 hover:text-blue-900 text-sm mb-2 inline-block"
-        >
-          ← Retour au stock
-        </Link>
-        <h1 className="text-2xl font-bold text-gray-900">Fractionnement de Sang Total</h1>
-        <p className="text-gray-700 mt-1">
-          Séparation d'une poche ST en composants sanguins (CGR, PFC, CP)
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Fractionnement"
+        description="Séparation d’une poche de sang total en composants sanguins (CGR, PFC, CP)"
+        back={{ href: "/stock", label: "Stock" }}
+      />
 
-      {/* Messages */}
       {successMessage && (
-        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-md">
-          <div className="text-sm font-medium text-green-900">
-            {successMessage}
-          </div>
-          <div className="text-xs text-green-600 mt-1">
-            Redirection vers le stock...
-          </div>
-        </div>
+        <Alert tone="success">
+          <p className="font-medium">{successMessage}</p>
+          <p className="mt-0.5 text-xs">Redirection vers le stock…</p>
+        </Alert>
       )}
 
       {errorMessage && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
-          <div className="text-sm font-medium text-red-900">
-            Erreur de fractionnement
-          </div>
-          <div className="text-sm text-red-600 mt-1">{errorMessage}</div>
-        </div>
+        <Alert tone="danger">
+          <p className="font-medium">Erreur de fractionnement</p>
+          <p className="mt-0.5">{errorMessage}</p>
+        </Alert>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Formulaire principal */}
         <div className="lg:col-span-2">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Sélection de la poche source */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold mb-4">Poche source</h2>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Sélectionner une poche ST en stock
-                  <span className="text-red-600">*</span>
-                </label>
-                <select
-                  value={selectedPocheId}
-                  onChange={(e) => setSelectedPocheId(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+            <Card>
+              <CardHeader title="Poche source" />
+              <CardBody>
+                <Field
+                  label="Poche de sang total en stock"
                   required
+                  hint={pochesDisponibles?.length === 0 ? "Aucune poche ST disponible pour fractionnement." : undefined}
                 >
-                  <option value="">-- Choisir une poche --</option>
-                  {pochesDisponibles?.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.groupe_sanguin || "?"} - {p.volume_ml || "?"}ml - Exp:{" "}
-                      {new Date(p.date_peremption).toLocaleDateString("fr-FR")}
-                    </option>
-                  ))}
-                </select>
-                {pochesDisponibles?.length === 0 && (
-                  <p className="mt-2 text-sm text-gray-800">
-                    Aucune poche ST disponible pour fractionnement
-                  </p>
-                )}
-              </div>
-            </div>
+                  <Select value={selectedPocheId} onChange={(e) => setSelectedPocheId(e.target.value)}>
+                    <option value="">— Choisir une poche —</option>
+                    {pochesDisponibles?.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.groupe_sanguin || "?"} — {p.volume_ml || "?"} mL — péremption{" "}
+                        {new Date(p.date_peremption).toLocaleDateString("fr-FR")}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              </CardBody>
+            </Card>
 
-            {/* Mode de fractionnement */}
             {selectedPocheId && (
-              <div className="bg-white rounded-lg shadow p-6">
-                <h2 className="text-lg font-semibold mb-4">
-                  Mode de fractionnement
-                </h2>
-                <div className="flex gap-4 mb-4">
-                  <button
-                    type="button"
-                    onClick={() => setMode("recette")}
-                    className={`flex-1 px-4 py-2 rounded-md transition ${mode === "recette"
-                      ? "bg-purple-600 text-white"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              <Card>
+                <CardHeader title="Mode de fractionnement" />
+                <CardBody className="space-y-5">
+                  <div className="grid grid-cols-2 gap-1 rounded-lg bg-gray-100 p-1" role="group" aria-label="Mode de fractionnement">
+                    <button
+                      type="button"
+                      aria-pressed={mode === "recette"}
+                      onClick={() => setMode("recette")}
+                      className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                        mode === "recette" ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-900"
                       }`}
-                  >
-                    Recette prédéfinie
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMode("manuel");
-                      setComposants([]);
-                    }}
-                    className={`flex-1 px-4 py-2 rounded-md transition ${mode === "manuel"
-                      ? "bg-purple-600 text-white"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                      }`}
-                  >
-                    Manuel
-                  </button>
-                </div>
-
-                {/* Mode recette */}
-                {mode === "recette" && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Sélectionner une recette
-                    </label>
-                    <select
-                      value={selectedRecetteCode}
-                      onChange={(e) => setSelectedRecetteCode(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                      required={mode === "recette"}
                     >
-                      <option value="">-- Choisir une recette --</option>
-                      {recettes?.map((r) => (
-                        <option key={r.code} value={r.code}>
-                          {r.libelle} ({r.composants.length} composant(s))
-                        </option>
-                      ))}
-                    </select>
-                    {recettes?.length === 0 && (
-                      <p className="mt-2 text-sm text-gray-800">
-                        Aucune recette active.{" "}
-                        <Link
-                          href="/stock/recettes"
-                          className="text-blue-600 hover:text-blue-900"
-                        >
-                          Créer une recette →
-                        </Link>
-                      </p>
-                    )}
+                      Recette prédéfinie
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={mode === "manuel"}
+                      onClick={() => {
+                        setMode("manuel");
+                        setComposants([]);
+                      }}
+                      className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                        mode === "manuel" ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-900"
+                      }`}
+                    >
+                      Manuel
+                    </button>
                   </div>
-                )}
 
-                {/* Composants (recette ou manuel) */}
-                {((mode === "recette" && recetteSelectionnee) ||
-                  mode === "manuel") && (
-                    <div className="mt-6">
-                      <div className="flex justify-between items-center mb-3">
-                        <h3 className="text-sm font-medium text-gray-900">
-                          Composants à créer
-                        </h3>
+                  {mode === "recette" && (
+                    <div>
+                      <Field label="Recette" required>
+                        <Select value={selectedRecetteCode} onChange={(e) => setSelectedRecetteCode(e.target.value)}>
+                          <option value="">— Choisir une recette —</option>
+                          {recettes?.map((r) => (
+                            <option key={r.code} value={r.code}>
+                              {r.libelle} ({r.composants.length} composant(s))
+                            </option>
+                          ))}
+                        </Select>
+                      </Field>
+                      {recettes?.length === 0 && (
+                        <p className="mt-2 text-sm text-gray-600">
+                          Aucune recette active.{" "}
+                          <Link href="/stock/recettes" className="font-medium text-blue-600 hover:text-blue-700">
+                            Créer une recette
+                          </Link>
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {((mode === "recette" && recetteSelectionnee) || mode === "manuel") && (
+                    <div>
+                      <div className="mb-3 flex items-center justify-between gap-2">
+                        <h3 className="text-sm font-semibold text-gray-900">Composants à créer</h3>
                         {mode === "manuel" && (
-                          <button
-                            type="button"
-                            onClick={ajouterComposant}
-                            className="text-sm text-blue-600 hover:text-blue-900"
-                          >
-                            + Ajouter
-                          </button>
+                          <Button variant="secondary" size="sm" onClick={ajouterComposant} icon={<Plus className="h-4 w-4" aria-hidden="true" />}>
+                            Ajouter
+                          </Button>
                         )}
                       </div>
 
                       {composants.length === 0 ? (
-                        <div className="text-sm text-gray-700 text-center py-4">
+                        <p className="rounded-lg border border-dashed border-gray-300 py-6 text-center text-sm text-gray-600">
                           Aucun composant défini
-                        </div>
+                        </p>
                       ) : (
                         <div className="space-y-3">
                           {composants.map((composant, index) => (
-                            <div
-                              key={index}
-                              className="flex gap-3 items-start p-3 bg-gray-50 rounded-md"
-                            >
-                              <div className="flex-1">
-                                <label className="block text-xs text-gray-800 mb-1">
-                                  Type
-                                </label>
-                                <select
+                            <div key={index} className="flex flex-wrap items-end gap-3 rounded-lg bg-gray-50 p-3">
+                              <Field label="Type" className="min-w-[8rem] flex-1">
+                                <Select
                                   value={composant.type_produit}
-                                  onChange={(e) =>
-                                    modifierComposant(
-                                      index,
-                                      "type_produit",
-                                      e.target.value
-                                    )
-                                  }
+                                  onChange={(e) => modifierComposant(index, "type_produit", e.target.value)}
                                   disabled={mode === "recette"}
-                                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 text-gray-900"
                                 >
                                   <option value="CGR">CGR</option>
                                   <option value="PFC">PFC</option>
                                   <option value="CP">CP</option>
-                                </select>
-                              </div>
-                              <div className="flex-1">
-                                <label className="block text-xs text-gray-800 mb-1">
-                                  Volume (ml)
-                                </label>
-                                <input
+                                </Select>
+                              </Field>
+                              <Field label="Volume (mL)" className="min-w-[8rem] flex-1">
+                                <Input
                                   type="number"
                                   value={composant.volume_ml}
-                                  onChange={(e) =>
-                                    modifierComposant(
-                                      index,
-                                      "volume_ml",
-                                      parseInt(e.target.value, 10)
-                                    )
-                                  }
+                                  onChange={(e) => modifierComposant(index, "volume_ml", parseInt(e.target.value, 10))}
                                   disabled={mode === "recette"}
                                   min="1"
-                                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 text-gray-900"
                                 />
-                              </div>
+                              </Field>
                               {mode === "manuel" && (
-                                <button
-                                  type="button"
+                                <Button
+                                  variant="ghost"
+                                  className="text-red-700 hover:bg-red-50"
                                   onClick={() => supprimerComposant(index)}
-                                  className="mt-6 text-red-600 hover:text-red-900 text-sm"
-                                >
-                                  Supprimer
-                                </button>
+                                  aria-label={`Supprimer le composant ${index + 1}`}
+                                  icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
+                                />
                               )}
                             </div>
                           ))}
                         </div>
                       )}
 
-                      {/* Volume total */}
-                      <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-blue-900 font-medium">
-                            Volume total des composants:
-                          </span>
-                          <span className="text-blue-900 font-bold">
-                            {volumeTotal}ml
-                          </span>
+                      <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+                        <div className="flex justify-between">
+                          <span className="font-medium">Volume total des composants</span>
+                          <span className="font-semibold tabular-nums">{volumeTotal} mL</span>
                         </div>
                         {pocheSelectionnee && (
-                          <div className="flex justify-between text-xs text-blue-700 mt-1">
-                            <span>Volume source:</span>
-                            <span>{pocheSelectionnee.volume_ml || "?"}ml</span>
+                          <div className="mt-1 flex justify-between text-xs text-blue-800">
+                            <span>Volume source</span>
+                            <span className="tabular-nums">{pocheSelectionnee.volume_ml || "?"} mL</span>
                           </div>
                         )}
                       </div>
                     </div>
                   )}
-              </div>
+                </CardBody>
+              </Card>
             )}
 
-            {/* Actions */}
             {selectedPocheId && composants.length > 0 && (
-              <div className="bg-white rounded-lg shadow p-6">
-                <div className="flex justify-end gap-3">
-                  <Link
-                    href="/stock"
-                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition"
-                  >
-                    Annuler
-                  </Link>
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition disabled:opacity-50"
-                  >
-                    {submitting
-                      ? "Fractionnement..."
-                      : "Fractionner la poche"}
-                  </button>
-                </div>
+              <div className="flex flex-wrap justify-end gap-2">
+                <ButtonLink href="/stock" variant="secondary">
+                  Annuler
+                </ButtonLink>
+                <Button type="submit" loading={submitting} icon={<Split className="h-4 w-4" aria-hidden="true" />}>
+                  Fractionner la poche
+                </Button>
               </div>
             )}
           </form>
         </div>
 
-        {/* Sidebar */}
+        {/* Colonne latérale */}
         <div className="space-y-6">
           {pocheSelectionnee && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="font-semibold mb-4">Poche sélectionnée</h3>
-              <dl className="space-y-3 text-sm">
-                <div>
-                  <dt className="text-gray-500">Type</dt>
-                  <dd className="font-medium text-gray-900">
-                    {pocheSelectionnee.type_produit}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-gray-500">Groupe sanguin</dt>
-                  <dd className="font-medium text-gray-900">
-                    {pocheSelectionnee.groupe_sanguin || "Non déterminé"}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-gray-500">Volume</dt>
-                  <dd className="font-medium text-gray-900">
-                    {pocheSelectionnee.volume_ml || "?"}ml
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-gray-500">Péremption</dt>
-                  <dd className="font-medium text-gray-900">
-                    {new Date(
-                      pocheSelectionnee.date_peremption
-                    ).toLocaleDateString("fr-FR")}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-gray-500">Emplacement</dt>
-                  <dd className="font-medium text-gray-900">
-                    {pocheSelectionnee.emplacement_stock}
-                  </dd>
-                </div>
-              </dl>
-              <Link
-                href={`/dons/${pocheSelectionnee.don_id}`}
-                className="block mt-4 text-sm text-blue-600 hover:text-blue-900"
-              >
-                Voir le don →
-              </Link>
-            </div>
+            <Card>
+              <CardHeader title="Poche sélectionnée" />
+              <CardBody>
+                <dl className="space-y-3 text-sm">
+                  <div>
+                    <dt className="text-gray-500">Type</dt>
+                    <dd className="font-medium text-gray-900">{pocheSelectionnee.type_produit}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-gray-500">Groupe sanguin</dt>
+                    <dd className="font-medium text-gray-900">{pocheSelectionnee.groupe_sanguin || "Non déterminé"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-gray-500">Volume</dt>
+                    <dd className="font-medium text-gray-900">{pocheSelectionnee.volume_ml || "?"} mL</dd>
+                  </div>
+                  <div>
+                    <dt className="text-gray-500">Péremption</dt>
+                    <dd className="font-medium text-gray-900">
+                      {new Date(pocheSelectionnee.date_peremption).toLocaleDateString("fr-FR")}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-gray-500">Emplacement</dt>
+                    <dd className="font-medium text-gray-900">{pocheSelectionnee.emplacement_stock}</dd>
+                  </div>
+                </dl>
+                <Link
+                  href={`/dons/${pocheSelectionnee.don_id}`}
+                  className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700"
+                >
+                  Voir le don
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </Link>
+              </CardBody>
+            </Card>
           )}
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 className="font-medium text-blue-900 mb-2 text-sm">
-              Produits dérivés du sang
-            </h3>
-            <ul className="text-xs text-blue-900 space-y-1">
-              <li>
-                <strong>CGR</strong>: Concentré Globules Rouges (~280ml, 42j)
-              </li>
-              <li>
-                <strong>PFC</strong>: Plasma Frais Congelé (~220ml, 365j)
-              </li>
-              <li>
-                <strong>CP</strong>: Concentré Plaquettaire (~50ml, 5j)
-              </li>
+          <Alert tone="info">
+            <p className="font-medium">Produits dérivés du sang</p>
+            <ul className="mt-1 space-y-0.5">
+              <li><strong>CGR</strong> : concentré de globules rouges (~280 mL, 42 j)</li>
+              <li><strong>PFC</strong> : plasma frais congelé (~220 mL, 365 j)</li>
+              <li><strong>CP</strong> : concentré plaquettaire (~50 mL, 5 j)</li>
             </ul>
-          </div>
+          </Alert>
 
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <h3 className="font-medium text-yellow-900 mb-2 text-sm">
-              ⚠️ Règles de fractionnement
-            </h3>
-            <ul className="text-xs text-yellow-900 space-y-1">
-              <li>• Seules les poches ST peuvent être fractionnées</li>
-              <li>• La poche doit être EN_STOCK</li>
-              <li>• Volume total ≤ volume source + tolérance (250ml)</li>
-              <li>• Péremption calculée selon règles produit</li>
-              <li>• Action irréversible</li>
+          <Alert tone="warning">
+            <p className="flex items-center gap-1.5 font-medium">
+              <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+              Règles de fractionnement
+            </p>
+            <ul className="mt-1 list-disc space-y-0.5 pl-5">
+              <li>Seules les poches de sang total peuvent être fractionnées</li>
+              <li>La poche doit être en stock</li>
+              <li>Volume total ≤ volume source + tolérance (250 mL)</li>
+              <li>Péremption calculée selon les règles produit</li>
+              <li>Action irréversible</li>
             </ul>
-          </div>
+          </Alert>
         </div>
       </div>
     </div>

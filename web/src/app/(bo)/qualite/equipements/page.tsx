@@ -1,12 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
 import {
   Plus,
   Eye,
   RefreshCw,
-  X,
   Wrench,
   Thermometer,
   FlaskConical,
@@ -15,6 +14,28 @@ import {
   Snowflake,
   Gauge,
 } from "lucide-react";
+import {
+  Alert,
+  Badge,
+  Button,
+  ButtonLink,
+  Card,
+  EmptyState,
+  ErrorState,
+  Field,
+  Input,
+  LoadingState,
+  Modal,
+  PageHeader,
+  Select,
+  Table,
+  TBody,
+  Td,
+  Th,
+  THead,
+  Tr,
+  type BadgeTone,
+} from "@/components/ui";
 
 const API = "/api";
 
@@ -69,11 +90,11 @@ interface EquipementCreate {
 const CATEGORIES: { value: CategorieEquipement; label: string }[] = [
   { value: "AUTOMATE_ANALYSE", label: "Automate d'analyse" },
   { value: "CENTRIFUGEUSE", label: "Centrifugeuse" },
-  { value: "REFRIGERATEUR", label: "Refrigerateur" },
-  { value: "CONGELATEUR", label: "Congelateur" },
+  { value: "REFRIGERATEUR", label: "Réfrigérateur" },
+  { value: "CONGELATEUR", label: "Congélateur" },
   { value: "AGITATEUR", label: "Agitateur" },
   { value: "BALANCE", label: "Balance" },
-  { value: "THERMOMETRE", label: "Thermometre" },
+  { value: "THERMOMETRE", label: "Thermomètre" },
 ];
 
 const STATUTS: { value: StatutEquipement; label: string }[] = [
@@ -81,71 +102,41 @@ const STATUTS: { value: StatutEquipement; label: string }[] = [
   { value: "EN_PANNE", label: "En panne" },
   { value: "EN_MAINTENANCE", label: "En maintenance" },
   { value: "HORS_SERVICE", label: "Hors service" },
-  { value: "REFORME", label: "Reforme" },
+  { value: "REFORME", label: "Réformé" },
 ];
 
 function getCategorieLabel(cat: CategorieEquipement): string {
   return CATEGORIES.find((c) => c.value === cat)?.label ?? cat;
 }
 
-function getCategorieBadge(cat: CategorieEquipement): string {
-  switch (cat) {
-    case "AUTOMATE_ANALYSE":
-      return "bg-purple-100 text-purple-900";
-    case "CENTRIFUGEUSE":
-      return "bg-blue-100 text-blue-900";
-    case "REFRIGERATEUR":
-      return "bg-cyan-100 text-cyan-900";
-    case "CONGELATEUR":
-      return "bg-indigo-100 text-indigo-900";
-    case "AGITATEUR":
-      return "bg-teal-100 text-teal-900";
-    case "BALANCE":
-      return "bg-orange-100 text-orange-900";
-    case "THERMOMETRE":
-      return "bg-rose-100 text-rose-900";
-    default:
-      return "bg-gray-100 text-gray-900";
-  }
-}
-
 function getCategorieIcon(cat: CategorieEquipement) {
+  const cls = "h-3.5 w-3.5";
   switch (cat) {
     case "AUTOMATE_ANALYSE":
-      return <FlaskConical className="w-3.5 h-3.5 inline mr-1" />;
+      return <FlaskConical className={cls} aria-hidden="true" />;
     case "CENTRIFUGEUSE":
-      return <Gauge className="w-3.5 h-3.5 inline mr-1" />;
+      return <Gauge className={cls} aria-hidden="true" />;
     case "REFRIGERATEUR":
-      return <Snowflake className="w-3.5 h-3.5 inline mr-1" />;
     case "CONGELATEUR":
-      return <Snowflake className="w-3.5 h-3.5 inline mr-1" />;
+      return <Snowflake className={cls} aria-hidden="true" />;
     case "AGITATEUR":
-      return <Wind className="w-3.5 h-3.5 inline mr-1" />;
+      return <Wind className={cls} aria-hidden="true" />;
     case "BALANCE":
-      return <Scale className="w-3.5 h-3.5 inline mr-1" />;
+      return <Scale className={cls} aria-hidden="true" />;
     case "THERMOMETRE":
-      return <Thermometer className="w-3.5 h-3.5 inline mr-1" />;
+      return <Thermometer className={cls} aria-hidden="true" />;
     default:
-      return <Wrench className="w-3.5 h-3.5 inline mr-1" />;
+      return <Wrench className={cls} aria-hidden="true" />;
   }
 }
 
-function getStatutBadge(statut: StatutEquipement): string {
-  switch (statut) {
-    case "EN_SERVICE":
-      return "bg-green-100 text-green-900";
-    case "EN_PANNE":
-      return "bg-red-100 text-red-900";
-    case "EN_MAINTENANCE":
-      return "bg-amber-100 text-amber-900";
-    case "HORS_SERVICE":
-      return "bg-gray-100 text-gray-700";
-    case "REFORME":
-      return "bg-gray-200 text-gray-700";
-    default:
-      return "bg-gray-100 text-gray-900";
-  }
-}
+const STATUT_TONES: Record<StatutEquipement, BadgeTone> = {
+  EN_SERVICE: "success",
+  EN_PANNE: "danger",
+  EN_MAINTENANCE: "warning",
+  HORS_SERVICE: "neutral",
+  REFORME: "neutral",
+};
 
 function getStatutLabel(statut: StatutEquipement): string {
   return STATUTS.find((s) => s.value === statut)?.label ?? statut;
@@ -156,8 +147,21 @@ function isOverdue(dateStr: string | null): boolean {
   return new Date(dateStr).getTime() < Date.now();
 }
 
+function DueDate({ value }: { value: string | null }) {
+  if (!value) return <span className="text-gray-400">—</span>;
+  if (isOverdue(value)) {
+    return (
+      <span className="inline-flex items-center gap-1.5 font-medium text-red-700">
+        {formatDate(value)}
+        <Badge tone="danger">En retard</Badge>
+      </span>
+    );
+  }
+  return <span>{formatDate(value)}</span>;
+}
+
 function formatDate(dateStr: string | null): string {
-  if (!dateStr) return "-";
+  if (!dateStr) return "—";
   return new Date(dateStr).toLocaleDateString("fr-FR");
 }
 
@@ -215,6 +219,8 @@ export default function EquipementsPage() {
     fetchEquipements();
   }, [fetchEquipements]);
 
+  const closeModal = useCallback(() => setShowModal(false), []);
+
   // Create equipement
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -231,10 +237,11 @@ export default function EquipementsPage() {
       if (!res.ok) {
         const body = await res.json().catch(() => null);
         throw new Error(
-          body?.detail || `Erreur ${res.status} lors de la creation`
+          body?.detail || `Erreur ${res.status} lors de la création`
         );
       }
 
+      toast.success("Équipement créé");
       setShowModal(false);
       setForm({
         code_inventaire: "",
@@ -254,387 +261,239 @@ export default function EquipementsPage() {
     }
   };
 
-  return (
-    <div className="p-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Equipements</h1>
-          <p className="text-gray-700 mt-1">
-            Qualification et suivi des equipements du laboratoire
-          </p>
-        </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-        >
-          <Plus className="w-4 h-4" />
-          Nouvel Equipement
-        </button>
-      </div>
+  const hasFilters = Boolean(categorieFilter || statutFilter);
 
-      {/* Filtres */}
-      <div className="bg-white rounded-lg shadow p-4 mb-6">
-        <div className="flex gap-4 items-end flex-wrap">
-          <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Categorie
-            </label>
-            <select
-              value={categorieFilter}
-              onChange={(e) => setCategorieFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-            >
-              <option value="">Toutes les categories</option>
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Équipements"
+        description="Qualification et suivi des équipements du laboratoire."
+        back={{ href: "/qualite", label: "Qualité" }}
+        actions={
+          <Button onClick={() => setShowModal(true)} icon={<Plus className="h-4 w-4" aria-hidden="true" />}>
+            Nouvel équipement
+          </Button>
+        }
+      />
+
+      <Card>
+        {/* Filtres */}
+        <div className="grid items-end gap-3 border-b border-gray-100 px-5 py-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Field label="Catégorie">
+            <Select value={categorieFilter} onChange={(e) => setCategorieFilter(e.target.value)}>
+              <option value="">Toutes les catégories</option>
               {CATEGORIES.map((cat) => (
                 <option key={cat.value} value={cat.value}>
                   {cat.label}
                 </option>
               ))}
-            </select>
-          </div>
-
-          <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Statut
-            </label>
-            <select
-              value={statutFilter}
-              onChange={(e) => setStatutFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-            >
+            </Select>
+          </Field>
+          <Field label="Statut">
+            <Select value={statutFilter} onChange={(e) => setStatutFilter(e.target.value)}>
               <option value="">Tous les statuts</option>
-              {STATUTS.map((s) => (
-                <option key={s.value} value={s.value}>
-                  {s.label}
+              {STATUTS.map((st) => (
+                <option key={st.value} value={st.value}>
+                  {st.label}
                 </option>
               ))}
-            </select>
-          </div>
-
-          <button
-            onClick={() => fetchEquipements()}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition"
-          >
-            <RefreshCw className="w-4 h-4" />
-            Actualiser
-          </button>
-        </div>
-      </div>
-
-      {/* Table */}
-      <div className="bg-white rounded-lg shadow">
-        {loading && (
-          <div className="p-8 text-center text-gray-700">Chargement...</div>
-        )}
-
-        {error && (
-          <div className="p-8 text-center">
-            <div className="text-red-600 mb-2">Erreur de chargement</div>
-            <div className="text-sm text-gray-800">{error}</div>
-            <button
+            </Select>
+          </Field>
+          <div className="flex flex-wrap gap-2 lg:col-span-2 lg:justify-end">
+            {hasFilters ? (
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setCategorieFilter("");
+                  setStatutFilter("");
+                }}
+              >
+                Réinitialiser
+              </Button>
+            ) : null}
+            <Button
+              variant="secondary"
               onClick={() => fetchEquipements()}
-              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              loading={loading}
+              icon={<RefreshCw className="h-4 w-4" aria-hidden="true" />}
             >
-              Reessayer
-            </button>
+              Actualiser
+            </Button>
           </div>
-        )}
+        </div>
 
-        {!loading && !error && equipements.length === 0 && (
-          <div className="p-8 text-center text-gray-700">
-            Aucun equipement trouve
-          </div>
-        )}
-
-        {!loading && !error && equipements.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
+        {loading ? (
+          <LoadingState />
+        ) : error ? (
+          <ErrorState message={error} onRetry={() => fetchEquipements()} />
+        ) : equipements.length === 0 ? (
+          <EmptyState
+            icon={<Wrench className="h-6 w-6" aria-hidden="true" />}
+            title="Aucun équipement trouvé"
+            description={hasFilters ? "Aucun équipement ne correspond à ces filtres." : "Enregistrez le premier équipement du laboratoire."}
+            action={
+              hasFilters ? undefined : (
+                <Button size="sm" onClick={() => setShowModal(true)} icon={<Plus className="h-4 w-4" aria-hidden="true" />}>
+                  Nouvel équipement
+                </Button>
+              )
+            }
+          />
+        ) : (
+          <>
+            <Table>
+              <THead>
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Code Inv.
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Nom
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Categorie
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Marque / Modele
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Statut
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Proch. Maintenance
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Proch. Calibration
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Actions
-                  </th>
+                  <Th>Code inv.</Th>
+                  <Th>Nom</Th>
+                  <Th>Catégorie</Th>
+                  <Th>Marque / modèle</Th>
+                  <Th>Statut</Th>
+                  <Th>Proch. maintenance</Th>
+                  <Th>Proch. calibration</Th>
+                  <Th align="right"><span className="sr-only">Actions</span></Th>
                 </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              </THead>
+              <TBody>
                 {equipements.map((eq) => (
-                  <tr key={eq.id} className="hover:bg-gray-50 transition">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono font-medium text-gray-900">
-                      {eq.code_inventaire}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {eq.nom}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded ${getCategorieBadge(eq.categorie)}`}
-                      >
+                  <Tr key={eq.id}>
+                    <Td className="whitespace-nowrap font-mono font-medium text-gray-900">{eq.code_inventaire}</Td>
+                    <Td className="text-gray-900">{eq.nom}</Td>
+                    <Td>
+                      <Badge tone="neutral">
                         {getCategorieIcon(eq.categorie)}
                         {getCategorieLabel(eq.categorie)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                      </Badge>
+                    </Td>
+                    <Td>
                       <div>{eq.marque}</div>
                       <div className="text-xs text-gray-500">{eq.modele}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2.5 py-1 text-xs font-semibold rounded-full ${getStatutBadge(eq.statut)}`}
-                      >
-                        {getStatutLabel(eq.statut)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <span
-                        className={
-                          isOverdue(eq.date_prochaine_maintenance)
-                            ? "text-red-600 font-semibold"
-                            : "text-gray-900"
-                        }
-                      >
-                        {formatDate(eq.date_prochaine_maintenance)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <span
-                        className={
-                          isOverdue(eq.date_prochaine_calibration)
-                            ? "text-red-600 font-semibold"
-                            : "text-gray-900"
-                        }
-                      >
-                        {formatDate(eq.date_prochaine_calibration)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <Link
+                    </Td>
+                    <Td>
+                      <Badge tone={STATUT_TONES[eq.statut] ?? "neutral"} dot>{getStatutLabel(eq.statut)}</Badge>
+                    </Td>
+                    <Td className="whitespace-nowrap">
+                      <DueDate value={eq.date_prochaine_maintenance} />
+                    </Td>
+                    <Td className="whitespace-nowrap">
+                      <DueDate value={eq.date_prochaine_calibration} />
+                    </Td>
+                    <Td align="right">
+                      <ButtonLink
                         href={`/qualite/equipements/${eq.id}`}
-                        className="inline-flex items-center gap-1 text-blue-700 hover:text-blue-900 font-semibold hover:underline"
+                        variant="ghost"
+                        size="sm"
+                        icon={<Eye className="h-4 w-4" aria-hidden="true" />}
                       >
-                        <Eye className="w-4 h-4" />
-                        Voir
-                      </Link>
-                    </td>
-                  </tr>
+                        Voir<span className="sr-only"> {eq.nom}</span>
+                      </ButtonLink>
+                    </Td>
+                  </Tr>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </TBody>
+            </Table>
+            <p className="border-t border-gray-100 px-4 py-3 text-sm text-gray-600">
+              {equipements.length} équipement{equipements.length > 1 ? "s" : ""} affiché{equipements.length > 1 ? "s" : ""}
+            </p>
+          </>
         )}
-      </div>
+      </Card>
 
-      {/* Footer */}
-      {!loading && !error && (
-        <div className="mt-4 text-sm text-gray-800">
-          {equipements.length} equipement(s) affiche(s)
-        </div>
-      )}
+      {/* Modale : nouvel équipement */}
+      <Modal
+        open={showModal}
+        onClose={closeModal}
+        title="Nouvel équipement"
+        footer={
+          <>
+            <Button variant="secondary" onClick={closeModal}>
+              Annuler
+            </Button>
+            <Button type="submit" form="equipement-form" loading={submitting}>
+              Créer l&apos;équipement
+            </Button>
+          </>
+        }
+      >
+        <form id="equipement-form" onSubmit={handleSubmit} className="space-y-4">
+          {formError && <Alert tone="danger">{formError}</Alert>}
 
-      {/* Modal: Nouvel Equipement */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black/50"
-            onClick={() => setShowModal(false)}
-          />
-          <div className="relative bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Nouvel Equipement
-              </h2>
-              <button
-                onClick={() => setShowModal(false)}
-                className="text-gray-400 hover:text-gray-600 transition"
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Code inventaire" required>
+              <Input
+                type="text"
+                value={form.code_inventaire}
+                onChange={(e) => setForm({ ...form, code_inventaire: e.target.value })}
+                placeholder="EQ-2024-001"
+              />
+            </Field>
+            <Field label="Catégorie" required>
+              <Select
+                value={form.categorie}
+                onChange={(e) => setForm({ ...form, categorie: e.target.value as CategorieEquipement })}
               >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              {formError && (
-                <div className="bg-red-50 border border-red-200 text-red-700 rounded-md p-3 text-sm">
-                  {formError}
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Code inventaire *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={form.code_inventaire}
-                  onChange={(e) =>
-                    setForm({ ...form, code_inventaire: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                  placeholder="EQ-2024-001"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nom *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={form.nom}
-                  onChange={(e) => setForm({ ...form, nom: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                  placeholder="Automate Sysmex XN-1000"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Categorie *
-                </label>
-                <select
-                  required
-                  value={form.categorie}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      categorie: e.target.value as CategorieEquipement,
-                    })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                >
-                  {CATEGORIES.map((cat) => (
-                    <option key={cat.value} value={cat.value}>
-                      {cat.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Marque *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={form.marque}
-                    onChange={(e) =>
-                      setForm({ ...form, marque: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                    placeholder="Sysmex"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Modele *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={form.modele}
-                    onChange={(e) =>
-                      setForm({ ...form, modele: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                    placeholder="XN-1000"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Numero de serie *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={form.numero_serie}
-                  onChange={(e) =>
-                    setForm({ ...form, numero_serie: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                  placeholder="SN-123456789"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Localisation *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={form.localisation}
-                  onChange={(e) =>
-                    setForm({ ...form, localisation: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                  placeholder="Laboratoire principal - Salle 3"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Date de mise en service *
-                </label>
-                <input
-                  type="date"
-                  required
-                  value={form.date_mise_service}
-                  onChange={(e) =>
-                    setForm({ ...form, date_mise_service: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                />
-              </div>
-
-              {/* Modal Footer */}
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {submitting ? "Creation..." : "Creer l'equipement"}
-                </button>
-              </div>
-            </form>
+                {CATEGORIES.map((cat) => (
+                  <option key={cat.value} value={cat.value}>
+                    {cat.label}
+                  </option>
+                ))}
+              </Select>
+            </Field>
           </div>
-        </div>
-      )}
+
+          <Field label="Nom" required>
+            <Input
+              type="text"
+              value={form.nom}
+              onChange={(e) => setForm({ ...form, nom: e.target.value })}
+              placeholder="Automate Sysmex XN-1000"
+            />
+          </Field>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Marque" required>
+              <Input
+                type="text"
+                value={form.marque}
+                onChange={(e) => setForm({ ...form, marque: e.target.value })}
+                placeholder="Sysmex"
+              />
+            </Field>
+            <Field label="Modèle" required>
+              <Input
+                type="text"
+                value={form.modele}
+                onChange={(e) => setForm({ ...form, modele: e.target.value })}
+                placeholder="XN-1000"
+              />
+            </Field>
+            <Field label="Numéro de série" required>
+              <Input
+                type="text"
+                value={form.numero_serie}
+                onChange={(e) => setForm({ ...form, numero_serie: e.target.value })}
+                placeholder="SN-123456789"
+              />
+            </Field>
+            <Field label="Date de mise en service" required>
+              <Input
+                type="date"
+                value={form.date_mise_service}
+                onChange={(e) => setForm({ ...form, date_mise_service: e.target.value })}
+              />
+            </Field>
+          </div>
+
+          <Field label="Localisation" required>
+            <Input
+              type="text"
+              value={form.localisation}
+              onChange={(e) => setForm({ ...form, localisation: e.target.value })}
+              placeholder="Laboratoire principal - Salle 3"
+            />
+          </Field>
+        </form>
+      </Modal>
     </div>
   );
 }

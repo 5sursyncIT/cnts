@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { accessCookieName, sessionCookieName, verifySessionToken } from "@/lib/auth/session";
+import { forwardedForHeader } from "@/lib/http/client-ip";
 
 const backendBaseUrl = (process.env.BACKOFFICE_API_BASE_URL ?? `${process.env.BACKEND_API_URL ?? "http://127.0.0.1:8000"}/api`)
   .replace(/\/+$/, "");
@@ -32,7 +33,7 @@ async function proxy(request: NextRequest, pathParts: string[]) {
   // Le proxy exige une session Back Office valide.
   const sessionToken = request.cookies.get(sessionCookieName)?.value;
   const session = sessionToken ? await verifySessionToken(sessionToken) : null;
-  if (!session) {
+  if (!session || !session.mfa) {
     return NextResponse.json({ detail: "Not authenticated" }, { status: 401 });
   }
 
@@ -47,6 +48,7 @@ async function proxy(request: NextRequest, pathParts: string[]) {
   if (accept) headers.set("accept", accept);
   const accessToken = request.cookies.get(accessCookieName)?.value;
   if (accessToken) headers.set("authorization", `Bearer ${accessToken}`);
+  for (const [key, value] of Object.entries(forwardedForHeader(request.headers))) headers.set(key, value);
 
   const res = await fetch(target, {
     method: request.method,

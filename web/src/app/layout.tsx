@@ -25,17 +25,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr">
-      <body
-        className={`antialiased`}
-      >
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <a
-          href="#contenu"
+          href="#contenu-principal"
           className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:text-black"
         >
           Aller au contenu
         </a>
-        <div id="contenu">{children}</div>
-        <Toaster />
+        {children}
+        <Toaster position="top-right" richColors closeButton />
       </body>
     </html>
   );

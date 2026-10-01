@@ -1,44 +1,53 @@
 import Link from "next/link";
-import { Activity, AlertTriangle } from "lucide-react";
+import { Activity, AlertTriangle, ChevronRight, ShieldAlert } from "lucide-react";
+
+import { PageHeader } from "@/components/ui";
+
+const SECTIONS = [
+  {
+    href: "/hemovigilance/transfusions",
+    title: "Suivi transfusionnel",
+    description: "Historique et traçabilité des actes transfusionnels.",
+    icon: Activity,
+    tone: "bg-blue-50 text-blue-600",
+  },
+  {
+    href: "/hemovigilance/rappels",
+    title: "Rappels et alertes",
+    description: "Rappels de produits et alertes sanitaires.",
+    icon: AlertTriangle,
+    tone: "bg-red-50 text-red-600",
+  },
+  {
+    href: "/hemovigilance/eir",
+    title: "Événements indésirables (EIR)",
+    description: "Déclarer, investiguer et clôturer les réactions transfusionnelles.",
+    icon: ShieldAlert,
+    tone: "bg-amber-50 text-amber-600",
+  },
+];
 
 export default function HemovigilancePage() {
   return (
-    <div>
-      <h1 className="mb-6 text-2xl font-bold text-zinc-900">Hémovigilance</h1>
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <Link
-          href="/hemovigilance/transfusions"
-          className="group relative overflow-hidden rounded-xl border border-zinc-200 bg-white p-6 transition-all hover:border-blue-500 hover:shadow-md"
-        >
-          <div className="flex items-center gap-4">
-            <div className="rounded-lg bg-blue-50 p-3 text-blue-600 group-hover:bg-blue-600 group-hover:text-white">
-              <Activity className="h-6 w-6" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-zinc-900">Suivi Transfusionnel</h2>
-              <p className="text-sm text-zinc-500">
-                Consulter l'historique des transfusions et les effets indésirables (EIR).
-              </p>
-            </div>
-          </div>
-        </Link>
-
-        <Link
-          href="/hemovigilance/rappels"
-          className="group relative overflow-hidden rounded-xl border border-zinc-200 bg-white p-6 transition-all hover:border-red-500 hover:shadow-md"
-        >
-          <div className="flex items-center gap-4">
-            <div className="rounded-lg bg-red-50 p-3 text-red-600 group-hover:bg-red-600 group-hover:text-white">
-              <AlertTriangle className="h-6 w-6" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-zinc-900">Rappels & Alertes</h2>
-              <p className="text-sm text-zinc-500">
-                Gérer les rappels de produits et les alertes sanitaires.
-              </p>
-            </div>
-          </div>
-        </Link>
+    <div className="space-y-6">
+      <PageHeader title="Hémovigilance" description="Traçabilité post-transfusionnelle, rappels et événements indésirables" />
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {SECTIONS.map(({ href, title, description, icon: Icon, tone }) => (
+          <Link
+            key={href}
+            href={href}
+            className="group flex items-start gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition-colors hover:border-blue-300"
+          >
+            <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${tone}`}>
+              <Icon className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-semibold text-gray-900">{title}</span>
+              <span className="mt-0.5 block text-sm text-gray-600">{description}</span>
+            </span>
+            <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-gray-400 group-hover:text-blue-600" aria-hidden="true" />
+          </Link>
+        ))}
       </div>
     </div>
   );

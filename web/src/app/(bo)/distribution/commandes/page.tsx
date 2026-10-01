@@ -3,7 +3,28 @@
 import { useCommandes, useHopitaux } from "@cnts/api";
 import Link from "next/link";
 import { useState } from "react";
+import { Plus, RefreshCw } from "lucide-react";
 import { apiClient } from "@/lib/api-client";
+import {
+  Button,
+  ButtonLink,
+  Card,
+  CardBody,
+  EmptyState,
+  ErrorState,
+  Field,
+  LoadingState,
+  PageHeader,
+  Select,
+  StatCard,
+  StatusBadge,
+  Table,
+  TBody,
+  Td,
+  Th,
+  THead,
+  Tr,
+} from "@/components/ui";
 
 export default function CommandesPage() {
   const [statutFilter, setStatutFilter] = useState<string>("");
@@ -33,239 +54,142 @@ export default function CommandesPage() {
     }
     : { total: 0, brouillon: 0, validee: 0, servie: 0, annulee: 0 };
 
-  return (
-    <div className="p-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <Link
-            href="/distribution"
-            className="text-blue-600 hover:text-blue-900 text-sm mb-2 inline-block"
-          >
-            ← Retour à la distribution
-          </Link>
-          <h1 className="text-2xl font-bold text-gray-900">Commandes Hospitalières</h1>
-          <p className="text-gray-700 mt-1">
-            Historique complet des commandes de sang
-          </p>
-        </div>
-        <Link
-          href="/distribution/commandes/nouvelle"
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-        >
-          + Nouvelle commande
-        </Link>
-      </div>
+  const fmtDate = (d: string) =>
+    new Date(d).toLocaleDateString("fr-FR", { year: "numeric", month: "short", day: "numeric" });
 
-      {/* Statistiques rapides */}
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Commandes hospitalières"
+        description="Historique complet des commandes de produits sanguins"
+        back={{ href: "/distribution", label: "Distribution" }}
+        actions={
+          <ButtonLink href="/distribution/commandes/nouvelle" icon={<Plus className="h-4 w-4" aria-hidden="true" />}>
+            Nouvelle commande
+          </ButtonLink>
+        }
+      />
+
       {status === "success" && commandes && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="text-sm text-gray-700 mb-1">Total</div>
-            <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
-          </div>
-          <div className="bg-gray-50 rounded-lg shadow p-4">
-            <div className="text-sm text-gray-800 mb-1">Brouillon</div>
-            <div className="text-2xl font-bold text-gray-900">
-              {stats.brouillon}
-            </div>
-          </div>
-          <div className="bg-blue-50 rounded-lg shadow p-4">
-            <div className="text-sm text-blue-700 mb-1">Validée</div>
-            <div className="text-2xl font-bold text-blue-900">{stats.validee}</div>
-          </div>
-          <div className="bg-green-50 rounded-lg shadow p-4">
-            <div className="text-sm text-green-700 mb-1">Servie</div>
-            <div className="text-2xl font-bold text-green-900">{stats.servie}</div>
-          </div>
-          <div className="bg-red-50 rounded-lg shadow p-4">
-            <div className="text-sm text-red-700 mb-1">Annulée</div>
-            <div className="text-2xl font-bold text-red-900">{stats.annulee}</div>
-          </div>
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
+          <StatCard label="Total" value={stats.total} />
+          <StatCard label="Brouillons" value={stats.brouillon} />
+          <StatCard label="Validées" value={stats.validee} tone="info" />
+          <StatCard label="Servies" value={stats.servie} tone="success" />
+          <StatCard label="Annulées" value={stats.annulee} tone="danger" />
         </div>
       )}
 
-      {/* Filtres */}
-      <div className="bg-white rounded-lg shadow p-4 mb-6">
-        <div className="flex gap-4 items-end flex-wrap">
-          <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Hôpital
-            </label>
-            <select
-              value={hopitalFilter}
-              onChange={(e) => setHopitalFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-            >
-              <option value="">Tous les hôpitaux</option>
-              {hopitaux?.map((h) => (
-                <option key={h.id} value={h.id}>
-                  {h.nom}
-                </option>
-              ))}
-            </select>
+      <Card>
+        <CardBody>
+          <div className="grid items-end gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Field label="Hôpital">
+              <Select value={hopitalFilter} onChange={(e) => setHopitalFilter(e.target.value)}>
+                <option value="">Tous les hôpitaux</option>
+                {hopitaux?.map((h) => (
+                  <option key={h.id} value={h.id}>
+                    {h.nom}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Statut">
+              <Select value={statutFilter} onChange={(e) => setStatutFilter(e.target.value)}>
+                <option value="">Tous</option>
+                <option value="BROUILLON">Brouillon</option>
+                <option value="VALIDEE">Validée</option>
+                <option value="SERVIE">Servie</option>
+                <option value="ANNULEE">Annulée</option>
+              </Select>
+            </Field>
+            <div>
+              <Button variant="secondary" onClick={() => refetch()} icon={<RefreshCw className="h-4 w-4" aria-hidden="true" />}>
+                Actualiser
+              </Button>
+            </div>
           </div>
+        </CardBody>
+      </Card>
 
-          <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Statut
-            </label>
-            <select
-              value={statutFilter}
-              onChange={(e) => setStatutFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-            >
-              <option value="">Tous</option>
-              <option value="BROUILLON">Brouillon</option>
-              <option value="VALIDEE">Validée</option>
-              <option value="SERVIE">Servie</option>
-              <option value="ANNULEE">Annulée</option>
-            </select>
-          </div>
-
-          <button
-            onClick={() => refetch()}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition"
-          >
-            Actualiser
-          </button>
-        </div>
-      </div>
-
-      {/* Liste des commandes */}
-      <div className="bg-white rounded-lg shadow">
-        {status === "loading" && (
-          <div className="p-8 text-center text-gray-700">Chargement...</div>
-        )}
+      <Card>
+        {status === "loading" && <LoadingState />}
 
         {status === "error" && (
-          <div className="p-8 text-center">
-            <div className="text-red-600 mb-2">Erreur de chargement</div>
-            <div className="text-sm text-gray-800">
-              {error?.status ? `Erreur ${error.status}` : "Erreur inconnue"}
-            </div>
-            <button
-              onClick={() => refetch()}
-              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-            >
-              Réessayer
-            </button>
-          </div>
+          <ErrorState
+            message={error?.status ? `Le serveur a répondu avec l’erreur ${error.status}.` : "Erreur inconnue."}
+            onRetry={() => refetch()}
+          />
         )}
 
         {status === "success" && commandes && commandes.length === 0 && (
-          <div className="p-8 text-center text-gray-700">
-            <div className="mb-2">Aucune commande trouvée</div>
-            <Link
-              href="/distribution/commandes/nouvelle"
-              className="text-sm text-blue-600 hover:text-blue-900"
-            >
-              Créer une commande →
-            </Link>
-          </div>
+          <EmptyState
+            title="Aucune commande trouvée"
+            description={statutFilter || hopitalFilter ? "Modifiez les filtres pour élargir la recherche." : undefined}
+            action={
+              <ButtonLink href="/distribution/commandes/nouvelle" variant="secondary" size="sm" icon={<Plus className="h-4 w-4" aria-hidden="true" />}>
+                Créer une commande
+              </ButtonLink>
+            }
+          />
         )}
 
         {status === "success" && commandes && commandes.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
+          <>
+            <Table>
+              <THead>
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Hôpital
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Date demande
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Livraison prévue
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Lignes
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Statut
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Actions
-                  </th>
+                  <Th>Hôpital</Th>
+                  <Th>Date demande</Th>
+                  <Th>Livraison prévue</Th>
+                  <Th>Lignes</Th>
+                  <Th>Statut</Th>
+                  <Th align="right">
+                    <span className="sr-only">Actions</span>
+                  </Th>
                 </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              </THead>
+              <TBody>
                 {commandes.map((commande) => (
-                  <tr key={commande.id} className="hover:bg-gray-50 transition">
-                    <td className="px-6 py-4 whitespace-nowrap">
+                  <Tr key={commande.id}>
+                    <Td className="whitespace-nowrap">
                       <Link
                         href={`/distribution/commandes/${commande.id}`}
-                        className="text-sm font-medium text-blue-600 hover:text-blue-900"
+                        className="font-medium text-blue-700 hover:text-blue-900 hover:underline"
                       >
                         {getHopitalNom(commande.hopital_id)}
                       </Link>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {new Date(commande.date_demande).toLocaleDateString("fr-FR", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                      {commande.date_livraison_prevue
-                        ? new Date(commande.date_livraison_prevue).toLocaleDateString(
-                          "fr-FR",
-                          {
-                            year: "numeric",
-                            month: "short",
-                            day: "numeric",
-                          }
-                        )
-                        : "-"}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                    </Td>
+                    <Td className="whitespace-nowrap">{fmtDate(commande.date_demande)}</Td>
+                    <Td className="whitespace-nowrap">
+                      {commande.date_livraison_prevue ? fmtDate(commande.date_livraison_prevue) : "—"}
+                    </Td>
+                    <Td className="whitespace-nowrap">
                       <div>{commande.lignes.length} ligne(s)</div>
                       <div className="text-xs text-gray-500">
-                        {commande.lignes.reduce(
-                          (sum, l) => sum + l.quantite,
-                          0
-                        )}{" "}
-                        poche(s)
+                        {commande.lignes.reduce((sum, l) => sum + l.quantite, 0)} poche(s)
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 py-1 text-xs font-semibold rounded-full ${commande.statut === "BROUILLON"
-                            ? "bg-gray-100 text-gray-800"
-                            : commande.statut === "VALIDEE"
-                              ? "bg-blue-100 text-blue-900"
-                              : commande.statut === "SERVIE"
-                                ? "bg-green-100 text-green-900"
-                                : "bg-red-100 text-red-900"
-                          }`}
-                      >
-                        {commande.statut}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    </Td>
+                    <Td>
+                      <StatusBadge status={commande.statut} />
+                    </Td>
+                    <Td align="right" className="whitespace-nowrap">
                       <Link
                         href={`/distribution/commandes/${commande.id}`}
-                        className="text-blue-700 hover:text-blue-900 font-semibold hover:underline"
+                        className="font-medium text-blue-700 hover:text-blue-900 hover:underline"
                       >
                         Gérer
                       </Link>
-                    </td>
-                  </tr>
+                    </Td>
+                  </Tr>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </TBody>
+            </Table>
+            <div className="border-t border-gray-100 px-4 py-3 text-right text-sm text-gray-600">
+              {commandes.length} commande(s) affichée(s)
+            </div>
+          </>
         )}
-      </div>
-
-      {/* Footer */}
-      {status === "success" && commandes && (
-        <div className="mt-4 text-sm text-gray-800 text-right">
-          {commandes.length} commande(s) affichée(s)
-        </div>
-      )}
+      </Card>
     </div>
   );
 }

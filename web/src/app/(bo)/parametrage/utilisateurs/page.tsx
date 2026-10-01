@@ -4,7 +4,39 @@ import { useUsers, useDeleteUser } from "@cnts/api";
 import type { UserRole } from "@cnts/api";
 import Link from "next/link";
 import { useState } from "react";
+import { Pencil, Plus, Power, RefreshCw, ShieldCheck } from "lucide-react";
+import { toast } from "sonner";
 import { apiClient } from "@/lib/api-client";
+import { apiErrorMessage } from "@/lib/api-error";
+import {
+    Alert,
+    Badge,
+    Button,
+    ButtonLink,
+    Card,
+    CardBody,
+    EmptyState,
+    ErrorState,
+    Field,
+    LoadingState,
+    PageHeader,
+    Select,
+    Table,
+    TBody,
+    THead,
+    Td,
+    Th,
+    Tr,
+    type BadgeTone,
+} from "@/components/ui";
+
+const ROLES: Record<string, { label: string; tone: BadgeTone }> = {
+    admin: { label: "Administrateur", tone: "purple" },
+    biologiste: { label: "Biologiste", tone: "info" },
+    technicien_labo: { label: "Technicien laboratoire", tone: "success" },
+    agent_distribution: { label: "Agent distribution", tone: "warning" },
+    agent_accueil: { label: "Agent accueil", tone: "neutral" },
+};
 
 export default function UtilisateursPage() {
     const [roleFilter, setRoleFilter] = useState<UserRole | "">("");
@@ -24,218 +56,155 @@ export default function UtilisateursPage() {
 
         try {
             await deleteMutation.mutate(id);
-            alert("Utilisateur désactivé avec succès");
+            toast.success("Utilisateur désactivé");
             refetch();
-        } catch (error: any) {
-            alert(`Erreur: ${error?.body?.detail || "Échec de la désactivation"}`);
-        }
-    };
-
-    const getRoleBadgeColor = (role: string) => {
-        switch (role) {
-            case "admin":
-                return "bg-purple-100 text-purple-900 font-bold";
-            case "biologiste":
-                return "bg-blue-100 text-blue-900 font-bold";
-            case "technicien_labo":
-                return "bg-green-100 text-green-900 font-bold";
-            case "agent_distribution":
-                return "bg-orange-100 text-orange-900 font-bold";
-            case "agent_accueil":
-                return "bg-teal-100 text-teal-900 font-bold";
-            default:
-                return "bg-gray-100 text-gray-900 font-bold";
+        } catch (err) {
+            toast.error(apiErrorMessage(err, "Échec de la désactivation"));
         }
     };
 
     return (
-        <div className="p-6 max-w-7xl mx-auto">
-            {/* Header */}
-            <div className="flex justify-between items-center mb-6">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Gestion des Utilisateurs</h1>
-                    <p className="text-gray-700 mt-1">
-                        Administration des comptes utilisateurs et attribution des rôles
-                    </p>
-                </div>
-                <Link
-                    href="/parametrage/utilisateurs/nouveau"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-                >
-                    + Nouvel Utilisateur
-                </Link>
-            </div>
+        <div className="space-y-6">
+            <PageHeader
+                title="Utilisateurs"
+                description="Comptes utilisateurs et attribution des rôles."
+                actions={
+                    <ButtonLink href="/parametrage/utilisateurs/nouveau" icon={<Plus className="h-4 w-4" aria-hidden="true" />}>
+                        Nouvel utilisateur
+                    </ButtonLink>
+                }
+            />
 
             {/* Filtres */}
-            <div className="bg-white rounded-lg shadow p-4 mb-6">
-                <div className="flex gap-4 items-end flex-wrap">
-                    <div className="flex-1 min-w-[200px]">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Rôle
-                        </label>
-                        <select
+            <Card>
+                <CardBody className="grid items-end gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <Field label="Rôle">
+                        <Select
                             value={roleFilter}
                             onChange={(e) => setRoleFilter(e.target.value as UserRole | "")}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
                             <option value="">Tous les rôles</option>
                             <option value="admin">Administrateur</option>
                             <option value="biologiste">Biologiste</option>
-                            <option value="technicien_labo">Technicien Labo</option>
-                            <option value="agent_distribution">Agent Distribution</option>
-                            <option value="agent_accueil">Agent Accueil</option>
-                        </select>
-                    </div>
+                            <option value="technicien_labo">Technicien laboratoire</option>
+                            <option value="agent_distribution">Agent distribution</option>
+                            <option value="agent_accueil">Agent accueil</option>
+                        </Select>
+                    </Field>
 
-                    <div className="flex-1 min-w-[200px]">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Statut
-                        </label>
-                        <select
+                    <Field label="Statut">
+                        <Select
                             value={statusFilter === undefined ? "all" : statusFilter ? "active" : "inactive"}
                             onChange={(e) =>
                                 setStatusFilter(
                                     e.target.value === "all" ? undefined : e.target.value === "active"
                                 )
                             }
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                         >
                             <option value="all">Tous</option>
                             <option value="active">Actifs uniquement</option>
                             <option value="inactive">Inactifs uniquement</option>
-                        </select>
+                        </Select>
+                    </Field>
+
+                    <div>
+                        <Button variant="secondary" onClick={() => refetch()} icon={<RefreshCw className="h-4 w-4" aria-hidden="true" />}>
+                            Actualiser
+                        </Button>
                     </div>
+                </CardBody>
+            </Card>
 
-                    <button
-                        onClick={() => refetch()}
-                        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition"
-                    >
-                        Actualiser
-                    </button>
-                </div>
-            </div>
-
-            {/* Content */}
-            <div className="bg-white rounded-lg shadow">
-                {status === "loading" && (
-                    <div className="p-8 text-center text-gray-700">Chargement...</div>
-                )}
+            <Card>
+                {status === "loading" && <LoadingState />}
 
                 {status === "error" && (
-                    <div className="p-8 text-center">
-                        <div className="text-red-600 mb-2">Erreur de chargement</div>
-                        <div className="text-sm text-gray-800">
-                            {error?.status ? `Erreur ${error.status}` : "Erreur inconnue"}
-                        </div>
-                        <button
-                            onClick={() => refetch()}
-                            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                        >
-                            Réessayer
-                        </button>
-                    </div>
+                    <ErrorState message={apiErrorMessage(error, "Impossible de charger les utilisateurs.")} onRetry={() => refetch()} />
                 )}
 
                 {status === "success" && users && users.length === 0 && (
-                    <div className="p-8 text-center text-gray-700">
-                        Aucun utilisateur trouvé
-                    </div>
+                    <EmptyState title="Aucun utilisateur trouvé" description="Modifiez les filtres ou créez un nouveau compte." />
                 )}
 
                 {status === "success" && users && users.length > 0 && (
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead className="bg-gray-50 border-b border-gray-200">
+                    <>
+                        <Table>
+                            <THead>
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                                        Email
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                                        Rôle
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                                        MFA
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                                        Statut
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                                        Créé le
-                                    </th>
-                                    <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                                        Actions
-                                    </th>
+                                    <Th>E-mail</Th>
+                                    <Th>Rôle</Th>
+                                    <Th>MFA</Th>
+                                    <Th>Statut</Th>
+                                    <Th>Créé le</Th>
+                                    <Th align="right"><span className="sr-only">Actions</span></Th>
                                 </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
+                            </THead>
+                            <TBody>
                                 {users.map((user) => (
-                                    <tr key={user.id} className="hover:bg-gray-50 transition">
-                                        <td className="px-6 py-4 text-sm text-gray-900">
-                                            {user.email}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className={`px-3 py-1.5 text-sm rounded ${getRoleBadgeColor(user.role)}`}>
-                                                {user.role}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                    <Tr key={user.id}>
+                                        <Td className="break-all text-gray-900">{user.email}</Td>
+                                        <Td>
+                                            <Badge tone={ROLES[user.role]?.tone ?? "neutral"}>
+                                                {ROLES[user.role]?.label ?? user.role}
+                                            </Badge>
+                                        </Td>
+                                        <Td>
                                             {user.mfa_enabled ? (
-                                                <span className="px-3 py-1.5 text-sm font-bold rounded bg-green-100 text-green-900">
+                                                <Badge tone="success">
+                                                    <ShieldCheck className="h-3 w-3" aria-hidden="true" />
                                                     Activé
-                                                </span>
+                                                </Badge>
                                             ) : (
-                                                <span className="text-gray-400">-</span>
+                                                <span className="text-gray-400">
+                                                    <span aria-hidden="true">—</span>
+                                                    <span className="sr-only">Non activé</span>
+                                                </span>
                                             )}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <span
-                                                className={`px-3 py-1.5 text-sm font-bold rounded-full ${user.is_active
-                                                    ? "bg-green-100 text-green-900"
-                                                    : "bg-gray-100 text-gray-900"
-                                                    }`}
-                                            >
+                                        </Td>
+                                        <Td>
+                                            <Badge tone={user.is_active ? "success" : "neutral"} dot>
                                                 {user.is_active ? "Actif" : "Inactif"}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                                            </Badge>
+                                        </Td>
+                                        <Td className="whitespace-nowrap tabular-nums">
                                             {new Date(user.created_at).toLocaleDateString("fr-FR")}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            <Link
-                                                href={`/parametrage/utilisateurs/${user.id}`}
-                                                className="text-blue-700 hover:text-blue-900 font-semibold hover:underline mr-4"
-                                            >
-                                                Modifier
-                                            </Link>
-                                            {user.is_active && (
-                                                <button
-                                                    onClick={() => handleDeactivate(user.id, user.email)}
-                                                    disabled={deleteMutation.isLoading}
-                                                    className="text-red-700 hover:text-red-900 font-semibold hover:underline disabled:text-gray-400"
+                                        </Td>
+                                        <Td align="right" className="whitespace-nowrap">
+                                            <div className="flex items-center justify-end gap-3">
+                                                <Link
+                                                    href={`/parametrage/utilisateurs/${user.id}`}
+                                                    className="inline-flex items-center gap-1 font-medium text-blue-700 hover:underline"
                                                 >
-                                                    Désactiver
-                                                </button>
-                                            )}
-                                        </td>
-                                    </tr>
+                                                    <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+                                                    Modifier<span className="sr-only"> {user.email}</span>
+                                                </Link>
+                                                {user.is_active && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleDeactivate(user.id, user.email)}
+                                                        disabled={deleteMutation.isLoading}
+                                                        className="inline-flex items-center gap-1 font-medium text-red-700 hover:underline disabled:text-gray-400"
+                                                    >
+                                                        <Power className="h-3.5 w-3.5" aria-hidden="true" />
+                                                        Désactiver<span className="sr-only"> {user.email}</span>
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </Td>
+                                    </Tr>
                                 ))}
-                            </tbody>
-                        </table>
-                    </div>
+                            </TBody>
+                        </Table>
+                        <div className="border-t border-gray-100 px-4 py-3 text-sm text-gray-600">
+                            {users.length} utilisateur(s) affiché(s)
+                        </div>
+                    </>
                 )}
-            </div>
+            </Card>
 
-            {/* Footer */}
-            {status === "success" && users && (
-                <div className="mt-4 text-sm text-gray-800">
-                    {users.length} utilisateur(s) affichés
-                </div>
-            )}
-
-            {/* Info */}
-            <div className="mt-4 text-sm text-gray-800 bg-yellow-50 border border-yellow-200 rounded p-4">
-                <strong>⚠️ Sécurité:</strong> Seuls les administrateurs peuvent accéder à cette page et gérer les utilisateurs.
-            </div>
+            <Alert tone="warning">
+                <strong>Sécurité :</strong> seuls les administrateurs peuvent accéder à cette page et gérer les utilisateurs.
+            </Alert>
         </div>
     );
 }
