@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { Button, Card, PageBanner, SectionTitle } from "@/components/cnts/primitives";
 import { Icon } from "@/components/cnts/icon";
-import { org } from "@/components/cnts/data";
+import { org, partenaires } from "@/components/cnts/data";
 import { NationalNetworkMap } from "@/components/cnts/national-network-map";
 import { getStructures } from "@/lib/cms";
 import { STRUCTURES } from "@/components/cnts/structures";
@@ -15,6 +15,22 @@ export const metadata = {
 function MaxWrap({ children, w = 1180 }: { children: React.ReactNode; w?: number }) {
   return <div style={{ maxWidth: w, margin: "0 auto", padding: "var(--gutter)" }}>{children}</div>;
 }
+
+const featuredPartnerLogos = [
+  "/images/partenaires/ministere-sante.png",
+  "/images/partenaires/oms.png",
+  "/images/partenaires/efs.png",
+  "/images/partenaires/isbt.png",
+  "/images/partenaires/ucad.png",
+  "/images/partenaires/pasteur.png",
+  "/images/partenaires/hopital-principal.jpeg",
+  "/images/partenaires/andobes.jpeg",
+];
+
+const featuredPartners = featuredPartnerLogos.flatMap((logo) => {
+  const partner = partenaires.find((item) => item.logo_url === logo);
+  return partner ? [{ ...partner, logo_url: logo }] : [];
+});
 
 export const dynamic = "force-dynamic";
 
@@ -177,9 +193,29 @@ export default async function QuiSommesNousPage() {
               </Button>
             }
           />
-          <div className="grid-3" style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 16 }}>
-            {org.partners.map((p) => (
-              <div key={p} className="ph" data-label={p} style={{ height: 78, borderRadius: "var(--r-md)" }} />
+          <div className="featured-partners-grid">
+            {featuredPartners.map((partner) => (
+              <figure key={partner.name} className="featured-partner-card">
+                <div className="featured-partner-logo">
+                  {partner.logo_url.endsWith("ministere-sante.png") ? (
+                    <div className="partner-ministry-mark">
+                      <Image src={partner.logo_url} alt="" width={269} height={68} style={{ maxWidth: "none" }} />
+                    </div>
+                  ) : (
+                    <Image
+                      src={partner.logo_url}
+                      alt=""
+                      fill
+                      sizes="(max-width: 760px) 45vw, 230px"
+                      style={{ objectFit: "contain" }}
+                    />
+                  )}
+                </div>
+                <figcaption>
+                  <span className="featured-partner-category">{partner.category}</span>
+                  <h3 className="featured-partner-name">{partner.name}</h3>
+                </figcaption>
+              </figure>
             ))}
           </div>
         </MaxWrap>

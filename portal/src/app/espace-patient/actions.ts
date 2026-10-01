@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { sessionCookieName, signSession } from "@/lib/auth/session";
+import { ESPACE_PATIENT_FERME_MSG, ESPACE_PATIENT_OUVERT } from "@/lib/espace-patient";
 import { BACKEND_URL, patientFetch, patientGet, publicPost, type DonPatient, type Profil, type RendezVous } from "@/lib/backend";
 import { logger } from "@/lib/logger";
 import { creneauValide, dernierDonConnu, eligibilite, LIEUX_RDV } from "@/lib/donneur";
@@ -36,6 +37,7 @@ function safeNext(next: unknown) {
 const loginSchema = z.object({ email: z.string().trim().email(), password: z.string().min(1) });
 
 export async function loginAction(_prev: FormState, form: FormData): Promise<FormState> {
+  if (!ESPACE_PATIENT_OUVERT) return { error: ESPACE_PATIENT_FERME_MSG };
   const email = String(form.get("email") ?? "");
   if (limiter.check(5, `login:${await clientIp()}`).isRateLimited) {
     return { error: "Trop de tentatives. Réessayez dans une minute.", fields: { email } };
@@ -102,6 +104,7 @@ const registerSchema = z
   .refine((v) => v.password === v.confirm, { message: "Les deux mots de passe ne correspondent pas.", path: ["confirm"] });
 
 export async function registerAction(_prev: FormState, form: FormData): Promise<FormState> {
+  if (!ESPACE_PATIENT_OUVERT) return { error: ESPACE_PATIENT_FERME_MSG };
   const raw = Object.fromEntries(["cni", "date_naissance", "email", "password", "confirm"].map((k) => [k, String(form.get(k) ?? "")]));
   const fields = { cni: raw.cni, date_naissance: raw.date_naissance, email: raw.email };
   // Limite stricte : la vérification CNI + date de naissance ne doit pas pouvoir être devinée.
@@ -147,6 +150,7 @@ const rdvSchema = z.object({
 });
 
 export async function createAppointmentAction(_prev: FormState, form: FormData): Promise<FormState> {
+  if (!ESPACE_PATIENT_OUVERT) return { error: ESPACE_PATIENT_FERME_MSG };
   const raw = {
     date: String(form.get("date") ?? ""),
     heure: String(form.get("heure") ?? ""),
@@ -188,6 +192,7 @@ export async function createAppointmentAction(_prev: FormState, form: FormData):
 }
 
 export async function cancelAppointmentAction(form: FormData) {
+  if (!ESPACE_PATIENT_OUVERT) return;
   const id = String(form.get("id") ?? "");
   if (!/^[0-9a-f-]{36}$/i.test(id)) return;
   await patientFetch(`/api/me/appointments/${id}`, { method: "PUT" });
@@ -204,6 +209,7 @@ const profilSchema = z.object({
 });
 
 export async function updateProfileAction(_prev: FormState, form: FormData): Promise<FormState> {
+  if (!ESPACE_PATIENT_OUVERT) return { error: ESPACE_PATIENT_FERME_MSG };
   const raw = Object.fromEntries(["telephone", "email", "adresse", "profession"].map((k) => [k, String(form.get(k) ?? "")]));
   const parsed = profilSchema.safeParse(raw);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message, fields: raw };

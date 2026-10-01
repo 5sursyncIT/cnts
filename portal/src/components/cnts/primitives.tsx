@@ -38,6 +38,9 @@ export function Logo({
           </div>
           <div
             style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 5,
               fontSize: 9.5,
               letterSpacing: "0.1em",
               textTransform: "uppercase",
@@ -46,6 +49,19 @@ export function Logo({
             }}
           >
             Sénégal
+            <svg
+              width="16"
+              height="11"
+              viewBox="0 0 30 20"
+              aria-hidden="true"
+              focusable="false"
+              style={{ display: "block", flexShrink: 0, borderRadius: 2, boxShadow: "0 0 0 1px rgba(0,0,0,.1)" }}
+            >
+              <path fill="#00853f" d="M0 0h10v20H0z" />
+              <path fill="#fdef42" d="M10 0h10v20H10z" />
+              <path fill="#e31b23" d="M20 0h10v20H20z" />
+              <path fill="#00853f" d="m15 5.5 1.05 3.14h3.3l-2.67 1.94 1.02 3.15L15 11.78l-2.7 1.95 1.02-3.15-2.67-1.94h3.3z" />
+            </svg>
           </div>
         </div>
       )}
@@ -117,6 +133,7 @@ export function Card({
   children,
   pad = 22,
   style = {},
+  className = "",
   hover = false,
   href,
   onClick,
@@ -124,21 +141,22 @@ export function Card({
   children?: ReactNode;
   pad?: number;
   style?: CSSProperties;
+  className?: string;
   hover?: boolean;
   href?: string;
   onClick?: () => void;
 }) {
-  const className = "cn-card" + (hover || href || onClick ? " hov" : "");
+  const classes = "cn-card" + (hover || href || onClick ? " hov" : "") + (className ? ` ${className}` : "");
   const merged: CSSProperties = { padding: pad, ...style };
   if (href) {
     return (
-      <Link href={href} className={className} style={merged}>
+      <Link href={href} className={classes} style={merged}>
         {children}
       </Link>
     );
   }
   return (
-    <div onClick={onClick} className={className} style={merged}>
+    <div onClick={onClick} className={classes} style={merged}>
       {children}
     </div>
   );

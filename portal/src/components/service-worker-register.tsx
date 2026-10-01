@@ -7,8 +7,8 @@ export function ServiceWorkerRegister() {
   useEffect(() => {
     if ("serviceWorker" in navigator && window.location.protocol === "https:") {
       window.addEventListener("load", () => {
-        navigator.serviceWorker.register("/app/sw.js", {
-          scope: "/app/",
+        navigator.serviceWorker.register("/sw.js", {
+          scope: "/",
           updateViaCache: "none",
         }).then(
           (registration) => {

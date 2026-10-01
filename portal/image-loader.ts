@@ -13,12 +13,8 @@
 // the basePath and let the standalone server serve it directly. The site's
 // images are already small/vector, so skipping on-the-fly optimization is a
 // non-issue and avoids the basePath + SVG pitfalls entirely.
-const BASE_PATH = "/app";
-
 export default function cntsImageLoader({ src }: { src: string }): string {
   // Leave absolute/remote URLs untouched.
   if (/^https?:\/\//.test(src)) return src;
-  // Already prefixed (defensive against double-prefixing).
-  if (src.startsWith(`${BASE_PATH}/`)) return src;
-  return `${BASE_PATH}${src.startsWith("/") ? src : `/${src}`}`;
+  return src.startsWith("/") ? src : `/${src}`;
 }

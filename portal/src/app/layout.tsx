@@ -6,6 +6,7 @@ import { SiteHeader } from "@/components/site-header";
 import { ConsentBanner } from "@/components/consent-banner";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
 import { RevealOnScroll } from "@/components/reveal-on-scroll";
+import { EspacePatientGate } from "@/components/espace-patient-gate";
 
 const publicSans = Public_Sans({
   variable: "--font-public-sans",
@@ -29,7 +30,7 @@ const splineMono = Spline_Sans_Mono({
 export const metadata: Metadata = {
   title: "Portail Patient — SGI-CNTS",
   description: "Site institutionnel et espace patient",
-  manifest: "/app/manifest.json",
+  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -62,6 +63,7 @@ export default function RootLayout({
         <ConsentBanner />
         <ServiceWorkerRegister />
         <RevealOnScroll />
+        <EspacePatientGate />
       </body>
     </html>
   );

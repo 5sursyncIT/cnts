@@ -186,6 +186,69 @@ h1, h2, h3, h4, p { margin: 0; }
   text-align: center;
 }
 
+.featured-partners-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+.featured-partner-card {
+  min-width: 0;
+  min-height: 190px;
+  margin: 0;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--sh-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.featured-partner-logo {
+  position: relative;
+  width: 100%;
+  height: 82px;
+  margin-bottom: 13px;
+  display: grid;
+  place-items: center;
+}
+/* The available ministry bitmap has its former name; show its emblem beside the current name. */
+.partner-ministry-mark {
+  position: relative;
+  width: 73px;
+  height: 68px;
+  overflow: hidden;
+}
+.partner-ministry-mark img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 269px;
+  height: 68px;
+}
+.featured-partner-category {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--brand);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.featured-partner-name {
+  color: var(--ink-900);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+@media (max-width: 760px) {
+  .featured-partners-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 380px) {
+  .featured-partners-grid { grid-template-columns: 1fr; }
+}
+
 /* focus visibility */
 :focus-visible {
   outline: none;
@@ -410,6 +473,61 @@ h1, h2, h3, h4, p { margin: 0; }
 .cn-card.hov:hover { transform: translateY(-5px); box-shadow: var(--sh-md); border-color: var(--red-200); text-decoration: none; }
 .cn-card.hov:hover .cn-ico { transform: rotate(-8deg) scale(1.08); }
 .cn-ico { transition: transform .35s cubic-bezier(.3, 1.6, .5, 1); }
+
+/* Parcours du donneur : le rail rend la succession des étapes immédiatement visible. */
+.donor-journey-card {
+  position: relative;
+  min-height: 100%;
+  animation: rise .7s cubic-bezier(.2, .8, .2, 1) both;
+}
+.donor-journey-card:nth-child(2) { animation-delay: .12s; }
+.donor-journey-card:nth-child(3) { animation-delay: .24s; }
+.donor-journey-card:nth-child(4) { animation-delay: .36s; }
+.donor-journey-card:hover { transform: translateY(-5px); box-shadow: var(--sh-md); border-color: var(--red-200); }
+.donor-journey-arrow {
+  position: absolute;
+  z-index: 2;
+  top: 41px;
+  left: calc(100% + 1px);
+  width: 16px;
+  height: 18px;
+  color: var(--brand);
+  display: grid;
+  place-items: center;
+  background: var(--surface-1);
+}
+.donor-journey-arrow::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  right: 7px;
+  width: 18px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--red-300);
+}
+.donor-journey-pulse {
+  position: absolute;
+  left: -11px;
+  top: 7px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--brand);
+  box-shadow: 0 0 0 4px oklch(0.575 0.192 26 / .12);
+  animation: journeyPulse 2.3s ease-in-out infinite;
+}
+.donor-journey-card:nth-child(2) .donor-journey-pulse { animation-delay: .38s; }
+.donor-journey-card:nth-child(3) .donor-journey-pulse { animation-delay: .76s; }
+@keyframes journeyPulse {
+  0%, 15% { transform: translateX(0) scale(.7); opacity: 0; }
+  35% { opacity: 1; }
+  72% { transform: translateX(18px) scale(1); opacity: 1; }
+  100% { transform: translateX(18px) scale(.7); opacity: 0; }
+}
+@media (max-width: 1000px) {
+  .donor-journey-arrow { display: none; }
+}
 
 /* Décors animés */
 .blob { position: absolute; border-radius: 58% 42% 55% 45% / 48% 60% 40% 52%; animation: morph 14s ease-in-out infinite, drift 18s ease-in-out infinite; pointer-events: none; }

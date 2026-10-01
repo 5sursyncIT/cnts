@@ -83,6 +83,16 @@ export function SiteFooter() {
               <span>{org.phone}</span>
               <span>{org.email}</span>
               <span>{org.bp}</span>
+              <a
+                href="https://www.facebook.com/CNTSenegal/?locale=fr_FR"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="foot-link"
+                style={{ display: "inline-flex", alignItems: "center", gap: 5, alignSelf: "flex-start" }}
+              >
+                Facebook du CNTS
+                <Icon name="arrowR" size={14} style={{ transform: "rotate(-45deg)" }} />
+              </a>
             </div>
           </div>
         </div>
@@ -111,11 +121,6 @@ export function SiteFooter() {
               <Link href="/politique-confidentialite" className="foot-link" style={{ fontSize: 12.5 }}>
                 Confidentialité
               </Link>
-              {/* Back Office (application séparée, servie sous /admin) */}
-              <a href="/admin" className="cn-btn outline sm">
-                <Icon name="building" size={14} />
-                Espace professionnel
-              </a>
             </div>
           </div>
         </div>

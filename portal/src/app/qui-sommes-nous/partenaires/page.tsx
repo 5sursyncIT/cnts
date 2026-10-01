@@ -70,8 +70,14 @@ function LogoTile({ p }: { p: Partner }) {
       }}
     >
       {p.logo_url ? (
-        <div style={{ position: "absolute", inset: 14 }}>
-          <Image src={p.logo_url} alt={`Logo ${p.name}`} fill sizes="240px" style={{ objectFit: "contain" }} />
+        <div style={{ position: "absolute", inset: 14, display: "grid", placeItems: "center" }}>
+          {p.name.startsWith("Ministère de la Santé") ? (
+            <div className="partner-ministry-mark">
+              <Image src="/images/partenaires/ministere-sante.png" alt={`Emblème ${p.name}`} width={269} height={68} style={{ maxWidth: "none" }} />
+            </div>
+          ) : (
+            <Image src={p.logo_url} alt={`Logo ${p.name}`} fill sizes="240px" style={{ objectFit: "contain" }} />
+          )}
         </div>
       ) : (
         <span

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { sessionCookieName, verifySessionToken } from "@/lib/auth/session";
+import { ESPACE_PATIENT_OUVERT } from "@/lib/espace-patient";
 
 function isProtectedPatientPath(pathname: string) {
   if (!pathname.startsWith("/espace-patient")) return false;
@@ -20,6 +21,14 @@ const LEGACY_REDIRECTS: Record<string, string> = {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Espace fermé : toute sous-page renvoie vers la page « en construction ».
+  if (!ESPACE_PATIENT_OUVERT && pathname !== "/espace-patient") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/espace-patient";
+    url.search = "";
+    return NextResponse.redirect(url, 307);
+  }
+
   const legacy = LEGACY_REDIRECTS[pathname];
   if (legacy) {
     const url = request.nextUrl.clone();
@@ -36,6 +45,7 @@ export async function middleware(request: NextRequest) {
     style-src 'self' 'unsafe-inline' https:;
     img-src 'self' blob: data: https:;
     font-src 'self' data: https:;
+    frame-src 'self' https://www.openstreetmap.org;
     object-src 'none';
     base-uri 'self';
     form-action 'self';

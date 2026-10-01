@@ -112,9 +112,9 @@ export default function DonDeSangPage() {
             title="Comment se déroule un don ?"
             sub="Quatre étapes, environ 45 minutes. Vous êtes accompagné à chaque instant par un personnel qualifié."
           />
-          <div className="grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 18 }}>
+          <div className="grid-4 donor-journey" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 18 }}>
             {parcours.map((p, i) => (
-              <Card key={i} pad={22}>
+              <Card key={i} pad={22} className="donor-journey-card">
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
                   <div
                     style={{
@@ -136,6 +136,12 @@ export default function DonDeSangPage() {
                 <h3 style={{ fontSize: 15.5, fontWeight: 700, marginBottom: 5 }}>{p.t}</h3>
                 <p style={{ fontSize: 13.5, color: "var(--ink-600)", lineHeight: 1.5, marginBottom: 10 }}>{p.d}</p>
                 <StatusPill status="info">{p.min}</StatusPill>
+                {i < parcours.length - 1 && (
+                  <span className="donor-journey-arrow" aria-hidden="true">
+                    <span className="donor-journey-pulse" />
+                    <Icon name="arrowR" size={18} stroke={2.2} />
+                  </span>
+                )}
               </Card>
             ))}
           </div>

@@ -7,7 +7,7 @@ import { conseils, parcours } from "@/components/cnts/data";
 export const metadata = {
   title: "Le parcours du donneur — CNTS Sénégal",
   description:
-    "Quatre étapes simples et sûres pour donner son sang au CNTS : accueil, entretien, prélèvement et collation. Conseils avant, pendant et après le don.",
+    "Découvrez en vidéo le parcours complet du don de sang, de la préparation jusqu’à la mise à disposition du sang pour les patients.",
 };
 
 function MaxWrap({ children, w = 1180 }: { children: ReactNode; w?: number }) {
@@ -22,6 +22,49 @@ export default function ParcoursDonneurPage() {
         title="Le parcours du donneur"
         sub="Quatre étapes simples et sûres permettent d’offrir un peu de soi pour sauver des vies. Tout est fait pour assurer votre confort, votre sécurité et celle des receveurs."
       />
+
+      <section aria-labelledby="video-parcours-title" style={{ background: "var(--surface-1)", borderBottom: "1px solid var(--line)" }}>
+        <MaxWrap>
+          <SectionTitle
+            kicker="Le parcours en vidéo"
+            title="Du premier pas aux soins"
+            sub="Une animation courte pour découvrir chaque étape du don de sang."
+          />
+          <div style={{ maxWidth: 960, margin: "0 auto" }}>
+            <h2 id="video-parcours-title" className="sr-only">Vidéo animée du parcours complet du don de sang</h2>
+            <video
+              controls
+              playsInline
+              preload="metadata"
+              poster="/videos/parcours-don-sang-poster.webp"
+              aria-label="Animation du parcours du don de sang, de la préparation aux soins"
+              style={{ display: "block", width: "100%", aspectRatio: "16 / 9", borderRadius: "var(--r-lg)", background: "#faf5f1", boxShadow: "var(--sh-lg)" }}
+            >
+              <source src="/videos/parcours-don-sang.mp4" type="video/mp4" />
+              <track kind="captions" src="/videos/parcours-don-sang.fr.vtt" srcLang="fr" label="Français" />
+              Votre navigateur ne peut pas lire cette vidéo.
+            </video>
+            <p style={{ color: "var(--ink-600)", fontSize: 13.5, lineHeight: 1.6, marginTop: 12 }}>
+              Animation muette avec texte à l’écran · 30 secondes. Le parcours peut varier selon le site de collecte.
+            </p>
+            <details style={{ color: "var(--ink-700)", fontSize: 14.5, lineHeight: 1.65, marginTop: 16 }}>
+              <summary style={{ cursor: "pointer", fontWeight: 700 }}>Lire la transcription de la vidéo</summary>
+              <ol style={{ marginTop: 10, paddingLeft: 24 }}>
+                <li>Je choisis un lieu de don, je m’hydrate et je viens en forme.</li>
+                <li>L’équipe m’accueille et enregistre mon arrivée.</li>
+                <li>Un entretien confidentiel vérifie que je peux donner aujourd’hui.</li>
+                <li>Un professionnel réalise le prélèvement avec du matériel stérile.</li>
+                <li>Je me repose, je bois et je prends une collation.</li>
+                <li>La poche est analysée avant d’être mise à disposition.</li>
+                <li>Le sang qualifié rejoint les établissements de santé pour aider les patients.</li>
+              </ol>
+            </details>
+            <p style={{ color: "var(--ink-600)", fontSize: 13, marginTop: 12 }}>
+              Parcours documenté par l’<a href="https://www.who.int/news-room/questions-and-answers/item/blood-products-why-should-i-donate-blood" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "underline" }}>Organisation mondiale de la Santé</a>.
+            </p>
+          </div>
+        </MaxWrap>
+      </section>
 
       <MaxWrap>
         <div className="two-col" style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 40, alignItems: "start" }}>

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { Button, Card, IconBubble, SectionTitle } from "@/components/cnts/primitives";
 import { getCurrentPatient } from "@/lib/auth/current-user";
+import { ESPACE_PATIENT_OUVERT } from "@/lib/espace-patient";
 
 export const metadata = {
   title: "Espace donneur — CNTS Sénégal",
@@ -17,7 +18,48 @@ const FONCTIONS: { icon: string; t: string; d: string; tone: "tint" | "sun" | "r
   { icon: "shield", t: "Confidentialité", d: "Aucun résultat d'analyse n'est affiché en ligne. Vos documents de santé restent soumis à votre accord.", tone: "tint" },
 ];
 
+function EspaceEnConstruction() {
+  return (
+    <section style={{ position: "relative", overflow: "hidden" }}>
+      <div aria-hidden className="blob" style={{ width: 460, height: 460, right: -120, top: -160, background: "var(--acc2-soft)" }} />
+      <div className="stag" style={{ position: "relative", maxWidth: 820, margin: "0 auto", padding: "72px var(--gutter) 88px", minWidth: 0 }}>
+        <div className="kicker" style={{ marginBottom: 14 }}>
+          Espace patient
+        </div>
+        <h1 className="font-serif" style={{ fontSize: "clamp(34px, 5vw, 56px)", fontWeight: 500, letterSpacing: "-0.03em", lineHeight: 1.08 }}>
+          Cet espace est <span className="hl serif-it" style={{ color: "var(--brand)" }}>en construction.</span>
+        </h1>
+        <Card pad={28} style={{ marginTop: 28 }}>
+          <div style={{ display: "flex", gap: 18, alignItems: "flex-start", flexWrap: "wrap" }}>
+            <IconBubble icon="clock" tone="sun" size={52} />
+            <div style={{ flex: "1 1 320px", minWidth: 0 }}>
+              <p style={{ fontSize: 17, lineHeight: 1.6, color: "var(--ink-700)" }}>
+                Nous préparons un espace personnel et sécurisé pour suivre vos rendez-vous, l&apos;historique de vos dons et
+                votre carte de donneur. Il n&apos;est pas encore ouvert : la connexion et la création de compte sont
+                temporairement indisponibles.
+              </p>
+              <p style={{ fontSize: 15.5, lineHeight: 1.6, color: "var(--ink-600)", marginTop: 12 }}>
+                En attendant, pour prendre rendez-vous ou pour toute question, contactez directement le CNTS ou rendez-vous
+                à l&apos;une de nos collectes. Merci de votre patience.
+              </p>
+            </div>
+          </div>
+        </Card>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 28 }}>
+          <Button size="lg" icon="calendarCheck" href="/collectes">
+            Voir les collectes
+          </Button>
+          <Button size="lg" variant="outline" iconRight="arrowR" href="/contact">
+            Nous contacter
+          </Button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default async function PatientAreaHome() {
+  if (!ESPACE_PATIENT_OUVERT) return <EspaceEnConstruction />;
   if (await getCurrentPatient()) redirect("/espace-patient/tableau-de-bord");
 
   return (
