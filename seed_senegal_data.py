@@ -87,9 +87,9 @@ def seed():
     # 3. Donneurs (~50)
     print("Seeding Donors...")
     for i in range(50):
-        sexe = random.choice(["M", "F"])
+        sexe = random.choice(["H", "F"])
         nom = random.choice(NOM_SENEGAL)
-        prenom = random.choice(PRENOM_HOMME if sexe == "M" else PRENOM_FEMME)
+        prenom = random.choice(PRENOM_HOMME if sexe == "H" else PRENOM_FEMME)
         cni = f"{random.randint(1, 2)}{random.randint(100, 999)}{datetime.datetime.now().year}{random.randint(10000, 99999)}"
         cni_h = mock_hash_cni(cni)
         

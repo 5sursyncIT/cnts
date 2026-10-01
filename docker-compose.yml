@@ -3,7 +3,7 @@ services:
     image: postgres:16
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-cnts}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cnts}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requis (voir .env)}
       POSTGRES_DB: ${POSTGRES_DB:-cnts}
     ports:
       - "127.0.0.1:5432:5432"
@@ -37,6 +37,9 @@ services:
       BACKOFFICE_API_BASE_URL: http://api:8000/api
       BACKOFFICE_SESSION_SECRET: ${BACKOFFICE_SESSION_SECRET:?BACKOFFICE_SESSION_SECRET requis (voir .env)}
       BACKOFFICE_PREAUTH_SECRET: ${BACKOFFICE_PREAUTH_SECRET:?BACKOFFICE_PREAUTH_SECRET requis (voir .env)}
+      CNTS_SMTP_HOST: ${CNTS_SMTP_HOST:-smtp-appli1.sec.gouv.sn}
+      CNTS_SMTP_PORT: ${CNTS_SMTP_PORT:-25}
+      CNTS_SMTP_SENDER: ${CNTS_SMTP_SENDER:-noreply-cnts@gouv.sn}
     ports:
       - "127.0.0.1:3001:3000"
     restart: always
@@ -48,7 +51,7 @@ services:
     environment:
       CNTS_ENV: ${CNTS_ENV:-dev}
       CNTS_LOG_LEVEL: ${CNTS_LOG_LEVEL:-INFO}
-      CNTS_DATABASE_URL: ${CNTS_DATABASE_URL:-postgresql+psycopg://cnts:cnts@db:5432/cnts}
+      CNTS_DATABASE_URL: ${CNTS_DATABASE_URL:?CNTS_DATABASE_URL requis (voir .env)}
       CNTS_CNI_HASH_KEY: ${CNTS_CNI_HASH_KEY:?CNTS_CNI_HASH_KEY requis (voir .env)}
       CNTS_AUTH_TOKEN_SECRET: ${CNTS_AUTH_TOKEN_SECRET:?CNTS_AUTH_TOKEN_SECRET requis (voir .env)}
       CNTS_RECOVERY_CODES_SECRET: ${CNTS_RECOVERY_CODES_SECRET:?CNTS_RECOVERY_CODES_SECRET requis (voir .env)}
@@ -56,6 +59,9 @@ services:
       CNTS_DIN_SITE_CODE: ${CNTS_DIN_SITE_CODE:-CNTS0}
       CNTS_FRACTIONNEMENT_MAX_OVERAGE_ML: ${CNTS_FRACTIONNEMENT_MAX_OVERAGE_ML:-250}
       CNTS_REDIS_URL: redis://redis:6379/0
+      CNTS_SMTP_HOST: ${CNTS_SMTP_HOST:-smtp-appli1.sec.gouv.sn}
+      CNTS_SMTP_PORT: ${CNTS_SMTP_PORT:-25}
+      CNTS_SMTP_SENDER: ${CNTS_SMTP_SENDER:-noreply-cnts@gouv.sn}
     ports:
       - "127.0.0.1:8000:8000"
     volumes:
@@ -111,12 +117,15 @@ services:
     environment:
       CNTS_ENV: ${CNTS_ENV:-dev}
       CNTS_LOG_LEVEL: ${CNTS_LOG_LEVEL:-INFO}
-      CNTS_DATABASE_URL: ${CNTS_DATABASE_URL:-postgresql+psycopg://cnts:cnts@db:5432/cnts}
+      CNTS_DATABASE_URL: ${CNTS_DATABASE_URL:?CNTS_DATABASE_URL requis (voir .env)}
       CNTS_CNI_HASH_KEY: ${CNTS_CNI_HASH_KEY:?CNTS_CNI_HASH_KEY requis (voir .env)}
       CNTS_AUTH_TOKEN_SECRET: ${CNTS_AUTH_TOKEN_SECRET:?CNTS_AUTH_TOKEN_SECRET requis (voir .env)}
       CNTS_RECOVERY_CODES_SECRET: ${CNTS_RECOVERY_CODES_SECRET:?CNTS_RECOVERY_CODES_SECRET requis (voir .env)}
       CNTS_ADMIN_TOKEN: ${CNTS_ADMIN_TOKEN:?CNTS_ADMIN_TOKEN requis (voir .env)}
       CNTS_REDIS_URL: redis://redis:6379/0
+      CNTS_SMTP_HOST: ${CNTS_SMTP_HOST:-smtp-appli1.sec.gouv.sn}
+      CNTS_SMTP_PORT: ${CNTS_SMTP_PORT:-25}
+      CNTS_SMTP_SENDER: ${CNTS_SMTP_SENDER:-noreply-cnts@gouv.sn}
     depends_on:
       - db
       - redis
