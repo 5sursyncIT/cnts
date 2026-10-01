@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.deps import require_auth_in_production
+from app.api.deps import require_auth_in_production, require_liberation_validator
 from app.audit.events import log_event
 from app.core.blood import validate_analyse_resultat
 from app.db.models import Analyse, Don, UserAccount
@@ -132,7 +132,10 @@ def update_analyse(
     analyse.resultat = payload.resultat.strip().upper()
     if payload.note is not None:
         analyse.note = payload.note
-    if payload.validateur_id is not None:
+    if analyse.resultat != previous_result:
+        # Un résultat corrigé doit être revalidé par un biologiste.
+        analyse.validateur_id = None
+    elif payload.validateur_id is not None:
         analyse.validateur_id = payload.validateur_id
 
     log_event(db, aggregate_type="don", aggregate_id=don.id,
@@ -141,6 +144,31 @@ def update_analyse(
                        "ancien_resultat": previous_result, "resultat": analyse.resultat,
                        "acteur_id": str(_user.id) if _user else None})
 
+    db.commit()
+    db.refresh(analyse)
+    return analyse
+
+
+@router.post("/{analyse_id}/valider", response_model=AnalyseOut)
+def valider_analyse(
+    analyse_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    user: UserAccount = Depends(require_liberation_validator),
+) -> Analyse:
+    """Validation biologique : le biologiste connecté devient le validateur."""
+    analyse = db.get(Analyse, analyse_id)
+    if analyse is None:
+        raise HTTPException(status_code=404, detail="analyse not found")
+    if analyse.resultat == "EN_ATTENTE":
+        raise HTTPException(status_code=409, detail="résultat en attente : rien à valider")
+    if analyse.validateur_id is not None:
+        raise HTTPException(status_code=409, detail="analyse déjà validée")
+
+    analyse.validateur_id = user.id
+    log_event(db, aggregate_type="don", aggregate_id=analyse.don_id,
+              event_type="analyse.validee",
+              payload={"analyse_id": str(analyse.id), "type_test": analyse.type_test,
+                       "resultat": analyse.resultat, "validateur_id": str(user.id)})
     db.commit()
     db.refresh(analyse)
     return analyse

@@ -1,3 +1,4 @@
+import secrets
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -14,10 +15,20 @@ from app.schemas.collectes import (
     CampagneCollecteUpdate,
     InscriptionCollecteCreate,
     InscriptionCollecteOut,
+    InscriptionStatutUpdate,
 )
 
 router = APIRouter(prefix="/collectes")
 require_collectes = require_module("collectes")
+
+
+def _generer_code(db: Session, date_debut) -> str:
+    """Code lisible et unique : COL-AAAAMMJJ-XXXX."""
+    prefix = f"COL-{date_debut:%Y%m%d}-"
+    while True:
+        code = prefix + secrets.token_hex(2).upper()
+        if db.execute(select(CampagneCollecte.id).where(CampagneCollecte.code == code)).first() is None:
+            return code
 
 
 @router.post("", response_model=CampagneCollecteOut, status_code=201)
@@ -26,13 +37,17 @@ def create_campagne(
     db: Session = Depends(get_db),
     _user: UserAccount = Depends(require_collectes),
 ) -> CampagneCollecte:
+    if payload.date_fin < payload.date_debut:
+        raise HTTPException(status_code=422, detail="la date de fin precede la date de debut")
+
+    code = (payload.code or "").strip() or _generer_code(db, payload.date_debut)
     existing = db.execute(
-        select(CampagneCollecte).where(CampagneCollecte.code == payload.code)
+        select(CampagneCollecte).where(CampagneCollecte.code == code)
     ).scalar_one_or_none()
     if existing:
         raise HTTPException(status_code=409, detail="une campagne avec ce code existe deja")
 
-    campagne = CampagneCollecte(**payload.model_dump())
+    campagne = CampagneCollecte(**{**payload.model_dump(), "code": code})
     db.add(campagne)
     db.flush()
 
@@ -168,6 +183,33 @@ def terminer_campagne(
     return campagne
 
 
+@router.post("/{campagne_id}/annuler", response_model=CampagneCollecteOut)
+def annuler_campagne(
+    campagne_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    _user: UserAccount = Depends(require_collectes),
+) -> CampagneCollecte:
+    campagne = db.get(CampagneCollecte, campagne_id)
+    if campagne is None:
+        raise HTTPException(status_code=404, detail="campagne introuvable")
+    if campagne.statut != "PLANIFIEE":
+        raise HTTPException(
+            status_code=409, detail="seule une campagne PLANIFIEE peut etre annulee"
+        )
+
+    campagne.statut = "ANNULEE"
+    log_event(
+        db,
+        aggregate_type="campagne_collecte",
+        aggregate_id=campagne.id,
+        event_type="campagne.annulee",
+        payload={},
+    )
+    db.commit()
+    db.refresh(campagne)
+    return campagne
+
+
 @router.get("/{campagne_id}/bilan", dependencies=[Depends(require_collectes)])
 def bilan_campagne(campagne_id: uuid.UUID, db: Session = Depends(get_db)) -> dict:
     campagne = db.execute(
@@ -238,3 +280,32 @@ def list_inscriptions(
     return list(
         db.execute(stmt.order_by(InscriptionCollecte.creneau).offset(offset).limit(limit)).scalars()
     )
+
+
+@router.patch(
+    "/{campagne_id}/inscriptions/{inscription_id}", response_model=InscriptionCollecteOut
+)
+def update_inscription_statut(
+    campagne_id: uuid.UUID,
+    inscription_id: uuid.UUID,
+    payload: InscriptionStatutUpdate,
+    db: Session = Depends(get_db),
+    _user: UserAccount = Depends(require_collectes),
+) -> InscriptionCollecte:
+    """Pointage le jour de la collecte : présent, prélevé, absent…"""
+    inscription = db.get(InscriptionCollecte, inscription_id)
+    if inscription is None or inscription.campagne_id != campagne_id:
+        raise HTTPException(status_code=404, detail="inscription introuvable")
+
+    previous = inscription.statut
+    inscription.statut = payload.statut
+    log_event(
+        db,
+        aggregate_type="campagne_collecte",
+        aggregate_id=campagne_id,
+        event_type="inscription.statut_modifie",
+        payload={"inscription_id": str(inscription_id), "de": previous, "vers": payload.statut},
+    )
+    db.commit()
+    db.refresh(inscription)
+    return inscription

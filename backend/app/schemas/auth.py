@@ -14,6 +14,8 @@ class LoginIn(BaseModel):
 
 class LoginOut(BaseModel):
     mfa_required: bool
+    # Personnel sans MFA : challenge_token ne sert qu'à l'enrôlement (/auth/mfa/setup).
+    mfa_setup_required: bool = False
     challenge_token: str | None = None
     access_token: str | None = None
     user: UserOut | None = None
@@ -28,6 +30,26 @@ class MfaVerifyIn(BaseModel):
 class MfaVerifyOut(BaseModel):
     access_token: str
     user: UserOut
+
+
+class MfaSetupIn(BaseModel):
+    challenge_token: str
+
+
+class MfaSetupOut(BaseModel):
+    secret: str
+    otpauth_uri: str
+
+
+class MfaSetupConfirmIn(BaseModel):
+    challenge_token: str
+    token: str
+
+
+class MfaSetupConfirmOut(BaseModel):
+    access_token: str
+    user: UserOut
+    recovery_codes: list[str]
 
 
 class AdminDisable2faIn(BaseModel):

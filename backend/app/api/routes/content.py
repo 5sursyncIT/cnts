@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user_optional, require_staff
 from app.db.models import Article, UserAccount
 from app.db.session import get_db
 from app.schemas.content import ArticleCreate, ArticleResponse, ArticleUpdate
@@ -22,10 +22,14 @@ def get_articles(
     category: str | None = None,
     status: str | None = None,
     published_only: bool = True,
+    current_user: UserAccount | None = Depends(get_current_user_optional),
 ) -> Any:
     """
     Retrieve articles.
     """
+    if (status and status != "PUBLISHED") or not published_only:
+        if current_user is None or (current_user.role or "").upper() == "PATIENT":
+            raise HTTPException(status_code=403, detail="Accès réservé au personnel")
     query = select(Article)
 
     if status:
@@ -42,12 +46,19 @@ def get_articles(
 
 
 @router.get("/{slug}", response_model=ArticleResponse)
-def get_article(slug: str, db: Session = Depends(get_db)) -> Any:
+def get_article(
+    slug: str,
+    db: Session = Depends(get_db),
+    current_user: UserAccount | None = Depends(get_current_user_optional),
+) -> Any:
     """
     Get article by slug.
     """
     article = db.execute(select(Article).where(Article.slug == slug)).scalar_one_or_none()
-    if not article:
+    if not article or (
+        article.status != "PUBLISHED"
+        and (current_user is None or (current_user.role or "").upper() == "PATIENT")
+    ):
         raise HTTPException(status_code=404, detail="Article not found")
     return article
 
@@ -57,7 +68,7 @@ def create_article(
     *,
     db: Session = Depends(get_db),
     article_in: ArticleCreate,
-    current_user: UserAccount = Depends(get_current_user),
+    current_user: UserAccount = Depends(require_staff),
 ) -> Any:
     """
     Create new article.
@@ -80,7 +91,7 @@ def update_article(
     db: Session = Depends(get_db),
     id: UUID,
     article_in: ArticleUpdate,
-    current_user: UserAccount = Depends(get_current_user),
+    current_user: UserAccount = Depends(require_staff),
 ) -> Any:
     """
     Update an article.
@@ -110,7 +121,7 @@ def delete_article(
     *,
     db: Session = Depends(get_db),
     id: UUID,
-    current_user: UserAccount = Depends(get_current_user),
+    current_user: UserAccount = Depends(require_staff),
 ) -> Any:
     """
     Delete an article.

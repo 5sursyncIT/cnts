@@ -1,5 +1,6 @@
 import datetime as dt
 import uuid
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -30,6 +31,21 @@ class PocheUpdate(BaseModel):
         default=None,
         pattern="^(NON_DISTRIBUABLE|DISPONIBLE|RESERVE|DISTRIBUE)$",
     )
+
+
+class PocheDestructionIn(BaseModel):
+    """Mise au rebut d'une poche (tracée, irréversible)."""
+
+    motif: Literal[
+        "PEREMPTION",
+        "SEROLOGIE_POSITIVE",
+        "NON_CONFORMITE",
+        "RUPTURE_CHAINE_FROID",
+        "RAPPEL",
+        "CASSE_FUITE",
+        "AUTRE",
+    ]
+    commentaire: str | None = Field(default=None, max_length=1000)
 
 
 class PocheOut(BaseModel):

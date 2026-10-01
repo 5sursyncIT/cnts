@@ -35,6 +35,12 @@ class Settings(BaseSettings):
     admin_token: str = "dev-admin-token"
 
     cors_origins: list[str] = ["http://localhost:3000", "http://localhost:3001"]
+    # Origines de confiance pour les écritures authentifiées par cookie (CSRF).
+    trusted_origins: list[str] = [
+        "https://cnts.gouv.sn",
+        "http://localhost:3000",
+        "http://localhost:3001",
+    ]
 
     # Redis / Celery
     redis_url: str = "redis://localhost:6379/0"
@@ -42,8 +48,7 @@ class Settings(BaseSettings):
     # Notifications
     smtp_host: str = "localhost"
     smtp_port: int = 587
-    smtp_user: str = ""
-    smtp_password: str = ""
+    smtp_sender: str = "noreply-cnts@gouv.sn"
     sms_api_key: str = ""
     sms_api_url: str = ""
     whatsapp_api_token: str = ""

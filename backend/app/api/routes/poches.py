@@ -15,6 +15,7 @@ from app.db.session import get_db
 from app.schemas.etiquettes import EtiquetteProduitOut
 from app.schemas.poches import (
     PocheCreate,
+    PocheDestructionIn,
     PocheOut,
     PochePeremptionAlert,
     PocheUpdate,
@@ -442,17 +443,59 @@ def delete_poche(
     db: Session = Depends(get_db),
     _user: UserAccount | None = Depends(require_auth_in_production),
 ) -> None:
-    """Supprimer une poche (à utiliser avec précaution)."""
-    poche = db.get(Poche, poche_id)
+    """Suppression physique interdite : elle romprait la traçabilité veine-à-veine."""
+    if db.get(Poche, poche_id) is None:
+        raise HTTPException(status_code=404, detail="poche not found")
+    raise HTTPException(
+        status_code=409,
+        detail="Suppression interdite (traçabilité) : utilisez la mise au rebut (POST /poches/{id}/detruire)",
+    )
+
+
+# Statuts depuis lesquels une poche peut être détruite.
+STATUTS_DESTRUCTIBLES = {"EN_STOCK", "RAPPELEE"}
+
+
+@router.post("/{poche_id}/detruire", response_model=PocheOut)
+def detruire_poche(
+    poche_id: uuid.UUID,
+    payload: PocheDestructionIn,
+    db: Session = Depends(get_db),
+    user: UserAccount | None = Depends(require_auth_in_production),
+) -> Poche:
+    """Mise au rebut tracée : la poche reste en base, statut DETRUITE."""
+    poche = db.execute(select(Poche).where(Poche.id == poche_id).with_for_update()).scalar_one_or_none()
     if poche is None:
         raise HTTPException(status_code=404, detail="poche not found")
-
-    # Ne pas permettre la suppression de poches déjà distribuées
-    if poche.statut_distribution == "DISTRIBUE":
+    if poche.statut_stock not in STATUTS_DESTRUCTIBLES:
         raise HTTPException(
-            status_code=422,
-            detail="Impossible de supprimer une poche déjà distribuée",
+            status_code=409,
+            detail=f"poche non destructible depuis le statut {poche.statut_stock}",
+        )
+    if poche.statut_distribution == "RESERVE":
+        raise HTTPException(
+            status_code=409, detail="poche réservée : annulez d'abord la commande correspondante"
         )
 
-    db.delete(poche)
+    previous = {"statut_stock": poche.statut_stock, "statut_distribution": poche.statut_distribution}
+    poche.statut_stock = "DETRUITE"
+    poche.statut_distribution = "NON_DISTRIBUABLE"
+    poche.emplacement_stock = "REBUT"
+
+    din = db.execute(select(Don.din).where(Don.id == poche.don_id)).scalar_one_or_none()
+    log_event(
+        db,
+        aggregate_type="poche",
+        aggregate_id=poche.id,
+        event_type="poche.detruite",
+        payload={
+            "din": din,
+            "motif": payload.motif,
+            "commentaire": payload.commentaire,
+            "par": str(user.id) if user else None,
+            **previous,
+        },
+    )
     db.commit()
+    db.refresh(poche)
+    return poche

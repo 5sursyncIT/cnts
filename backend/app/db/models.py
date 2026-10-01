@@ -1,6 +1,7 @@
 import uuid
 
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     Date,
     DateTime,
@@ -394,6 +395,14 @@ class UserAccount(Base):
     mfa_secret: Mapped[str | None] = mapped_column(Text, nullable=True)
     mfa_enabled_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     mfa_disabled_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Dernier pas TOTP accepté : empêche de rejouer un code déjà utilisé.
+    mfa_last_step: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+
+    # Verrouillage après échecs répétés (mot de passe ou second facteur).
+    failed_auth_attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    locked_until: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Déconnexion : tout jeton émis au plus tard à cet instant est révoqué.
+    tokens_valid_after: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[DateTime] = mapped_column(

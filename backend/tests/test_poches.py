@@ -315,5 +315,27 @@ def test_delete_poche_distribuee_interdite(don_libere):
 
     # Tenter de supprimer
     response = client.delete(f"/api/poches/{poche_id}")
-    assert response.status_code == 422
-    assert "déjà distribuée" in response.json()["detail"]
+    assert response.status_code == 409
+    assert "traçabilité" in response.json()["detail"]
+
+
+def test_destruction_tracee(don_id):
+    poche_id = client.post(
+        "/api/poches",
+        json={
+            "don_id": don_id,
+            "type_produit": "CGR",
+            "date_peremption": str(dt.date.today() + dt.timedelta(days=30)),
+            "emplacement_stock": "FRIGO_A1",
+        },
+    ).json()["id"]
+
+    r = client.post(f"/api/poches/{poche_id}/detruire", json={"motif": "CASSE_FUITE"})
+    assert r.status_code == 200, r.text
+    assert r.json()["statut_stock"] == "DETRUITE"
+    assert r.json()["statut_distribution"] == "NON_DISTRIBUABLE"
+
+    # Irréversible, et la poche reste consultable.
+    assert client.post(f"/api/poches/{poche_id}/detruire", json={"motif": "AUTRE"}).status_code == 409
+    assert client.get(f"/api/poches/{poche_id}").status_code == 200
+    assert client.post(f"/api/poches/{poche_id}/detruire", json={"motif": "INCONNU"}).status_code in (409, 422)

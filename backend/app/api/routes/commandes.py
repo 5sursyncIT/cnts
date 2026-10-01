@@ -234,6 +234,46 @@ def get_commande(commande_id: uuid.UUID, db: Session = Depends(get_db)) -> Comma
     return row
 
 
+@router.get("/{commande_id}/reservations")
+def list_commande_reservations(commande_id: uuid.UUID, db: Session = Depends(get_db)) -> list[dict]:
+    """Poches réservées (actives) d'une commande, avec receveur affecté et cross-match."""
+    if db.get(Commande, commande_id) is None:
+        raise HTTPException(status_code=404, detail="commande introuvable")
+
+    rows = db.execute(
+        select(Reservation, Poche, Don.din)
+        .join(Poche, Poche.id == Reservation.poche_id)
+        .join(Don, Don.id == Poche.don_id)
+        .where(Reservation.commande_id == commande_id, Reservation.released_at.is_(None))
+        .order_by(Reservation.ligne_commande_id, Poche.date_peremption)
+    ).all()
+
+    pairs = {(r.poche_id, r.receveur_id) for r, _, _ in rows if r.receveur_id is not None}
+    crossmatchs: dict[tuple, str] = {}
+    if pairs:
+        for cm in db.execute(
+            select(CrossMatch).where(CrossMatch.poche_id.in_({p for p, _ in pairs}))
+        ).scalars():
+            crossmatchs[(cm.poche_id, cm.receveur_id)] = cm.resultat
+
+    return [
+        {
+            "reservation_id": str(r.id),
+            "ligne_commande_id": str(r.ligne_commande_id) if r.ligne_commande_id else None,
+            "poche_id": str(p.id),
+            "din": din,
+            "type_produit": p.type_produit,
+            "groupe_sanguin": p.groupe_sanguin,
+            "date_peremption": p.date_peremption.isoformat(),
+            "expires_at": r.expires_at.isoformat() if r.expires_at else None,
+            "receveur_id": str(r.receveur_id) if r.receveur_id else None,
+            "crossmatch_requis": requires_crossmatch(type_produit=p.type_produit),
+            "crossmatch": crossmatchs.get((p.id, r.receveur_id)) if r.receveur_id else None,
+        }
+        for r, p, din in rows
+    ]
+
+
 @router.get("/{commande_id}/events", response_model=list[TraceEventOut])
 def list_commande_events(
     commande_id: uuid.UUID,

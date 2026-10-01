@@ -207,3 +207,22 @@ def test_billing_rejects_negative_and_excess_payments(client):
     stats = client.get("/api/facturation/statistiques").json()
     assert stats["montant_total_fcfa"] == 1000
     assert stats["total_paye_fcfa"] == 600
+
+
+def test_reservations_listing_shows_assignment(client, don_id):
+    _release(client, don_id)
+    hospital_id = _hospital(client)
+    receiver = client.post("/api/receveurs", json={"nom": "Patient résa", "groupe_sanguin": "O+"}).json()
+    command = client.post("/api/commandes", json={
+        "hopital_id": hospital_id, "lignes": [{"type_produit": "ST", "quantite": 1}],
+    }).json()
+    client.post(f"/api/commandes/{command['id']}/valider", json={})
+    rows = client.get(f"/api/commandes/{command['id']}/reservations").json()
+    assert len(rows) == 1 and rows[0]["receveur_id"] is None and rows[0]["din"]
+
+    client.post(f"/api/commandes/{command['id']}/affecter", json={
+        "affectations": [{"ligne_commande_id": command["lignes"][0]["id"],
+                          "receveur_id": receiver["id"], "quantite": 1}],
+    })
+    rows = client.get(f"/api/commandes/{command['id']}/reservations").json()
+    assert rows[0]["receveur_id"] == receiver["id"]

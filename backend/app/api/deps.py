@@ -1,3 +1,4 @@
+import datetime as dt
 import uuid
 from collections.abc import Callable
 
@@ -37,6 +38,20 @@ MODULE_ROLES: dict[str, frozenset[str]] = {
 }
 
 
+def token_revoked(user: UserAccount, payload: dict) -> bool:
+    """Jeton émis avant la dernière déconnexion de l'utilisateur."""
+    valid_after = user.tokens_valid_after
+    if valid_after is None:
+        return False
+    if valid_after.tzinfo is None:  # SQLite renvoie des datetimes naïfs (UTC)
+        valid_after = valid_after.replace(tzinfo=dt.timezone.utc)
+    try:
+        issued_at = int(payload.get("iat"))
+    except (TypeError, ValueError):
+        return True
+    return issued_at <= int(valid_after.timestamp())
+
+
 def _resolve_user(db: Session, token: str | None) -> UserAccount | None:
     """Valide un jeton d'accès et renvoie l'utilisateur actif, ou None."""
     if not token:
@@ -49,7 +64,7 @@ def _resolve_user(db: Session, token: str | None) -> UserAccount | None:
     except ValueError:
         return None
     user = db.get(UserAccount, user_id)
-    if not user or not user.is_active:
+    if not user or not user.is_active or token_revoked(user, payload):
         return None
     return user
 
@@ -94,6 +109,12 @@ def get_current_user(
         raise HTTPException(status_code=404, detail="User not found")
     if not user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
+    if token_revoked(user, payload):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session révoquée",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     return user
 
@@ -101,8 +122,10 @@ def get_current_user(
 def get_current_user_optional(
     db: Session = Depends(get_db),
     token: str | None = Depends(oauth2_scheme),
+    cookie_token: str | None = Depends(access_cookie_scheme),
 ) -> UserAccount | None:
     """Optional authentication - returns None if not authenticated."""
+    token = token or cookie_token
     if not token:
         return None
 
@@ -116,7 +139,7 @@ def get_current_user_optional(
         return None
 
     user = db.get(UserAccount, user_id)
-    if not user or not user.is_active:
+    if not user or not user.is_active or token_revoked(user, payload):
         return None
 
     return user
@@ -142,7 +165,7 @@ def require_auth_in_production(
             try:
                 user_id = uuid.UUID(str(payload.get("sub")))
                 user = db.get(UserAccount, user_id)
-                if user and user.is_active:
+                if user and user.is_active and not token_revoked(user, payload):
                     return user
             except ValueError:
                 pass

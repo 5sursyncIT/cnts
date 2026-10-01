@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user_optional, require_staff
 from app.db.models import TeamMember, UserAccount
 from app.db.session import get_db
 from app.schemas.content import (
@@ -23,8 +23,11 @@ def list_team(
     published_only: bool = True,
     skip: int = 0,
     limit: int = 200,
+    current_user: UserAccount | None = Depends(get_current_user_optional),
 ) -> Any:
     """List team members, ordered for display."""
+    if not published_only and (current_user is None or (current_user.role or "").upper() == "PATIENT"):
+        raise HTTPException(status_code=403, detail="Accès réservé au personnel")
     query = select(TeamMember)
     if published_only:
         query = query.where(TeamMember.is_published.is_(True))
@@ -37,9 +40,16 @@ def list_team(
 
 
 @router.get("/{id}", response_model=TeamMemberResponse)
-def get_team_member(id: UUID, db: Session = Depends(get_db)) -> Any:
+def get_team_member(
+    id: UUID,
+    db: Session = Depends(get_db),
+    current_user: UserAccount | None = Depends(get_current_user_optional),
+) -> Any:
     member = db.get(TeamMember, id)
-    if not member:
+    if not member or (
+        not member.is_published
+        and (current_user is None or (current_user.role or "").upper() == "PATIENT")
+    ):
         raise HTTPException(status_code=404, detail="Team member not found")
     return member
 
@@ -49,7 +59,7 @@ def create_team_member(
     *,
     db: Session = Depends(get_db),
     member_in: TeamMemberCreate,
-    current_user: UserAccount = Depends(get_current_user),
+    current_user: UserAccount = Depends(require_staff),
 ) -> Any:
     member = TeamMember(**member_in.model_dump())
     db.add(member)
@@ -64,7 +74,7 @@ def update_team_member(
     db: Session = Depends(get_db),
     id: UUID,
     member_in: TeamMemberUpdate,
-    current_user: UserAccount = Depends(get_current_user),
+    current_user: UserAccount = Depends(require_staff),
 ) -> Any:
     member = db.get(TeamMember, id)
     if not member:
@@ -82,7 +92,7 @@ def delete_team_member(
     *,
     db: Session = Depends(get_db),
     id: UUID,
-    current_user: UserAccount = Depends(get_current_user),
+    current_user: UserAccount = Depends(require_staff),
 ) -> Any:
     member = db.get(TeamMember, id)
     if not member:

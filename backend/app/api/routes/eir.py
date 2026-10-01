@@ -1,10 +1,11 @@
+import datetime as dt
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.api.deps import require_auth_in_production
+from app.api.deps import require_staff
 from app.audit.events import log_event
 from app.db.models import EIR, ActeTransfusionnel, UserAccount
 from app.db.session import get_db
@@ -17,13 +18,28 @@ router = APIRouter(prefix="/eir")
 def create_eir(
     payload: EIRCreate,
     db: Session = Depends(get_db),
-    _user: UserAccount | None = Depends(require_auth_in_production),
+    user: UserAccount = Depends(require_staff),
 ) -> EIR:
     acte = db.get(ActeTransfusionnel, payload.acte_transfusionnel_id)
     if acte is None:
         raise HTTPException(status_code=404, detail="acte transfusionnel introuvable")
 
-    eir = EIR(**payload.model_dump())
+    # La poche et le receveur sont ceux de l'acte : on refuse toute incohérence.
+    if payload.poche_id is not None and payload.poche_id != acte.poche_id:
+        raise HTTPException(status_code=422, detail="la poche ne correspond pas a l'acte transfusionnel")
+    receveur_id = payload.receveur_id or acte.receveur_id
+    if receveur_id is None:
+        raise HTTPException(status_code=422, detail="receveur inconnu pour cet acte transfusionnel")
+    if acte.receveur_id is not None and receveur_id != acte.receveur_id:
+        raise HTTPException(status_code=422, detail="le receveur ne correspond pas a l'acte transfusionnel")
+
+    eir = EIR(
+        **payload.model_dump(exclude={"receveur_id", "poche_id", "date_declaration"}),
+        receveur_id=receveur_id,
+        poche_id=acte.poche_id,
+        declarant_id=user.id,
+        date_declaration=payload.date_declaration or dt.datetime.now(dt.timezone.utc),
+    )
     db.add(eir)
     db.flush()
 
@@ -103,7 +119,7 @@ def update_eir(
     eir_id: uuid.UUID,
     payload: EIRUpdate,
     db: Session = Depends(get_db),
-    _user: UserAccount | None = Depends(require_auth_in_production),
+    _user: UserAccount = Depends(require_staff),
 ) -> EIR:
     eir = db.get(EIR, eir_id)
     if eir is None:
@@ -128,7 +144,7 @@ def update_eir(
 def cloturer_eir(
     eir_id: uuid.UUID,
     db: Session = Depends(get_db),
-    _user: UserAccount | None = Depends(require_auth_in_production),
+    _user: UserAccount = Depends(require_staff),
 ) -> EIR:
     eir = db.get(EIR, eir_id)
     if eir is None:

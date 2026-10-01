@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user_optional, require_staff
 from app.db.models import Partner, UserAccount
 from app.db.session import get_db
 from app.schemas.content import PartnerCreate, PartnerResponse, PartnerUpdate
@@ -20,8 +20,11 @@ def list_partners(
     published_only: bool = True,
     skip: int = 0,
     limit: int = 200,
+    current_user: UserAccount | None = Depends(get_current_user_optional),
 ) -> Any:
     """List partners, ordered for display."""
+    if not published_only and (current_user is None or (current_user.role or "").upper() == "PATIENT"):
+        raise HTTPException(status_code=403, detail="Accès réservé au personnel")
     query = select(Partner)
     if published_only:
         query = query.where(Partner.is_published.is_(True))
@@ -36,9 +39,16 @@ def list_partners(
 
 
 @router.get("/{id}", response_model=PartnerResponse)
-def get_partner(id: UUID, db: Session = Depends(get_db)) -> Any:
+def get_partner(
+    id: UUID,
+    db: Session = Depends(get_db),
+    current_user: UserAccount | None = Depends(get_current_user_optional),
+) -> Any:
     partner = db.get(Partner, id)
-    if not partner:
+    if not partner or (
+        not partner.is_published
+        and (current_user is None or (current_user.role or "").upper() == "PATIENT")
+    ):
         raise HTTPException(status_code=404, detail="Partner not found")
     return partner
 
@@ -48,7 +58,7 @@ def create_partner(
     *,
     db: Session = Depends(get_db),
     partner_in: PartnerCreate,
-    current_user: UserAccount = Depends(get_current_user),
+    current_user: UserAccount = Depends(require_staff),
 ) -> Any:
     partner = Partner(**partner_in.model_dump())
     db.add(partner)
@@ -63,7 +73,7 @@ def update_partner(
     db: Session = Depends(get_db),
     id: UUID,
     partner_in: PartnerUpdate,
-    current_user: UserAccount = Depends(get_current_user),
+    current_user: UserAccount = Depends(require_staff),
 ) -> Any:
     partner = db.get(Partner, id)
     if not partner:
@@ -81,7 +91,7 @@ def delete_partner(
     *,
     db: Session = Depends(get_db),
     id: UUID,
-    current_user: UserAccount = Depends(get_current_user),
+    current_user: UserAccount = Depends(require_staff),
 ) -> Any:
     partner = db.get(Partner, id)
     if not partner:

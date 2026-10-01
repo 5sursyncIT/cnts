@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user_optional, require_staff
 from app.db.models import FaqItem, UserAccount
 from app.db.session import get_db
 from app.schemas.content import FaqItemCreate, FaqItemResponse, FaqItemUpdate
@@ -20,8 +20,11 @@ def list_faq(
     published_only: bool = True,
     skip: int = 0,
     limit: int = 200,
+    current_user: UserAccount | None = Depends(get_current_user_optional),
 ) -> Any:
     """List FAQ items, ordered for display."""
+    if not published_only and (current_user is None or (current_user.role or "").upper() == "PATIENT"):
+        raise HTTPException(status_code=403, detail="Accès réservé au personnel")
     query = select(FaqItem)
     if published_only:
         query = query.where(FaqItem.is_published.is_(True))
@@ -36,10 +39,17 @@ def list_faq(
 
 
 @router.get("/{id}", response_model=FaqItemResponse)
-def get_faq(id: UUID, db: Session = Depends(get_db)) -> Any:
+def get_faq(
+    id: UUID,
+    db: Session = Depends(get_db),
+    current_user: UserAccount | None = Depends(get_current_user_optional),
+) -> Any:
     """Get a single FAQ item by id."""
     item = db.get(FaqItem, id)
-    if not item:
+    if not item or (
+        not item.is_published
+        and (current_user is None or (current_user.role or "").upper() == "PATIENT")
+    ):
         raise HTTPException(status_code=404, detail="FAQ item not found")
     return item
 
@@ -49,7 +59,7 @@ def create_faq(
     *,
     db: Session = Depends(get_db),
     item_in: FaqItemCreate,
-    current_user: UserAccount = Depends(get_current_user),
+    current_user: UserAccount = Depends(require_staff),
 ) -> Any:
     """Create a FAQ item."""
     item = FaqItem(**item_in.model_dump())
@@ -65,7 +75,7 @@ def update_faq(
     db: Session = Depends(get_db),
     id: UUID,
     item_in: FaqItemUpdate,
-    current_user: UserAccount = Depends(get_current_user),
+    current_user: UserAccount = Depends(require_staff),
 ) -> Any:
     """Update a FAQ item."""
     item = db.get(FaqItem, id)
@@ -84,7 +94,7 @@ def delete_faq(
     *,
     db: Session = Depends(get_db),
     id: UUID,
-    current_user: UserAccount = Depends(get_current_user),
+    current_user: UserAccount = Depends(require_staff),
 ) -> Any:
     """Delete a FAQ item."""
     item = db.get(FaqItem, id)

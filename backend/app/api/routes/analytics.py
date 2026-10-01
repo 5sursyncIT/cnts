@@ -440,25 +440,37 @@ def get_stock_breakdown(db: Session = Depends(get_db)):
 def export_report(
     format: str = Query(..., pattern=r"^(csv|excel|pdf)$"),
     report_type: str = Query(..., pattern=r"^(activity|stock)$"),
+    start_date: dt.date | None = None,
+    end_date: dt.date | None = None,
     db: Session = Depends(get_db),
 ):
     """
     Exporter un rapport au format spécifié.
+
+    activity : dons de la période [start_date, end_date] (30 derniers jours par défaut).
+    stock : état instantané des poches disponibles (la période est ignorée).
     """
     import pandas as pd
 
     # Génération des données
     if report_type == "activity":
-        # Exemple: Liste des dons récents
-        stmt = select(Don.din, Don.date_don, Don.type_don, Don.statut_qualification).limit(1000)
+        end = end_date or dt.date.today()
+        start = start_date or end - dt.timedelta(days=30)
+        if start > end:
+            raise HTTPException(status_code=422, detail="la date de debut est posterieure a la date de fin")
+        stmt = (
+            select(Don.din, Don.date_don, Don.type_don, Don.statut_qualification)
+            .where(Don.date_don >= start, Don.date_don <= end)
+            .order_by(Don.date_don)
+        )
         data = db.execute(stmt).all()
         df = pd.DataFrame(data, columns=["DIN", "Date", "Type", "Statut"])
-        filename = f"rapport_activite_{dt.date.today()}"
+        filename = f"rapport_activite_{start}_{end}"
 
     elif report_type == "stock":
         stmt = select(
             Poche.code_produit_isbt, Poche.type_produit, Poche.groupe_sanguin, Poche.date_peremption
-        ).where(Poche.statut_distribution == "DISPONIBLE")
+        ).where(Poche.statut_distribution == "DISPONIBLE").order_by(Poche.date_peremption)
         data = db.execute(stmt).all()
         df = pd.DataFrame(data, columns=["Code Produit", "Type", "Groupe", "Expiration"])
         filename = f"rapport_stock_{dt.date.today()}"

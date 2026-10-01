@@ -14,6 +14,7 @@ from app.api.router import api_router
 from app.core.config import settings
 from app.core.logging import configure_logging
 from app.core.metrics import metrics
+from app.core.csrf import CSRFMiddleware
 from app.core.rate_limit import RateLimitMiddleware
 from app.core.request_context import request_id_var
 
@@ -111,6 +112,7 @@ def create_app() -> FastAPI:
 
     application.add_middleware(ObservabilityMiddleware)
     application.add_middleware(RateLimitMiddleware)
+    application.add_middleware(CSRFMiddleware)
     application.mount("/static", StaticFiles(directory="static"), name="static")
     application.include_router(api_router, prefix="/api")
     return application

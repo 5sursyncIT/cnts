@@ -1,11 +1,14 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel
+from typing import Literal
+
+from pydantic import BaseModel, Field
 
 
 class CampagneCollecteCreate(BaseModel):
-    code: str
+    # Facultatif : généré (COL-AAAAMMJJ-XXXX) s'il n'est pas fourni.
+    code: str | None = Field(default=None, max_length=32)
     nom: str
     site_id: uuid.UUID | None = None
     type_campagne: str
@@ -70,3 +73,7 @@ class InscriptionCollecteCreate(BaseModel):
     nom: str | None = None
     telephone: str | None = None
     creneau: datetime | None = None
+
+
+class InscriptionStatutUpdate(BaseModel):
+    statut: Literal["INSCRIT", "PRESENT", "PRELEVE", "ABSENT", "ANNULE"]

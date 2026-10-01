@@ -18,6 +18,7 @@ from app.api.routes.receveurs import router as receveurs_router
 from app.api.routes.sync import router as sync_router
 from app.api.routes.stock import router as stock_router
 from app.api.routes.analytics import router as analytics_router
+from app.api.routes.tableau_de_bord import router as tableau_de_bord_router
 from app.api.routes.trace import router as trace_router
 from app.api.routes.contact import router as contact_router
 from app.api.routes.content import router as content_router
@@ -85,6 +86,7 @@ api_router.include_router(receveurs_router, tags=["receveurs"], dependencies=DIS
 api_router.include_router(crossmatch_router, tags=["cross-match"], dependencies=DISTRIBUTION)
 api_router.include_router(hemovigilance_router, tags=["hemovigilance"], dependencies=HEMOVIGILANCE)
 api_router.include_router(analytics_router, tags=["analytics"], dependencies=ANALYTICS)
+api_router.include_router(tableau_de_bord_router, tags=["tableau-de-bord"], dependencies=STAFF)
 api_router.include_router(trace_router, tags=["trace"], dependencies=ADMIN)
 api_router.include_router(metrics_router, tags=["metrics"])
 api_router.include_router(sync_router, tags=["sync"], dependencies=STAFF)
@@ -100,14 +102,16 @@ api_router.include_router(monitoring_router, prefix="/observability", tags=["obs
 api_router.include_router(upload_router, tags=["upload"], dependencies=STAFF)
 api_router.include_router(users_router, tags=["users"], dependencies=ADMIN)
 api_router.include_router(notifications_router, tags=["notifications"], dependencies=STAFF)
-api_router.include_router(sites_router, tags=["sites"], dependencies=ADMIN)
+# Sites : lecture + transferts pour le module stock ; création/modification de
+# site réservées à l'admin (dépendance posée sur ces routes).
+api_router.include_router(sites_router, tags=["sites"], dependencies=STOCK)
 api_router.include_router(phenotypage_router, tags=["phenotypage"], dependencies=LABORATOIRE)
 api_router.include_router(rai_router, tags=["rai"], dependencies=LABORATOIRE)
 api_router.include_router(nat_router, tags=["nat"], dependencies=LABORATOIRE)
 api_router.include_router(reactions_donneur_router, tags=["reactions-donneur"], dependencies=LABORATOIRE)
 api_router.include_router(culm_router, tags=["culm"], dependencies=LABORATOIRE)
 api_router.include_router(suivi_transfusion_router, tags=["suivi-transfusion"], dependencies=LABORATOIRE)
-api_router.include_router(eir_router, tags=["eir"], dependencies=LABORATOIRE)
+api_router.include_router(eir_router, tags=["eir"], dependencies=HEMOVIGILANCE)
 api_router.include_router(apherese_router, tags=["apherese"], dependencies=LABORATOIRE)
 api_router.include_router(collectes_router, tags=["collectes"])
 api_router.include_router(prevision_router, tags=["prevision"], dependencies=ANALYTICS)

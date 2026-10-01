@@ -9,6 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import require_staff
+from app.core.rate_limit import get_client_ip
 from app.db.models import ContactMessage
 from app.db.session import get_db
 from app.schemas.contact import (
@@ -20,16 +21,13 @@ from app.schemas.contact import (
 
 router = APIRouter(prefix="/contact")
 
-# Le middleware de limitation est désactivé quand CNTS_ENV=dev (cas du serveur
-# live) : on borne donc ici le nombre de messages par IP.
+# Borne propre au formulaire (par heure), en plus du middleware global (par minute).
 MAX_MESSAGES_PER_HOUR = 5
 
 
 def _client_ip(request: Request) -> str | None:
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()[:64]
-    return request.client.host if request.client else None
+    ip = get_client_ip(request)
+    return None if ip == "unknown" else ip[:64]
 
 
 @router.post("", response_model=ContactAck, status_code=201)

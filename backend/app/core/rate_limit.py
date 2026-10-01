@@ -3,14 +3,15 @@ Simple in-memory rate limiting middleware.
 For production, consider using Redis-based rate limiting.
 """
 
+import ipaddress
 import time
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Callable
 
-from fastapi import HTTPException, Request, status
+from fastapi import Request, status
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import Response
+from starlette.responses import JSONResponse, Response
 
 from app.core.config import settings
 
@@ -80,24 +81,34 @@ _config = RateLimitConfig()
 _last_cleanup = time.time()
 
 
+def _is_trusted_proxy(host: str | None) -> bool:
+    """Pairs de confiance : loopback / réseaux privés (Apache via le port publié, conteneurs Next)."""
+    if not host:
+        return False
+    try:
+        addr = ipaddress.ip_address(host)
+    except ValueError:
+        return False
+    return addr.is_loopback or addr.is_private
+
+
 def get_client_ip(request: Request) -> str:
-    """Extract client IP from request, considering proxies."""
-    # Check X-Forwarded-For header (set by proxies/load balancers)
-    forwarded_for = request.headers.get("X-Forwarded-For")
-    if forwarded_for:
-        # Take the first IP in the chain (original client)
-        return forwarded_for.split(",")[0].strip()
+    """IP du client réel.
 
-    # Check X-Real-IP header (nginx)
-    real_ip = request.headers.get("X-Real-IP")
-    if real_ip:
-        return real_ip
+    X-Forwarded-For n'est pris en compte que si la connexion vient d'un proxy de
+    confiance, et on retient la DERNIÈRE entrée (celle ajoutée par notre proxy) :
+    les entrées de gauche sont fournies par le client et donc falsifiables.
+    """
+    peer = request.client.host if request.client else None
 
-    # Fall back to direct client IP
-    if request.client:
-        return request.client.host
+    if _is_trusted_proxy(peer):
+        forwarded_for = request.headers.get("X-Forwarded-For")
+        if forwarded_for:
+            last = forwarded_for.split(",")[-1].strip()
+            if last:
+                return last
 
-    return "unknown"
+    return peer or "unknown"
 
 
 def get_rate_limit_for_path(path: str, method: str) -> int:
@@ -161,12 +172,16 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # Check rate limit
         if _counter.is_rate_limited(rate_key, limit):
             remaining = _counter.get_remaining(rate_key, limit)
-            raise HTTPException(
+            # Réponse directe : une HTTPException levée dans un BaseHTTPMiddleware
+            # n'est pas convertie par les exception handlers (→ 500).
+            return JSONResponse(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail={
-                    "error": "rate_limit_exceeded",
-                    "message": "Trop de requêtes. Veuillez réessayer plus tard.",
-                    "retry_after_seconds": 60,
+                content={
+                    "detail": {
+                        "error": "rate_limit_exceeded",
+                        "message": "Trop de requêtes. Veuillez réessayer plus tard.",
+                        "retry_after_seconds": 60,
+                    }
                 },
                 headers={
                     "Retry-After": "60",

@@ -53,10 +53,14 @@ def send_notification(self, notification_id: str) -> dict:
 
 
 def _send_email(destinataire: str, template: str, variables: dict) -> None:
-    """Send email via SMTP. To be configured with real SMTP credentials."""
+    """Send a plain-text notification through the IP-authorized SMTP relay."""
+    import json
+    import smtplib
+    from email.message import EmailMessage
+
     from app.core.config import settings
 
-    if settings.env == "dev":
+    if settings.env == "dev" and settings.smtp_host == "localhost":
         logger.info(
             "[DEV] Email simulé vers %s | template=%s | variables=%s",
             destinataire,
@@ -65,10 +69,17 @@ def _send_email(destinataire: str, template: str, variables: dict) -> None:
         )
         return
 
-    # Production: integrate with SMTP or SendGrid
-    # from app.notifications.channels.email import send_email_smtp
-    # send_email_smtp(destinataire, template, variables)
-    logger.warning("Envoi email non configuré en production pour %s", destinataire)
+    message = EmailMessage()
+    message["From"] = settings.smtp_sender
+    message["To"] = destinataire
+    message["Subject"] = template
+    body = variables.get("body")
+    message.set_content(
+        body if isinstance(body, str) else json.dumps(variables, ensure_ascii=False, indent=2)
+    )
+
+    with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=10) as smtp:
+        smtp.send_message(message)
 
 
 def _send_sms(destinataire: str, template: str, variables: dict) -> None:

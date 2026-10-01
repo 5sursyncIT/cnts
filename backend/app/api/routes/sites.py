@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.api.deps import require_auth_in_production
+from app.api.deps import require_auth_in_production, require_admin
 from app.audit.events import log_event
 from app.db.models import LigneTransfert, Poche, Site, TransfertInterSite, UserAccount
 from app.db.session import get_db
@@ -17,7 +17,7 @@ router = APIRouter(prefix="/sites")
 # ── Sites CRUD ────────────────────────────────
 
 
-@router.post("", response_model=SiteOut, status_code=201)
+@router.post("", response_model=SiteOut, status_code=201, dependencies=[Depends(require_admin)])
 def create_site(
     payload: SiteCreate,
     db: Session = Depends(get_db),
@@ -258,7 +258,7 @@ def get_site(site_id: uuid.UUID, db: Session = Depends(get_db)) -> Site:
     return site
 
 
-@router.put("/{site_id}", response_model=SiteOut)
+@router.put("/{site_id}", response_model=SiteOut, dependencies=[Depends(require_admin)])
 def update_site(
     site_id: uuid.UUID,
     payload: SiteUpdate,
