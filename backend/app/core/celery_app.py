@@ -24,6 +24,11 @@ celery_app.conf.update(
             "task": "app.tasks.maintenance.sweep_reservations",
             "schedule": 3600.0,
         },
+        # Rappel des rendez-vous de don la veille (fenêtre glissante de 24 h).
+        "rappels-rendez-vous": {
+            "task": "app.tasks.rappels.rappels_rendez_vous",
+            "schedule": 3600.0,
+        },
         "check-expiration-alerts": {
             "task": "app.tasks.maintenance.check_expiration_alerts",
             "schedule": 86400.0,
@@ -31,4 +36,12 @@ celery_app.conf.update(
     },
 )
 
-celery_app.autodiscover_tasks(["app.tasks"])
+# Modules de tâches chargés explicitement par le worker. (`autodiscover_tasks(["app.tasks"])`
+# cherchait un module `app.tasks.tasks` inexistant : aucune tâche n'était enregistrée et
+# toutes les tâches planifiées étaient rejetées par le worker.)
+celery_app.conf.include = [
+    "app.tasks.maintenance",
+    "app.tasks.notifications",
+    "app.tasks.reports",
+    "app.tasks.rappels",
+]

@@ -33,6 +33,9 @@ def sweep_reservations() -> dict:
             db.execute(
                 update(Poche)
                 .where(Poche.id == reservation.poche_id)
+                # Seule une poche encore réservée redevient disponible : jamais une poche
+                # distribuée ou détruite entre-temps.
+                .where(Poche.statut_distribution == "RESERVE")
                 .values(statut_distribution="DISPONIBLE")
             )
             log_event(
