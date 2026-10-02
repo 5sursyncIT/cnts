@@ -16,6 +16,7 @@ export function EspacePatientGate() {
   const open = openOn === pathname;
   const close = () => setOpenOn(null);
   const closeRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (ESPACE_PATIENT_OUVERT) return;
@@ -34,10 +35,28 @@ export function EspacePatientGate() {
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
+    const precedent = document.activeElement as HTMLElement | null;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") return close();
+      if (e.key !== "Tab" || !dialogRef.current) return;
+      // Tabulation bouclée dans la boîte de dialogue.
+      const focusables = dialogRef.current.querySelectorAll<HTMLElement>("a[href], button:not([disabled])");
+      const premier = focusables[0];
+      const dernier = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === premier) {
+        e.preventDefault();
+        dernier?.focus();
+      } else if (!e.shiftKey && document.activeElement === dernier) {
+        e.preventDefault();
+        premier?.focus();
+      }
+    };
     document.addEventListener("keydown", onKey);
     closeRef.current?.querySelector("button")?.focus();
-    return () => document.removeEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      precedent?.focus?.();
+    };
   }, [open]);
 
   if (!open) return null;
@@ -48,6 +67,7 @@ export function EspacePatientGate() {
       style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(20, 10, 12, 0.55)", display: "grid", placeItems: "center", padding: 16 }}
     >
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="ep-modal-title"

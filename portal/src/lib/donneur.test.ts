@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { bornesRdv, creneauValide, creneaux, dernierDonConnu, eligibilite, rdvAVenir, typeDonLabel } from "./donneur";
+import { bornesRdv, depuisServeur, dernierDonConnu, eligibilite, rdvAVenir, typeDonLabel } from "./donneur";
 
 describe("eligibilite", () => {
   const today = new Date(2026, 8, 29); // 29 septembre 2026
@@ -63,30 +63,36 @@ it("typeDonLabel", () => {
 });
 
 
-describe("créneaux de rendez-vous", () => {
-  it("dimanche fermé, samedi jusqu'à 12h30, semaine jusqu'à 16h30", () => {
-    expect(creneaux("2026-10-04")).toEqual([]); // dimanche
-    expect(creneaux("2026-10-03").at(-1)).toBe("12:30"); // samedi
-    expect(creneaux("2026-10-05")[0]).toBe("08:00"); // lundi
-    expect(creneaux("2026-10-05").at(-1)).toBe("16:30");
+describe("calendrier de rendez-vous", () => {
+  const today = new Date(2026, 8, 29);
+
+  it("va d'aujourd'hui à l'horizon du lieu", () => {
+    expect(bornesRdv(90, today)).toEqual({ min: "2026-09-29", max: "2026-12-28" });
   });
 
-  it("borne l'horizon de demain à +90 jours", () => {
-    const today = new Date(2026, 8, 29);
-    expect(bornesRdv(today)).toEqual({ min: "2026-09-30", max: "2026-12-28" });
-    expect(creneauValide("2026-09-29", "09:00", today)).toBe(false); // aujourd'hui
-    expect(creneauValide("2026-10-05", "09:00", today)).toBe(true);
-    expect(creneauValide("2026-10-05", "09:15", today)).toBe(false); // hors grille
-    expect(creneauValide("2026-12-29", "09:00", today)).toBe(false); // au-delà de 90 j
+  it("commence à la date d'éligibilité si elle est plus tardive", () => {
+    expect(bornesRdv(90, today, "2026-11-02")).toEqual({ min: "2026-11-02", max: "2026-12-28" });
+    expect(bornesRdv(90, today, "2026-06-01").min).toBe("2026-09-29");
+  });
+});
+
+describe("éligibilité renvoyée par le backend", () => {
+  const today = new Date(2026, 8, 29);
+
+  it("attente avec date et jours restants", () => {
+    const e = depuisServeur({ eligible: false, eligible_le: "2026-10-09", raison: "Délai" }, "2026-06-09", today);
+    expect(e).toMatchObject({ etat: "attente", joursRestants: 10 });
   });
 
-  it("ne propose rien avant la date d'éligibilité", () => {
-    const today = new Date(2026, 8, 29);
-    const eligible = new Date(2026, 10, 2); // 2 novembre
-    expect(bornesRdv(today, eligible)).toEqual({ min: "2026-11-02", max: "2027-01-30" });
-    expect(creneauValide("2026-10-05", "09:00", today, eligible)).toBe(false);
-    expect(creneauValide("2026-11-02", "09:00", today, eligible)).toBe(true);
-    // Éligibilité déjà passée : on reste sur « demain ».
-    expect(bornesRdv(today, new Date(2026, 5, 1)).min).toBe("2026-09-30");
+  it("inapte sans date (âge)", () => {
+    expect(depuisServeur({ eligible: false, eligible_le: null, raison: "Âge au-delà de la limite" }, null, today)).toEqual({
+      etat: "inapte",
+      raison: "Âge au-delà de la limite",
+    });
+  });
+
+  it("premier don ou don à nouveau possible", () => {
+    expect(depuisServeur({ eligible: true, eligible_le: null, raison: "" }, null, today)).toEqual({ etat: "jamais" });
+    expect(depuisServeur({ eligible: true, eligible_le: "2026-09-01", raison: "" }, "2026-05-01", today).etat).toBe("possible");
   });
 });

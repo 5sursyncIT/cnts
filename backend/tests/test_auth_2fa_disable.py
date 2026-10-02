@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 import uuid
 
 from fastapi.testclient import TestClient
@@ -20,6 +21,7 @@ def _create_user_with_2fa(
         is_active=True,
         mfa_enabled=True,
         mfa_secret=secret,
+        email_verified_at=datetime.now(UTC),
     )
     db_session.add(user)
     for code in recovery_codes:

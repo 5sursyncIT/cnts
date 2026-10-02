@@ -3,12 +3,19 @@ import { NextResponse, type NextRequest } from "next/server";
 import { sessionCookieName, verifySessionToken } from "@/lib/auth/session";
 import { ESPACE_PATIENT_OUVERT } from "@/lib/espace-patient";
 
+// Pages accessibles sans session (création du compte et récupération de l'accès).
+const PUBLIC_PATIENT_PATHS = new Set([
+  "/espace-patient",
+  "/espace-patient/connexion",
+  "/espace-patient/inscription",
+  "/espace-patient/verification",
+  "/espace-patient/verification-sms",
+  "/espace-patient/mot-de-passe-oublie",
+  "/espace-patient/nouveau-mot-de-passe",
+]);
+
 function isProtectedPatientPath(pathname: string) {
-  if (!pathname.startsWith("/espace-patient")) return false;
-  if (pathname === "/espace-patient") return false;
-  if (pathname === "/espace-patient/connexion") return false;
-  if (pathname === "/espace-patient/inscription") return false;
-  return true;
+  return pathname.startsWith("/espace-patient") && !PUBLIC_PATIENT_PATHS.has(pathname);
 }
 
 // Anciennes pages de démonstration de l'espace patient → pages réelles.
@@ -18,76 +25,69 @@ const LEGACY_REDIRECTS: Record<string, string> = {
   "/espace-patient/preferences": "/espace-patient/profil",
 };
 
+// 'unsafe-eval' n'est nécessaire qu'au serveur de développement de Next (rechargement à chaud).
+const CSP = [
+  "default-src 'self'",
+  `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "production" ? "" : " 'unsafe-eval'"} https:`,
+  "style-src 'self' 'unsafe-inline' https:",
+  "img-src 'self' blob: data: https:",
+  "font-src 'self' data: https:",
+  "frame-src 'self' https://www.openstreetmap.org",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  "upgrade-insecure-requests",
+].join("; ");
+
+/** En-têtes de sécurité posés sur toutes les réponses de l'espace patient, redirections comprises. */
+function secure(response: NextResponse): NextResponse {
+  response.headers.set("Content-Security-Policy", CSP);
+  response.headers.set("X-Frame-Options", "DENY");
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  response.headers.set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
+  // Pages personnelles : jamais en cache partagé.
+  response.headers.set("Cache-Control", "private, no-store");
+  return response;
+}
+
+function redirectTo(request: NextRequest, pathname: string, status: number, params?: Record<string, string>) {
+  const url = request.nextUrl.clone();
+  url.pathname = pathname;
+  url.search = "";
+  for (const [k, v] of Object.entries(params ?? {})) url.searchParams.set(k, v);
+  return secure(NextResponse.redirect(url, status));
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Espace fermé : toute sous-page renvoie vers la page « en construction ».
-  if (!ESPACE_PATIENT_OUVERT && pathname !== "/espace-patient") {
-    const url = request.nextUrl.clone();
-    url.pathname = "/espace-patient";
-    url.search = "";
-    return NextResponse.redirect(url, 307);
-  }
+  if (!ESPACE_PATIENT_OUVERT && pathname !== "/espace-patient") return redirectTo(request, "/espace-patient", 307);
 
   const legacy = LEGACY_REDIRECTS[pathname];
-  if (legacy) {
-    const url = request.nextUrl.clone();
-    url.pathname = legacy;
-    url.search = "";
-    return NextResponse.redirect(url, 308);
-  }
-  
-  // 1. Security Headers
-  const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
-  const cspHeader = `
-    default-src 'self';
-    script-src 'self' 'unsafe-eval' 'unsafe-inline' https:;
-    style-src 'self' 'unsafe-inline' https:;
-    img-src 'self' blob: data: https:;
-    font-src 'self' data: https:;
-    frame-src 'self' https://www.openstreetmap.org;
-    object-src 'none';
-    base-uri 'self';
-    form-action 'self';
-    frame-ancestors 'none';
-    upgrade-insecure-requests;
-  `.replace(/\s{2,}/g, ' ').trim();
+  if (legacy) return redirectTo(request, legacy, 308);
 
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.set('x-nonce', nonce);
-  requestHeaders.set('Content-Security-Policy', cspHeader);
-
-  // 2. Auth Logic
-  let response = NextResponse.next({
-    request: {
-      headers: requestHeaders,
-    },
-  });
-
+  const token = request.cookies.get(sessionCookieName)?.value;
   if (isProtectedPatientPath(pathname)) {
-    const token = request.cookies.get(sessionCookieName)?.value;
     const session = token ? await verifySessionToken(token) : null;
-    
     if (!session) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/espace-patient/connexion";
-      url.searchParams.set("next", pathname);
-      response = NextResponse.redirect(url);
+      const response = redirectTo(request, "/espace-patient/connexion", 307, { next: pathname });
+      if (token) response.cookies.delete(sessionCookieName);
+      return response;
     }
   }
 
-  // 3. Apply Security Headers to Response
-  response.headers.set('Content-Security-Policy', cspHeader);
-  response.headers.set('X-Frame-Options', 'DENY');
-  response.headers.set('X-Content-Type-Options', 'nosniff');
-  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-  response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
-
-  return response;
+  const response = NextResponse.next();
+  // Jeton backend refusé (401) : la session portail est encore signée mais inutilisable.
+  if (pathname === "/espace-patient/connexion" && request.nextUrl.searchParams.get("error") === "expired") {
+    response.cookies.delete(sessionCookieName);
+  }
+  return secure(response);
 }
 
 export const config = {
-  matcher: ["/espace-patient/:path*"]
+  matcher: ["/espace-patient/:path*"],
 };
-

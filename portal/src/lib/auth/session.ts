@@ -10,8 +10,12 @@ export type PortalSession = {
 export const sessionCookieName = "cnts_portal_session";
 
 function getSecretKey() {
-  const secret = process.env.PORTAL_SESSION_SECRET ?? "dev-only-change-me";
-  return new TextEncoder().encode(secret);
+  const secret = process.env.PORTAL_SESSION_SECRET;
+  if (!secret && process.env.NODE_ENV === "production") {
+    // Sans secret, n'importe qui pourrait forger une session : on refuse plutôt que de signer avec une valeur connue.
+    throw new Error("PORTAL_SESSION_SECRET manquant");
+  }
+  return new TextEncoder().encode(secret || "dev-only-change-me");
 }
 
 export async function signSession(session: PortalSession, ttlSeconds: number): Promise<string> {

@@ -49,8 +49,16 @@ class Settings(BaseSettings):
     smtp_host: str = "localhost"
     smtp_port: int = 587
     smtp_sender: str = "noreply-cnts@gouv.sn"
+    # URL publique du portail : base des liens envoyés par email aux donneurs.
+    portal_url: str = "https://cnts.gouv.sn"
+    # Documents remis aux donneurs : stockage privé (volume docker), jamais sous /static.
+    documents_dir: str = "private/documents"
+    # SMS : Brevo pour l'instant (voir app/core/sms.py). Expéditeur : 11 caractères max.
     sms_api_key: str = ""
     sms_api_url: str = ""
+    sms_sender: str = "CNTS"
+    # Rappel de rendez-vous la veille : email toujours, SMS seulement si activé (facturé).
+    rdv_rappel_sms: bool = False
     whatsapp_api_token: str = ""
     whatsapp_phone_id: str = ""
 

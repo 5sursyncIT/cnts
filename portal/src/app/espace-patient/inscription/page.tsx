@@ -9,7 +9,11 @@ export const metadata = { title: "Activer mon espace — Espace patient" };
 const ETAPES = [
   { icon: "idcard", t: "Votre dossier existe déjà", d: "L'espace est réservé aux personnes ayant déjà donné au CNTS : votre dossier a été créé lors de votre premier don." },
   { icon: "shield", t: "Vérification de votre identité", d: "Votre numéro de CNI et votre date de naissance doivent correspondre à votre dossier. La CNI n'est jamais stockée en clair." },
-  { icon: "check", t: "Accès immédiat", d: "Une fois le compte créé, connectez-vous pour suivre vos dons et prendre rendez-vous." },
+  {
+    icon: "mail",
+    t: "Confirmation par email ou SMS",
+    d: "Avec l'email donné au centre, un lien suffit. Sinon, un code est envoyé par SMS au téléphone de votre dossier, puis un lien à votre email.",
+  },
 ];
 
 export default function RegisterPage() {

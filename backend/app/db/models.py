@@ -403,6 +403,15 @@ class UserAccount(Base):
     locked_until: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # Déconnexion : tout jeton émis au plus tard à cet instant est révoqué.
     tokens_valid_after: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Comptes patients : la connexion exige une adresse email confirmée.
+    email_verified_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Inscription sans email au dossier : code SMS envoyé au téléphone du dossier donneur.
+    phone_verified_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    otp_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    otp_expires_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    otp_attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    otp_last_sent_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    otp_sends_today: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[DateTime] = mapped_column(
@@ -429,6 +438,34 @@ class UserRecoveryCode(Base):
     user: Mapped["UserAccount"] = relationship(back_populates="recovery_codes")
 
 
+class LieuRdv(Base):
+    """Lieu où un donneur peut prendre rendez-vous en ligne (centre fixe)."""
+
+    __tablename__ = "lieux_rdv"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    code: Mapped[str] = mapped_column(String(16), unique=True, index=True)
+    nom: Mapped[str] = mapped_column(String(120))
+    adresse: Mapped[str | None] = mapped_column(Text, nullable=True)
+    actif: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"), index=True)
+    # Horaires d'ouverture par jour ISO (« 1 » = lundi … « 7 » = dimanche) :
+    # {"1": [["08:00", "17:00"]], "6": [["08:00", "13:00"]]} — heure de Dakar (UTC).
+    horaires: Mapped[dict] = mapped_column(JSON().with_variant(JSONB(), "postgresql"), default=dict)
+    # Jours de fermeture exceptionnelle (fériés, travaux) : ["2026-12-25", …].
+    fermetures: Mapped[list] = mapped_column(JSON().with_variant(JSONB(), "postgresql"), default=list)
+    duree_creneau_min: Mapped[int] = mapped_column(Integer, default=30, server_default="30")
+    capacite_creneau: Mapped[int] = mapped_column(Integer, default=3, server_default="3")
+    delai_min_heures: Mapped[int] = mapped_column(Integer, default=2, server_default="2")
+    horizon_jours: Mapped[int] = mapped_column(Integer, default=90, server_default="90")
+
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
 class RendezVous(Base):
     __tablename__ = "rendez_vous"
 
@@ -439,8 +476,15 @@ class RendezVous(Base):
     statut: Mapped[str] = mapped_column(
         String(16), default="CONFIRME"
     )  # CONFIRME, ANNULE, EFFECTUE, MANQUE
-    lieu: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    lieu: Mapped[str | None] = mapped_column(String(120), nullable=True)  # nom du lieu au moment de la prise
+    lieu_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("lieux_rdv.id"), nullable=True, index=True)
     commentaire: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Suivi par le centre (passage à EFFECTUE / MANQUE / ANNULE).
+    motif: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    traite_par_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("user_accounts.id"), nullable=True)
+    traite_le: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Rappel envoyé la veille (email, et SMS si activé) : jamais deux fois.
+    rappel_envoye_le: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[DateTime] = mapped_column(
@@ -450,6 +494,7 @@ class RendezVous(Base):
     )
 
     donneur: Mapped["Donneur"] = relationship(back_populates="rendez_vous")
+    lieu_rdv: Mapped["LieuRdv | None"] = relationship()
 
 
 class DocumentMedical(Base):
@@ -458,8 +503,15 @@ class DocumentMedical(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     donneur_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("donneurs.id"), index=True)
     titre: Mapped[str] = mapped_column(String(200))
-    type_document: Mapped[str] = mapped_column(String(32))  # ANALYSE, COMPTE_RENDU, ATTESTATION
-    fichier_url: Mapped[str] = mapped_column(String(500))
+    type_document: Mapped[str] = mapped_column(String(32))  # ATTESTATION, CERTIFICAT, COMPTE_RENDU, AUTRE
+    # Ancien champ (URL libre) ; les fichiers déposés par le centre sont dans `fichier_cle`.
+    fichier_url: Mapped[str] = mapped_column(String(500), default="")
+    # Nom du fichier dans le stockage privé (settings.documents_dir), jamais servi par /static.
+    fichier_cle: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    fichier_nom: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    mime: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    taille: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    ajoute_par_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("user_accounts.id"), nullable=True)
     date_document: Mapped[Date] = mapped_column(Date)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
 

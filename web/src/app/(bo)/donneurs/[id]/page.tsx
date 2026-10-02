@@ -7,6 +7,9 @@ import { useCallback, useState } from "react";
 import { Archive, CheckCircle2, Droplet, Info, Pencil, Plus, RefreshCw, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
+import { DocumentsSection } from "./documents-section";
+import { RendezVousSection } from "./rendez-vous-section";
+
 import { apiClient } from "@/lib/api-client";
 import { apiErrorMessage } from "@/lib/api-error";
 import {
@@ -424,6 +427,10 @@ export default function DonneurDetailPage() {
               </ul>
             )}
           </Card>
+
+          <RendezVousSection donneurId={donneurId} />
+          {/* L'API limite le dépôt au module donneurs : quiconque voit cette fiche peut déposer. */}
+          <DocumentsSection donneurId={donneurId} canWrite />
         </div>
 
         <div className="space-y-6">

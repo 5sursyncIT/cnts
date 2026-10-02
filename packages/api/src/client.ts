@@ -148,6 +148,42 @@ export function createApiClient(options: ApiClientOptions) {
     },
 
     // ========================================================================
+    // RENDEZ-VOUS (portail donneur) & LIEUX DE RENDEZ-VOUS
+    // ========================================================================
+    rendezVous: {
+      list: (params?: T.RendezVousListParams) => get<T.RendezVousStaff[]>("/rendez-vous", params),
+
+      setStatut: (id: T.UUID, data: { statut: "EFFECTUE" | "MANQUE" | "ANNULE"; motif?: string }) =>
+        patch<T.RendezVousStaff>(`/rendez-vous/${id}`, data),
+
+      lieux: () => get<T.LieuRdv[]>("/rendez-vous/lieux"),
+
+      createLieu: (data: T.LieuRdvInput) => post<T.LieuRdv>("/rendez-vous/lieux", data),
+
+      updateLieu: (id: T.UUID, data: T.LieuRdvInput) => put<T.LieuRdv>(`/rendez-vous/lieux/${id}`, data),
+    },
+
+    // ========================================================================
+    // DOCUMENTS REMIS AUX DONNEURS
+    // ========================================================================
+    documentsDonneur: {
+      list: (donneurId: T.UUID) => get<T.DocumentDonneur[]>(`/donneurs/${donneurId}/documents`),
+
+      /** `form` : titre, type_document, date_document, description?, fichier (multipart). */
+      upload: (donneurId: T.UUID, form: FormData) =>
+        requestJson<T.DocumentDonneur>({
+          fetchImpl,
+          url: `${baseUrl}/donneurs/${donneurId}/documents`,
+          init: { method: "POST", body: form },
+        }),
+
+      delete: (donneurId: T.UUID, docId: T.UUID) => del<void>(`/donneurs/${donneurId}/documents/${docId}`),
+
+      /** URL de téléchargement (via le proxy authentifié du back-office). */
+      fileUrl: (donneurId: T.UUID, docId: T.UUID) => `${baseUrl}/donneurs/${donneurId}/documents/${docId}/fichier`,
+    },
+
+    // ========================================================================
     // FIDELISATION - CARTES DONNEUR
     // ========================================================================
     fidelisation: {

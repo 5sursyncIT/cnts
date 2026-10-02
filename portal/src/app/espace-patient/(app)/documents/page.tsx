@@ -16,7 +16,7 @@ export default async function DocumentsPage() {
       <SectionTitle
         kicker="Documents"
         title="Mes documents"
-        sub="Attestations de don et comptes-rendus mis à disposition par le CNTS. Les résultats d'analyses biologiques vous sont remis au centre."
+        sub="Attestations, certificats et comptes-rendus mis à disposition par le CNTS. Les résultats d'analyses biologiques vous sont remis au centre, jamais en ligne."
       />
       {consent !== "accepted" ? <ConsentCard current={consent} /> : <DocumentList />}
     </div>
@@ -44,8 +44,12 @@ async function DocumentList() {
   return (
     <div style={{ display: "grid", gap: 10 }}>
       {docs.map((d) => {
-        // Seuls les liens https explicites sont proposés : les fichiers internes ne sont pas publics.
-        const lien = d.fichier_url.startsWith("https://") ? d.fichier_url : null;
+        // Fichier déposé par le centre : relayé par le portail. Sinon, seul un lien https explicite est proposé.
+        const lien = d.fichier_url.startsWith("/api/me/documents/")
+          ? `/espace-patient/documents/${d.id}/fichier`
+          : d.fichier_url.startsWith("https://")
+            ? d.fichier_url
+            : null;
         return (
           <Card key={d.id} pad={16}>
             <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
@@ -60,9 +64,10 @@ async function DocumentList() {
                 </div>
               </div>
               {lien ? (
-                <a href={lien} target="_blank" rel="noopener noreferrer" className="cn-btn outline sm">
+                <a href={lien} target="_blank" rel="noopener noreferrer" className="cn-btn outline sm" aria-label={`Ouvrir ${d.titre}`}>
                   <Icon name="arrowR" size={15} />
                   Ouvrir
+                  {d.taille ? <span style={{ fontWeight: 500, color: "var(--ink-500)" }}>({Math.max(1, Math.round(d.taille / 1024))} Ko)</span> : null}
                 </a>
               ) : (
                 <span style={{ fontSize: 13, color: "var(--ink-500)" }}>À retirer au centre</span>

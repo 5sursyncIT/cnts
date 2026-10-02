@@ -23,6 +23,7 @@ export function buildNavigation(user: User): NavSection[] {
           enabled: can("donneurs"),
           children: [
             { label: "Liste des donneurs", href: "/donneurs" },
+            { label: "Rendez-vous", href: "/donneurs/rendez-vous" },
             { label: "Fidélisation", href: "/donneurs/fidelisation" },
           ],
         },

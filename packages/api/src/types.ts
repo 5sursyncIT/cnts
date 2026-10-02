@@ -896,3 +896,66 @@ export type EtiquetteProduit = {
   statut_distribution: string;
   payload: { datamatrix_content?: string } & Record<string, unknown>;
 };
+
+// ============================================================================
+// RENDEZ-VOUS (pris par les donneurs sur le portail) & DOCUMENTS DONNEUR
+// ============================================================================
+
+export type StatutRendezVous = "CONFIRME" | "EFFECTUE" | "MANQUE" | "ANNULE";
+
+export type RendezVousStaff = {
+  id: UUID;
+  date_prevue: string;
+  type_rdv: string;
+  statut: StatutRendezVous;
+  lieu: string | null;
+  lieu_id: UUID | null;
+  commentaire: string | null;
+  motif: string | null;
+  traite_le: string | null;
+  created_at: string;
+  donneur: { id: UUID; nom: string; prenom: string; telephone: string | null; groupe_sanguin: string | null };
+};
+
+export type RendezVousListParams = {
+  du?: string;
+  au?: string;
+  lieu_id?: UUID;
+  statut?: StatutRendezVous;
+  donneur_id?: UUID;
+  q?: string;
+  limit?: number;
+  offset?: number;
+};
+
+/** Plages d'ouverture par jour ISO (« 1 » = lundi … « 7 » = dimanche), heure de Dakar. */
+export type HorairesLieu = Record<string, [string, string][]>;
+
+export type LieuRdvInput = {
+  code: string;
+  nom: string;
+  adresse: string | null;
+  actif: boolean;
+  horaires: HorairesLieu;
+  fermetures: string[];
+  duree_creneau_min: number;
+  capacite_creneau: number;
+  delai_min_heures: number;
+  horizon_jours: number;
+};
+
+export type LieuRdv = LieuRdvInput & { id: UUID };
+
+export type TypeDocumentDonneur = "ATTESTATION" | "CERTIFICAT" | "COMPTE_RENDU" | "AUTRE";
+
+export type DocumentDonneur = {
+  id: UUID;
+  titre: string;
+  type_document: TypeDocumentDonneur | string;
+  description: string | null;
+  date_document: string;
+  fichier_nom: string | null;
+  mime: string | null;
+  taille: number | null;
+  created_at: string;
+};

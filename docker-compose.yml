@@ -19,6 +19,7 @@ services:
       NODE_ENV: production
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://cnts.gouv.sn}
       BACKEND_URL: http://api:8000
+      PORTAL_SESSION_SECRET: ${PORTAL_SESSION_SECRET:?PORTAL_SESSION_SECRET requis (voir .env)}
       # CMS Strapi : appels serveur via le réseau docker, médias via l'URL publique.
       CMS_INTERNAL_URL: http://cms:1337
       CMS_PUBLIC_URL: ${CMS_PUBLIC_URL:-https://cnts.gouv.sn/cms}
@@ -62,6 +63,10 @@ services:
       CNTS_SMTP_HOST: ${CNTS_SMTP_HOST:-smtp-appli1.sec.gouv.sn}
       CNTS_SMTP_PORT: ${CNTS_SMTP_PORT:-25}
       CNTS_SMTP_SENDER: ${CNTS_SMTP_SENDER:-noreply-cnts@gouv.sn}
+      CNTS_PORTAL_URL: ${NEXT_PUBLIC_APP_URL:-https://cnts.gouv.sn}
+      # SMS via Brevo (provisoire) : sans clé, les codes SMS ne partent pas.
+      CNTS_SMS_API_KEY: ${CNTS_SMS_API_KEY:-}
+      CNTS_SMS_SENDER: ${CNTS_SMS_SENDER:-CNTS}
     ports:
       - "127.0.0.1:8000:8000"
     volumes:
@@ -70,6 +75,8 @@ services:
       - ./backend/alembic.ini:/app/alembic.ini
       - ./backend/tests:/app/tests
       - ./backend/static:/app/static
+      # Documents remis aux donneurs : stockage privé, jamais servi par /static.
+      - patient_documents:/app/private/documents
     depends_on:
       - db
     restart: always
@@ -126,6 +133,8 @@ services:
       CNTS_SMTP_HOST: ${CNTS_SMTP_HOST:-smtp-appli1.sec.gouv.sn}
       CNTS_SMTP_PORT: ${CNTS_SMTP_PORT:-25}
       CNTS_SMTP_SENDER: ${CNTS_SMTP_SENDER:-noreply-cnts@gouv.sn}
+      CNTS_SMS_API_KEY: ${CNTS_SMS_API_KEY:-}
+      CNTS_SMS_SENDER: ${CNTS_SMS_SENDER:-CNTS}
     depends_on:
       - db
       - redis
@@ -144,3 +153,4 @@ services:
 volumes:
   postgres_data:
   cms_uploads:
+  patient_documents:

@@ -168,6 +168,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   sites: "Sites", "regles-produits": "Règles produits", peremption: "Péremption", recettes: "Recettes",
   audit: "Audit", cms: "Contenus", messages: "Messages de contact", admin: "Système", roles: "Rôles & permissions",
   monitoring: "Supervision", production: "Production", etiquetage: "Étiquetage ISBT 128",
+  "rendez-vous": "Rendez-vous", lieux: "Lieux et horaires", documents: "Documents",
 };
 
 function segmentLabel(segment: string): string {

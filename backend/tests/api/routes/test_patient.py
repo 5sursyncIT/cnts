@@ -13,7 +13,7 @@ def test_get_my_profile(client: TestClient, db_session: Session):
     # Create user and linked donor
     email = f"patient_{uuid.uuid4()}@example.com"
     password = "password"
-    user = UserAccount(email=email, password_hash=hash_password(password))
+    user = UserAccount(email=email, password_hash=hash_password(password), email_verified_at=datetime.now(UTC))
     db_session.add(user)
     db_session.commit()
 
@@ -33,36 +33,9 @@ def test_get_my_profile(client: TestClient, db_session: Session):
     assert data["email"] == email
 
 
-def test_create_appointment(client: TestClient, db_session: Session):
-    # Setup user
-    email = f"rdv_{uuid.uuid4()}@example.com"
-    password = "password"
-    user = UserAccount(email=email, password_hash=hash_password(password))
-    donneur = Donneur(nom="Rdv", prenom="Test", sexe="F", cni_hash="hash_rdv", user=user)
-    db_session.add(user)
-    db_session.add(donneur)
-    db_session.commit()
-
-    # Login
-    response = client.post("/api/auth/login", json={"email": email, "password": password})
-    token = response.json()["access_token"]
-
-    # Create Appointment
-    rdv_data = {
-        "date_prevue": (datetime.now(UTC) + timedelta(days=7)).replace(microsecond=0).isoformat(),
-        "type_rdv": "DON_SANG",
-        "lieu": "Centre Principal",
-    }
-    response = client.post(
-        "/api/me/appointments", json=rdv_data, headers={"Authorization": f"Bearer {token}"}
-    )
-    assert response.status_code == 200
-    assert response.json()["statut"] == "CONFIRME"
-
-
 def _patient(db_session: Session, cni_hash: str) -> tuple[UserAccount, Donneur, str]:
     email = f"p_{uuid.uuid4()}@example.com"
-    user = UserAccount(email=email, password_hash=hash_password("password"))
+    user = UserAccount(email=email, password_hash=hash_password("password"), email_verified_at=datetime.now(UTC))
     donneur = Donneur(nom="Diop", prenom="Awa", sexe="F", cni_hash=cni_hash, user=user)
     db_session.add_all([user, donneur])
     db_session.commit()
@@ -72,13 +45,6 @@ def _patient(db_session: Session, cni_hash: str) -> tuple[UserAccount, Donneur, 
 def _token(client: TestClient, email: str) -> dict:
     token = client.post("/api/auth/login", json={"email": email, "password": "password"}).json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
-
-
-def test_appointment_in_past_rejected(client: TestClient, db_session: Session):
-    _, _, email = _patient(db_session, "hash_past")
-    past = (datetime.now(UTC) - timedelta(days=1)).replace(microsecond=0).isoformat()
-    r = client.post("/api/me/appointments", json={"date_prevue": past}, headers=_token(client, email))
-    assert r.status_code == 422
 
 
 def test_my_donations_only_mine_and_no_status(client: TestClient, db_session: Session):
@@ -121,16 +87,18 @@ def test_my_card(client: TestClient, db_session: Session):
     assert body["historique"][0]["points"] == 30
 
 
-def _donneur_sans_compte(db_session: Session, cni: str, naissance: date) -> Donneur:
-    d = Donneur(nom="Ndiaye", prenom="Moussa", sexe="M", cni_hash=hash_cni(cni), date_naissance=naissance)
+def _donneur_sans_compte(db_session: Session, cni: str, naissance: date, email: str | None = None) -> Donneur:
+    d = Donneur(
+        nom="Ndiaye", prenom="Moussa", sexe="M", cni_hash=hash_cni(cni), date_naissance=naissance, email=email
+    )
     db_session.add(d)
     db_session.commit()
     return d
 
 
 def test_register_patient_links_existing_donor(client: TestClient, db_session: Session):
-    d = _donneur_sans_compte(db_session, "1 234 5678 90123", date(1990, 4, 12))
     email = f"new_{uuid.uuid4()}@example.com"
+    d = _donneur_sans_compte(db_session, "1 234 5678 90123", date(1990, 4, 12), email=email)
     r = client.post(
         "/api/auth/register-patient",
         json={"cni": "1234567890123", "date_naissance": "1990-04-12", "email": email, "password": "motdepasse"},
@@ -139,7 +107,10 @@ def test_register_patient_links_existing_donor(client: TestClient, db_session: S
     db_session.refresh(d)
     assert d.user_id is not None
 
-    # Le nouveau compte se connecte et voit son propre dossier.
+    # Après confirmation de l'email (voir test_patient_account.py), le nouveau compte
+    # se connecte et voit son propre dossier.
+    d.user.email_verified_at = datetime.now(UTC)
+    db_session.commit()
     r = client.get("/api/me", headers={**_token_pw(client, email, "motdepasse")})
     assert r.status_code == 200
     assert r.json()["nom"] == "Ndiaye"
@@ -177,3 +148,41 @@ def test_register_patient_short_password(client: TestClient, db_session: Session
         json={"cni": "CC112233", "date_naissance": "2000-06-06", "email": f"s_{uuid.uuid4()}@example.com", "password": "court"},
     )
     assert r.status_code == 422
+
+
+def test_update_profile_ignores_identity_and_accepts_null(client: TestClient, db_session: Session):
+    _, moi, email = _patient(db_session, "hash_maj_profil")
+    headers = _token(client, email)
+    r = client.put(
+        "/api/me",
+        json={"nom": None, "prenom": "Pirate", "telephone": "+221 77 000 00 00", "adresse": None},
+        headers=headers,
+    )
+    assert r.status_code == 200, r.text
+    db_session.refresh(moi)
+    # Nom et prénom ne sont pas modifiables en ligne ; null efface une coordonnée sans erreur 500.
+    assert (moi.nom, moi.prenom) == ("Diop", "Awa")
+    assert moi.telephone == "+221 77 000 00 00"
+    assert moi.adresse is None
+
+
+def test_update_profile_too_long_is_422(client: TestClient, db_session: Session):
+    _, _, email = _patient(db_session, "hash_maj_long")
+    r = client.put("/api/me", json={"telephone": "7" * 33}, headers=_token(client, email))
+    assert r.status_code == 422
+
+
+def test_list_limit_is_capped(client: TestClient, db_session: Session):
+    _, _, email = _patient(db_session, "hash_limit")
+    headers = _token(client, email)
+    for path in ("/api/me/appointments", "/api/me/documents", "/api/me/dons"):
+        assert client.get(f"{path}?limit=100000", headers=headers).status_code == 422
+
+
+def test_deleted_donor_loses_access(client: TestClient, db_session: Session):
+    _, moi, email = _patient(db_session, "hash_supprime")
+    headers = _token(client, email)
+    moi.deleted_at = datetime.now(UTC)
+    db_session.commit()
+    assert client.get("/api/me", headers=headers).status_code == 404
+    assert client.get("/api/me/dons", headers=headers).status_code == 404

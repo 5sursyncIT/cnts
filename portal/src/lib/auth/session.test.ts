@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { signSession, verifySessionToken, type PortalSession } from "./session";
 import { SignJWT } from "jose";
@@ -30,5 +30,17 @@ describe("portal session", () => {
       .setExpirationTime("2h")
       .sign(key);
     await expect(verifySessionToken(token)).resolves.toBeNull();
+  });
+
+  it("refuse de signer sans secret en production", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("PORTAL_SESSION_SECRET", "");
+    try {
+      await expect(
+        signSession({ userId: "p1", email: "a@b.sn", displayName: "A", accessToken: "t" }, 60),
+      ).rejects.toThrow("PORTAL_SESSION_SECRET");
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });

@@ -1,6 +1,7 @@
 """MFA obligatoire pour le personnel : enrôlement, anti-rejeu et verrouillage."""
 
 import time
+from datetime import UTC, datetime
 import uuid
 
 from fastapi.testclient import TestClient
@@ -15,7 +16,8 @@ PWD = "Motdepasse-Solide-1"
 
 def _staff(db: Session, email: str = "bio@cnts.local", role: str = "biologiste") -> UserAccount:
     user = UserAccount(
-        id=uuid.uuid4(), email=email, password_hash=hash_password(PWD), is_active=True, role=role
+        id=uuid.uuid4(), email=email, password_hash=hash_password(PWD), is_active=True, role=role,
+        email_verified_at=datetime.now(UTC),
     )
     db.add(user)
     db.commit()

@@ -3,25 +3,29 @@ import Link from "next/link";
 import { frDate } from "@/components/cnts/format";
 import { Icon } from "@/components/cnts/icon";
 import { Button, Card, IconBubble, SectionTitle } from "@/components/cnts/primitives";
-import { patientGet, type Carte, type DonPatient, type Profil, type RendezVous } from "@/lib/backend";
-import { delaiMois, dernierDonConnu, eligibilite, rdvAVenir, typeDonLabel } from "@/lib/donneur";
+import { patientGet, type Carte, type DonPatient, type EligibiliteApi, type Profil, type RendezVous } from "@/lib/backend";
+import { dernierDonConnu, depuisServeur, eligibilite, isoLocal, rdvAVenir, typeDonLabel } from "@/lib/donneur";
 
 export const metadata = { title: "Tableau de bord — Espace patient" };
 
 const DAKAR = { timeZone: "Africa/Dakar" } as const;
 
 export default async function PatientDashboardPage() {
-  const [profil, dons, rdvs, carte] = await Promise.all([
+  const [profil, dons, rdvs, carte, eligApi] = await Promise.all([
     patientGet<Profil>("/api/me"),
     patientGet<DonPatient[]>("/api/me/dons"),
     patientGet<RendezVous[]>("/api/me/appointments"),
     patientGet<Carte>("/api/me/carte"),
+    patientGet<EligibiliteApi>("/api/me/eligibilite"),
   ]);
 
   const listeDons = dons ?? [];
   const dernier = dernierDonConnu(profil?.dernier_don, listeDons);
-  const elig = eligibilite(dernier, profil?.sexe);
+  // Calcul du backend (âge, type du dernier don) ; estimation locale s'il est indisponible.
+  const elig = eligApi ? depuisServeur(eligApi, dernier) : eligibilite(dernier, profil?.sexe);
   const prochain = rdvAVenir(rdvs ?? [])[0];
+  // Carte claire (et non rouge) quand le don n'est pas possible tout de suite.
+  const neutre = elig.etat === "attente" || elig.etat === "inapte";
   const indisponible = profil === null;
 
   return (
@@ -40,20 +44,20 @@ export default async function PatientDashboardPage() {
             position: "relative",
             overflow: "hidden",
             borderRadius: "var(--r-xl)",
-            background: elig.etat === "attente" ? "var(--surface)" : "var(--brand)",
-            color: elig.etat === "attente" ? "var(--ink-900)" : "#fff",
-            border: elig.etat === "attente" ? "1px solid var(--line)" : "none",
+            background: neutre ? "var(--surface)" : "var(--brand)",
+            color: neutre ? "var(--ink-900)" : "#fff",
+            border: neutre ? "1px solid var(--line)" : "none",
             padding: "clamp(24px, 3vw, 34px)",
             display: "grid",
             gap: 14,
             alignContent: "space-between",
           }}
         >
-          {elig.etat !== "attente" && (
+          {!neutre && (
             <div aria-hidden className="blob" style={{ width: 220, height: 220, right: -60, top: -80, background: "var(--red-700)" }} />
           )}
           <div style={{ position: "relative" }}>
-            <div className="kicker" style={{ color: elig.etat === "attente" ? "var(--brand)" : "#fff", opacity: 0.9, marginBottom: 10 }}>
+            <div className="kicker" style={{ color: neutre ? "var(--brand)" : "#fff", opacity: 0.9, marginBottom: 10 }}>
               Prochain don
             </div>
             <h2 className="font-serif" style={{ fontSize: "clamp(26px, 3vw, 36px)", fontWeight: 500, letterSpacing: "-0.02em", lineHeight: 1.1 }}>
@@ -61,9 +65,11 @@ export default async function PatientDashboardPage() {
                 <>
                   Possible à partir du{" "}
                   <span className="serif-it" style={{ color: "var(--brand)" }}>
-                    {frDate(elig.le.toISOString(), { day: "numeric", month: "long" })}
+                    {frDate(isoLocal(elig.le), { day: "numeric", month: "long" })}
                   </span>
                 </>
+              ) : elig.etat === "inapte" ? (
+                "Don non possible en ligne"
               ) : elig.etat === "possible" ? (
                 "Vous pouvez donner à nouveau"
               ) : (
@@ -72,19 +78,25 @@ export default async function PatientDashboardPage() {
             </h2>
             <p style={{ marginTop: 10, fontSize: 15, lineHeight: 1.55, opacity: 0.85, maxWidth: 440 }}>
               {elig.etat === "attente"
-                ? `Encore ${elig.joursRestants} jour${elig.joursRestants > 1 ? "s" : ""}. Un délai de ${delaiMois(profil?.sexe)} mois entre deux dons de sang total permet à votre organisme de se reconstituer.`
-                : elig.etat === "possible"
+                ? `Encore ${elig.joursRestants} jour${elig.joursRestants > 1 ? "s" : ""}. Ce délai entre deux dons permet à votre organisme de se reconstituer.`
+                : elig.etat === "inapte"
+                  ? `${elig.raison}. Contactez le CNTS pour toute question.`
+                  : elig.etat === "possible"
                   ? `Votre dernier don date du ${frDate(dernier!, { day: "numeric", month: "long", year: "numeric" })}. Votre aptitude sera confirmée lors de l'entretien.`
                   : "Aucun don n'est encore enregistré dans votre dossier. Votre aptitude sera confirmée lors de l'entretien."}
             </p>
           </div>
           <div style={{ position: "relative" }}>
-            {prochain ? (
-              <Button variant={elig.etat === "attente" ? "outline" : "light"} icon="calendar" href="/espace-patient/rendez-vous">
+            {elig.etat === "inapte" ? (
+              <Button variant="outline" icon="phone" href="/contact">
+                Contacter le CNTS
+              </Button>
+            ) : prochain ? (
+              <Button variant={neutre ? "outline" : "light"} icon="calendar" href="/espace-patient/rendez-vous">
                 Voir mon rendez-vous
               </Button>
             ) : (
-              <Button variant={elig.etat === "attente" ? "outline" : "light"} icon="calendarCheck" href="/espace-patient/rendez-vous">
+              <Button variant={neutre ? "outline" : "light"} icon="calendarCheck" href="/espace-patient/rendez-vous">
                 Prendre rendez-vous
               </Button>
             )}

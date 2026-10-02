@@ -83,19 +83,14 @@ def _send_email(destinataire: str, template: str, variables: dict) -> None:
 
 
 def _send_sms(destinataire: str, template: str, variables: dict) -> None:
-    """Send SMS via provider API. To be configured with real SMS provider."""
-    from app.core.config import settings
+    """Send an SMS through the configured provider (Brevo for now)."""
+    from app.core.sms import normalize_phone, send_sms
 
-    if settings.env == "dev":
-        logger.info(
-            "[DEV] SMS simulé vers %s | template=%s | variables=%s",
-            destinataire,
-            template,
-            variables,
-        )
-        return
-
-    logger.warning("Envoi SMS non configuré en production pour %s", destinataire)
+    numero = normalize_phone(destinataire)
+    if numero is None:
+        raise ValueError(f"Numéro de téléphone inexploitable : {destinataire!r}")
+    body = variables.get("body")
+    send_sms(numero, body if isinstance(body, str) else template, tag=template[:50])
 
 
 def _send_whatsapp(destinataire: str, template: str, variables: dict) -> None:

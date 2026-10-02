@@ -58,6 +58,10 @@ const STATUS: Record<string, [BadgeTone, string]> = {
   TERMINEE: ["neutral", "Terminée"],
   ANNULEE: ["danger", "Annulée"],
   ANNULE: ["danger", "Annulé"],
+  // Rendez-vous
+  CONFIRME: ["info", "Confirmé"],
+  EFFECTUE: ["success", "Effectué"],
+  MANQUE: ["warning", "Manqué"],
   PLANIFIEE: ["info", "Planifiée"],
   PLANIFIE: ["info", "Planifié"],
   VALIDEE: ["info", "Validée"],

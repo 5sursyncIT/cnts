@@ -21,7 +21,8 @@ export function rateLimit(options?: Options) {
         tokenCache.set(token, tokenCount);
       }
       const currentUsage = tokenCount[0];
-      const isRateLimited = currentUsage >= limit;
+      // `limit` essais autorisés par fenêtre : le (limit + 1)-ième est refusé.
+      const isRateLimited = currentUsage > limit;
       
       return {
         isRateLimited,

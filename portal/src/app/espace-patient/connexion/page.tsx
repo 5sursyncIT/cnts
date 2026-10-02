@@ -4,19 +4,25 @@ import { redirect } from "next/navigation";
 import { Card } from "@/components/cnts/primitives";
 import { Alert, LoginForm } from "@/components/patient/forms";
 import { getCurrentPatient } from "@/lib/auth/current-user";
+import { safeNext } from "@/lib/safe-next";
 
 export const metadata = { title: "Connexion — Espace patient" };
 
 const MESSAGES: Record<string, { tone: "ok" | "info" | "warn"; text: string }> = {
-  created: { tone: "ok", text: "Votre compte est créé. Connectez-vous avec votre email et votre mot de passe." },
+  verify: {
+    tone: "ok",
+    text: "Votre compte est créé. Ouvrez le lien de confirmation que nous venons de vous envoyer par email (valable 48 heures), puis connectez-vous.",
+  },
+  reset: { tone: "ok", text: "Votre mot de passe a été changé. Connectez-vous avec le nouveau." },
+  password: { tone: "ok", text: "Mot de passe modifié : vous avez été déconnecté de tous vos appareils. Reconnectez-vous." },
   logout: { tone: "info", text: "Vous êtes déconnecté." },
   expired: { tone: "warn", text: "Votre session a expiré. Merci de vous reconnecter." },
 };
 
 export default async function PatientLoginPage(props: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
   const sp = (await props.searchParams) ?? {};
-  const next = typeof sp.next === "string" ? sp.next : "/espace-patient/tableau-de-bord";
-  const key = sp.created ? "created" : sp.logout ? "logout" : sp.error === "expired" ? "expired" : null;
+  const next = safeNext(sp.next);
+  const key = (["verify", "reset", "password", "logout"] as const).find((k) => sp[k]) ?? (sp.error === "expired" ? "expired" : null);
 
   // Déjà connecté (et pas une session expirée) → directement au tableau de bord.
   if (!key && (await getCurrentPatient())) redirect(next);
@@ -44,7 +50,7 @@ export default async function PatientLoginPage(props: { searchParams?: Promise<R
               Déjà donneur au CNTS mais pas encore de compte ? <Link href="/espace-patient/inscription" style={{ fontWeight: 700 }}>Activer mon espace</Link>
             </span>
             <span>
-              Mot de passe oublié ? <Link href="/contact">Contactez le CNTS</Link>
+              <Link href="/espace-patient/mot-de-passe-oublie">Mot de passe oublié ?</Link>
             </span>
           </div>
         </Card>

@@ -16,11 +16,18 @@ const OPERATION: Record<string, string> = {
 export default async function DonorCardPage() {
   const [profil, carte] = await Promise.all([patientGet<Profil>("/api/me"), patientGet<Carte>("/api/me/carte")]);
   const nom = profil ? `${profil.prenom} ${profil.nom}` : "";
-  const niveauIdx = carte ? Math.max(0, NIVEAUX.indexOf(carte.niveau.toUpperCase())) : -1;
+  // Niveau inconnu (ajouté côté centre) : -1, aucune étape de la progression n'est cochée à tort.
+  const niveauIdx = carte ? NIVEAUX.indexOf(carte.niveau.toUpperCase()) : -1;
 
   return (
     <div className="two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 28, alignItems: "start" }}>
       <div style={{ display: "grid", gap: 18 }}>
+        {carte && !carte.is_active && (
+          <div className="cn-alert warn" role="status">
+            <Icon name="alert" size={18} />
+            Votre carte est désactivée : vos points ne peuvent pas être utilisés pour le moment. Contactez le CNTS.
+          </div>
+        )}
         {/* Carte numérique */}
         <div
           style={{

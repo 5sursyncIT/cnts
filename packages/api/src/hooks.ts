@@ -536,3 +536,43 @@ export function useKPIs(api: ApiClient) {
 export function useStockBreakdown(api: ApiClient) {
   return useQuery(["analytics-stock-breakdown"], () => api.analytics.stockBreakdown());
 }
+
+// ============================================================================
+// RENDEZ-VOUS & DOCUMENTS DONNEUR HOOKS
+// ============================================================================
+
+export function useRendezVous(api: ApiClient, params?: T.RendezVousListParams) {
+  return useQuery(["rendez-vous", JSON.stringify(params ?? {})], () => api.rendezVous.list(params));
+}
+
+export function useSetStatutRendezVous(api: ApiClient) {
+  return useMutation((payload: { id: T.UUID; statut: "EFFECTUE" | "MANQUE" | "ANNULE"; motif?: string }) =>
+    api.rendezVous.setStatut(payload.id, { statut: payload.statut, motif: payload.motif })
+  );
+}
+
+export function useLieuxRdv(api: ApiClient) {
+  return useQuery(["lieux-rdv"], () => api.rendezVous.lieux());
+}
+
+export function useSaveLieuRdv(api: ApiClient) {
+  return useMutation((payload: { id?: T.UUID; data: T.LieuRdvInput }) =>
+    payload.id ? api.rendezVous.updateLieu(payload.id, payload.data) : api.rendezVous.createLieu(payload.data)
+  );
+}
+
+export function useDocumentsDonneur(api: ApiClient, donneurId: T.UUID) {
+  return useQuery(["documents-donneur", donneurId], () => api.documentsDonneur.list(donneurId), { enabled: !!donneurId });
+}
+
+export function useUploadDocumentDonneur(api: ApiClient) {
+  return useMutation((payload: { donneurId: T.UUID; form: FormData }) =>
+    api.documentsDonneur.upload(payload.donneurId, payload.form)
+  );
+}
+
+export function useDeleteDocumentDonneur(api: ApiClient) {
+  return useMutation((payload: { donneurId: T.UUID; docId: T.UUID }) =>
+    api.documentsDonneur.delete(payload.donneurId, payload.docId)
+  );
+}

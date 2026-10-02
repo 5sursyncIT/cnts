@@ -48,12 +48,12 @@ export default async function PatientAppLayout(props: { children: React.ReactNod
               <div className="kicker" style={{ marginBottom: 2 }}>
                 Espace donneur
               </div>
-              <div className="font-serif" style={{ fontSize: 26, fontWeight: 500, letterSpacing: "-0.02em", lineHeight: 1.1 }}>
+              <h1 className="font-serif" style={{ fontSize: 26, fontWeight: 500, letterSpacing: "-0.02em", lineHeight: 1.1 }}>
                 Bonjour, {prenom}
-              </div>
+              </h1>
             </div>
             {profil?.groupe_sanguin && (
-              <span title="Groupe sanguin" style={{ marginLeft: 4 }}>
+              <span title="Groupe sanguin" role="img" aria-label={`Groupe sanguin ${profil.groupe_sanguin}`} style={{ marginLeft: 4 }}>
                 <BloodTag type={profil.groupe_sanguin} size="md" />
               </span>
             )}

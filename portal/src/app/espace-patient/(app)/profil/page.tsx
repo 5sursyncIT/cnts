@@ -1,7 +1,7 @@
 import { frDate } from "@/components/cnts/format";
 import { Icon } from "@/components/cnts/icon";
 import { Card, SectionTitle } from "@/components/cnts/primitives";
-import { ProfileForm } from "@/components/patient/forms";
+import { ChangePasswordForm, ProfileForm } from "@/components/patient/forms";
 import { ConsentCard, RevokeConsentButton } from "@/components/patient/ui";
 import { getCurrentPatient } from "@/lib/auth/current-user";
 import { patientGet, type Profil } from "@/lib/backend";
@@ -72,6 +72,12 @@ export default async function ProfilePage() {
             <p style={{ color: "var(--ink-600)" }}>Vos coordonnées ne peuvent pas être chargées pour le moment.</p>
           )}
         </Card>
+        <div style={{ marginTop: 28 }}>
+          <SectionTitle kicker="Sécurité" title="Mot de passe" />
+          <Card pad={26}>
+            <ChangePasswordForm />
+          </Card>
+        </div>
       </div>
     </div>
   );

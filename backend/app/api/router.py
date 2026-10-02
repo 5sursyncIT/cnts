@@ -32,6 +32,7 @@ from app.api.routes.monitoring import router as monitoring_router
 from app.api.routes.upload import router as upload_router
 from app.api.routes.users import router as users_router
 from app.api.routes.notifications import router as notifications_router
+from app.api.routes.rendez_vous import router as rendez_vous_router
 from app.api.routes.sites import router as sites_router
 from app.api.routes.phenotypage import router as phenotypage_router
 from app.api.routes.rai import router as rai_router
@@ -96,6 +97,7 @@ api_router.include_router(faq_router, tags=["content"])
 api_router.include_router(team_router, tags=["content"])
 api_router.include_router(partners_router, tags=["content"])
 api_router.include_router(patient_router, tags=["patient"])
+api_router.include_router(rendez_vous_router, tags=["rendez-vous"], dependencies=DONNEURS)
 api_router.include_router(parametrage_router, prefix="/parametrage", tags=["parametrage"], dependencies=ADMIN)
 api_router.include_router(etiquetage_router, prefix="/etiquetage", tags=["etiquetage"], dependencies=LABORATOIRE)
 api_router.include_router(monitoring_router, prefix="/observability", tags=["observability"], dependencies=ADMIN)
